@@ -15,8 +15,10 @@ namespace Sharpcraft.Client.Tests.Render;
 public sealed class SheepRabbitFrogTadpoleModelDefinitionTests
 {
     [Fact]
-    public void SheepPartsMatchLegacyFromVanillaRecords()
+    public void SheepPartsMatchSourceFrameRecords()
     {
+        // task-135: Sheep migrated to raw source frame; Mirror per QuadrupedModel.createLegs,
+        // body xRot source literal +PI/2 (independent source oracle).
         AssertPartsMatch(ExpectedSheepParts(), SheepModelDefinition.Definition.Parts);
     }
 
@@ -108,24 +110,24 @@ public sealed class SheepRabbitFrogTadpoleModelDefinitionTests
 
     private static EntityModelPart[] ExpectedSheepParts() =>
     [
-        LegacyModelPartFactory.FromVanilla("head", 0f, 6f, -8f, -3f, -4f, -6f, 6f, 6f, 8f, 0, 0),
-        LegacyModelPartFactory.FromVanilla("body", 0f, 5f, 2f, -4f, -10f, -7f, 8f, 16f, 6f, 28, 8, rotationX: -MathF.PI / 2f),
-        LegacyModelPartFactory.FromVanilla("right_hind_leg", -3f, 12f, 7f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16),
-        LegacyModelPartFactory.FromVanilla("left_hind_leg", 3f, 12f, 7f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16, mirror: true),
-        LegacyModelPartFactory.FromVanilla("right_front_leg", -3f, 12f, -5f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16),
-        LegacyModelPartFactory.FromVanilla("left_front_leg", 3f, 12f, -5f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16, mirror: true),
-        LegacyModelPartFactory.FromVanilla("wool_head", 0f, 6f, -8f, -3f, -4f, -4f, 6f, 6f, 6f, 0, 0,
+        RawModelPartFactory.FromVanilla("head", 0f, 6f, -8f, -3f, -4f, -6f, 6f, 6f, 8f, 0, 0),
+        RawModelPartFactory.FromVanilla("body", 0f, 5f, 2f, -4f, -10f, -7f, 8f, 16f, 6f, 28, 8, rotationX: MathF.PI / 2f),
+        RawModelPartFactory.FromVanilla("right_hind_leg", -3f, 12f, 7f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16, mirror: true),
+        RawModelPartFactory.FromVanilla("left_hind_leg", 3f, 12f, 7f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16),
+        RawModelPartFactory.FromVanilla("right_front_leg", -3f, 12f, -5f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16, mirror: true),
+        RawModelPartFactory.FromVanilla("left_front_leg", 3f, 12f, -5f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16),
+        RawModelPartFactory.FromVanilla("wool_head", 0f, 6f, -8f, -3f, -4f, -4f, 6f, 6f, 6f, 0, 0,
             grow: 0.6f, texturePath: "entity/sheep/sheep_wool"),
-        LegacyModelPartFactory.FromVanilla("wool_body", 0f, 5f, 2f, -4f, -10f, -7f, 8f, 16f, 6f, 28, 8,
-            rotationX: -MathF.PI / 2f, grow: 1.75f, texturePath: "entity/sheep/sheep_wool"),
-        LegacyModelPartFactory.FromVanilla("wool_right_hind_leg", -3f, 12f, 7f, -2f, 0f, -2f, 4f, 6f, 4f, 0, 16,
-            grow: 0.5f, texturePath: "entity/sheep/sheep_wool"),
-        LegacyModelPartFactory.FromVanilla("wool_left_hind_leg", 3f, 12f, 7f, -2f, 0f, -2f, 4f, 6f, 4f, 0, 16,
+        RawModelPartFactory.FromVanilla("wool_body", 0f, 5f, 2f, -4f, -10f, -7f, 8f, 16f, 6f, 28, 8,
+            rotationX: MathF.PI / 2f, grow: 1.75f, texturePath: "entity/sheep/sheep_wool"),
+        RawModelPartFactory.FromVanilla("wool_right_hind_leg", -3f, 12f, 7f, -2f, 0f, -2f, 4f, 6f, 4f, 0, 16,
             mirror: true, grow: 0.5f, texturePath: "entity/sheep/sheep_wool"),
-        LegacyModelPartFactory.FromVanilla("wool_right_front_leg", -3f, 12f, -5f, -2f, 0f, -2f, 4f, 6f, 4f, 0, 16,
+        RawModelPartFactory.FromVanilla("wool_left_hind_leg", 3f, 12f, 7f, -2f, 0f, -2f, 4f, 6f, 4f, 0, 16,
             grow: 0.5f, texturePath: "entity/sheep/sheep_wool"),
-        LegacyModelPartFactory.FromVanilla("wool_left_front_leg", 3f, 12f, -5f, -2f, 0f, -2f, 4f, 6f, 4f, 0, 16,
-            mirror: true, grow: 0.5f, texturePath: "entity/sheep/sheep_wool")
+        RawModelPartFactory.FromVanilla("wool_right_front_leg", -3f, 12f, -5f, -2f, 0f, -2f, 4f, 6f, 4f, 0, 16,
+            mirror: true, grow: 0.5f, texturePath: "entity/sheep/sheep_wool"),
+        RawModelPartFactory.FromVanilla("wool_left_front_leg", 3f, 12f, -5f, -2f, 0f, -2f, 4f, 6f, 4f, 0, 16,
+            grow: 0.5f, texturePath: "entity/sheep/sheep_wool")
     ];
 
     private static EntityModelPart[] ExpectedRabbitParts() =>
