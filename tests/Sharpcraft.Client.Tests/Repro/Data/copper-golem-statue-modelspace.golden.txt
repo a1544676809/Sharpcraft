@@ -3,7 +3,10 @@
 # tool: ref://mc-26.3-analysis/vectors/StatueSourceProbe.java (real CopperGolemStatueModel.setupAnim)
 # space: MODEL-SPACE normalized render units (v/16); NO renderer translate(0.5,0,0.5)+Yrot
 # ref: ModelPart.java:129-138,163-167,384-394 (getExtentsForGui/translateAndRotate/worldX)
+# counts: standing=216 running=216 sitting=264 star=216 (sitting has 5 extra _r1 cubes:
+#         body_r1, right_arm_r1, left_arm_r1, right_leg_r1, left_leg_r1 = 11 cubes*24=264; source-legitimate)
 # columns: pose|part|cube|polygon|vertex|x|y|z|u|v
+# key: (pose, part, cube, polygon, vertex) is the strict comparison identity.
 standing|/left_leg|0|0|0|-0.250000000|0.312500000|0.125000000|0.375000000|0.421875000
 standing|/left_leg|0|0|1|0.000000000|0.312500000|0.125000000|0.312500000|0.421875000
 standing|/left_leg|0|0|2|0.000000000|0.312500000|-0.125000000|0.312500000|0.484375000
