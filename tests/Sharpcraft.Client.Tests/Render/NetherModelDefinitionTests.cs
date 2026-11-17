@@ -256,4 +256,3 @@ public sealed class NetherModelDefinitionTests
         }
     }
 }
-

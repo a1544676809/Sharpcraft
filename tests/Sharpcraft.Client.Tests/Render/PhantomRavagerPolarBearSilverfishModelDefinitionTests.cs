@@ -122,5 +122,3 @@ public sealed class PhantomRavagerPolarBearSilverfishModelDefinitionTests
         }
     }
 }
-
-
