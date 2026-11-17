@@ -178,7 +178,10 @@ public sealed class LivingRawReferenceSampleTests
         // task-178: Witch raw (scale 0.9375 #141, multi-tier hat, head UV source calibration).
         { "witch-raw-vectors.reference.txt", WitchModelDefinition.Definition, 64, 128, "entity/witch/witch", 360, 48, 312, 0 },
         // bogged BLOCKED (head mushrooms) / witch BLOCKED / zombie-villager BLOCKED /
-        // piglin, piglin-brute, zombified-piglin BLOCKED (ears + clothing overlays).
+        // task-185: Piglin×3 raw (source overlays jacket/sleeve/pants, head 4 cubes + ears).
+        { "piglin-raw-vectors.reference.txt", PiglinModelDefinition.Definition, 64, 64, "entity/piglin/piglin", 384, 0, 384, 0 },
+        { "piglin-brute-raw-vectors.reference.txt", PiglinModelDefinition.Brute, 64, 64, "entity/piglin/piglin_brute", 384, 0, 384, 0 },
+        { "zombified-piglin-raw-vectors.reference.txt", PiglinModelDefinition.Zombified, 64, 64, "entity/piglin/zombified_piglin", 384, 0, 384, 0 },
     };
 
     /// <summary>
@@ -453,7 +456,7 @@ public sealed class LivingRawReferenceSampleTests
                 flatName = cube == 0 ? "left_leg" : "left_foot"; break;
             case "/right_leg" when definition.Name.StartsWith("baby_chicken", StringComparison.Ordinal):
                 flatName = cube == 0 ? "right_leg" : "right_foot"; break;
-            case "/head" when definition.Name.StartsWith("pig", StringComparison.Ordinal):
+            case "/head" when definition.Name.StartsWith("pig", StringComparison.Ordinal) && !definition.Name.StartsWith("piglin", StringComparison.Ordinal):
                 flatName = cube == 0 ? "head" : "snout"; break;
             case "/head" when definition.Name.StartsWith("cow", StringComparison.Ordinal) || definition.Name.StartsWith("mooshroom", StringComparison.Ordinal):
                 flatName = cube switch { 0 => "head", 1 => "snout", 2 => "right_horn", _ => "left_horn" }; break;
@@ -535,6 +538,9 @@ public sealed class LivingRawReferenceSampleTests
                 flatName = cube == 0 ? "head" : "nose"; break;
             case "/body" when definition.Name == "zombie_villager":
                 flatName = cube == 0 ? "body" : "body_outer"; break;
+            // task-185: piglin source /head has 4 cubes (head,nose,nostril_right,nostril_left).
+            case "/head" when definition.Name is "piglin" or "piglin_brute" or "zombified_piglin":
+                flatName = cube switch { 0 => "head", 1 => "head_nose", 2 => "head_nostril_right", _ => "head_nostril_left" }; break;
             // task-165: sniffer source /bone/body has 3 cubes (body,body_outer,body_bottom); /head 2 (head,head_flat).
             case "/bone/body" when definition.Name == "sniffer":
                 flatName = cube switch { 0 => "body", 1 => "body_outer", _ => "body_bottom" }; break;
