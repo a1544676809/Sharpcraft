@@ -46,13 +46,13 @@ public sealed class SlimeMagmaCubeShulkerVexModelDefinitionTests
     }
 
     [Fact]
-    public void ShulkerPartsAndVariantsMatchLegacyRecords()
+    public void ShulkerPartsAndVariantsMatchSourceFrameRecords()
     {
         var expected = new[]
         {
-            LegacyModelPartFactory.FromVanilla("lid", 0f, 24f, 0f, -8f, -16f, -8f, 16f, 12f, 16f, 0, 0),
-            LegacyModelPartFactory.FromVanilla("base", 0f, 24f, 0f, -8f, -8f, -8f, 16f, 8f, 16f, 0, 28),
-            LegacyModelPartFactory.FromVanilla("head", 0f, 12f, 0f, -3f, 0f, -3f, 6f, 6f, 6f, 0, 52)
+            RawModelPartFactory.FromVanilla("lid", 0f, 24f, 0f, -8f, -16f, -8f, 16f, 12f, 16f, 0, 0),
+            RawModelPartFactory.FromVanilla("base", 0f, 24f, 0f, -8f, -8f, -8f, 16f, 8f, 16f, 0, 28),
+            RawModelPartFactory.FromVanilla("head", 0f, 12f, 0f, -3f, 0f, -3f, 6f, 6f, 6f, 0, 52)
         };
         AssertPartsMatch(expected, ShulkerModelDefinition.Definition.Parts);
         foreach (var key in ShulkerModelDefinition.VariantKeys)

@@ -52,8 +52,8 @@ public sealed class EntityModelBakeStabilityTests
         // Refreshed for the CopperGolem entity+statue raw migration (rawSourceFrame bake changed
         // these definitions). Change-detector only, not equivalence evidence; per-family source
         // samples remain the equivalence gate.
-        Assert.Equal("d5479be41ca33bf8e9634abe7517ed8343abb538ac9ea162d13be0e68a772a9a", Hash(flat));
-        Assert.Equal("c4f9c85a9e113d45b74ed863a8427987d782bb05edb4f75fd44d24a456f56b38", Hash(tree));
+        Assert.Equal("712f145237fc9f7342daa9b4481886d7bbf8a917e0eafb34fd55b77fc26a8b78", Hash(flat));
+        Assert.Equal("727be20ace04ad5359d93ae459895c73f1fa2a9c67e2abc99f4a75be6bef9140", Hash(tree));
     }
 
     private static void AppendPart(StringBuilder builder, EntityModelPart part)

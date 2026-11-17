@@ -28,7 +28,7 @@ public sealed class NetherModelDefinitionTests
     }
 
     [Fact]
-    public void BlazePartsMatchLegacyFromVanillaRecords()
+    public void BlazePartsMatchSourceFrameRecords()
     {
         AssertPartsMatch(ExpectedBlazeParts(), BlazeModelDefinition.Definition.Parts);
     }
@@ -40,7 +40,7 @@ public sealed class NetherModelDefinitionTests
     }
 
     [Fact]
-    public void HappyGhastPartsMatchLegacyFromVanillaRecords()
+    public void HappyGhastPartsMatchSourceFrameRecords()
     {
         AssertPartsMatch(ExpectedHappyGhastParts(), HappyGhastModelDefinition.Definition.Parts);
     }
@@ -159,7 +159,7 @@ public sealed class NetherModelDefinitionTests
     {
         var parts = new List<EntityModelPart>
         {
-            LegacyModelPartFactory.FromVanilla("head", 0f, 0f, 0f, -4f, -4f, -4f, 8f, 8f, 8f, 0, 0)
+            RawModelPartFactory.FromVanilla("head", 0f, 0f, 0f, -4f, -4f, -4f, 8f, 8f, 8f, 0, 0)
         };
         var angle = 0f;
         for (var i = 0; i < 4; i++)
@@ -186,7 +186,7 @@ public sealed class NetherModelDefinitionTests
     }
 
     private static void AddRod(List<EntityModelPart> parts, int index, float x, float y, float z) =>
-        parts.Add(LegacyModelPartFactory.FromVanilla($"part{index}", x, y, z, 0f, 0f, 0f, 2f, 8f, 2f, 0, 16));
+        parts.Add(RawModelPartFactory.FromVanilla($"part{index}", x, y, z, 0f, 0f, 0f, 2f, 8f, 2f, 0, 16));
 
     private static EntityModelPart[] ExpectedGhastParts()
     {
@@ -221,12 +221,12 @@ public sealed class NetherModelDefinitionTests
         };
         var parts = new List<EntityModelPart>
         {
-            LegacyModelPartFactory.FromVanilla("body", 0f, 16f, 0f, -8f, -8f, -8f, 16f, 16f, 16f, 0, 0)
+            RawModelPartFactory.FromVanilla("body", 0f, 16f, 0f, -8f, -8f, -8f, 16f, 16f, 16f, 0, 0)
         };
         for (var i = 0; i < tentacles.Length; i++)
         {
             var (x, y, z, length) = tentacles[i];
-            parts.Add(LegacyModelPartFactory.FromVanillaChild("tentacle" + i, "body", x, y, z,
+            parts.Add(RawModelPartFactory.FromVanillaChild("tentacle" + i, "body", x, y, z,
                 -1f, 0f, -1f, 2f, length, 2f, 0, 0));
         }
 

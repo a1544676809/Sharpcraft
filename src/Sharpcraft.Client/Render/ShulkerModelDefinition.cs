@@ -19,7 +19,7 @@ public static class ShulkerModelDefinition
 
     private static readonly VanillaMeshDefinition ShulkerMesh = BuildShulkerMesh();
 
-    private static readonly EntityModelPart[] Parts = [.. VanillaMeshBake.Bake(ShulkerMesh, 0, 0)];
+    private static readonly EntityModelPart[] Parts = [.. VanillaMeshBake.Bake(ShulkerMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)];
 
     /// <summary>Dye colour ids in registry order (0..15); 16 means "no colour" and uses the default texture.</summary>
     public static readonly IReadOnlyList<string> VariantKeys =
@@ -33,8 +33,8 @@ public static class ShulkerModelDefinition
         64,
         64,
         ShulkerMesh,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/shulker/shulker");
+        faceTransforms: null,
+        texturePath: "entity/shulker/shulker", baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants = BuildVariants();
 
@@ -48,7 +48,7 @@ public static class ShulkerModelDefinition
                 64,
                 64,
                 Parts,
-                PlayerModelDefinition.DefaultFaceTransforms,
+                faceTransforms: null,
                 "entity/shulker/shulker_" + key,
                 compiled: Definition.Compiled);
         }

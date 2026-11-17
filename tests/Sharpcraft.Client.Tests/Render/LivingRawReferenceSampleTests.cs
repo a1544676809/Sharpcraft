@@ -77,7 +77,18 @@ public sealed class LivingRawReferenceSampleTests
         { "allay-raw-vectors.reference.txt", AllayModelDefinition.Definition, 32, 32, "entity/allay/allay", 168, 0, 120, 48 },
         // task-81: CopperGolem entity raw, nested part paths resolved via full parent chain.
         // Counts = (total, mirror, checked, degenerate) from jar probe: 216 rows, no mirrors/degenerate.
-        { "copper-golem-raw-vectors.reference.txt", CopperGolemModelDefinition.Definition, 64, 64, "entity/copper_golem/copper_golem", 216, 0, 216, 0 }
+        { "copper-golem-raw-vectors.reference.txt", CopperGolemModelDefinition.Definition, 64, 64, "entity/copper_golem/copper_golem", 216, 0, 216, 0 },
+        // task-94 special/large first group (total, mirror, checked, degenerate).
+        { "shulker-raw-vectors.reference.txt", ShulkerModelDefinition.Definition, 64, 64, "entity/shulker/shulker", 72, 0, 72, 0 },
+        { "blaze-raw-vectors.reference.txt", BlazeModelDefinition.Definition, 64, 32, "entity/blaze/blaze", 312, 0, 312, 0 },
+        // breeze BLOCKED (special DSL/jar geometry gap, task-94)
+        // creaking BLOCKED (special DSL/jar geometry gap, task-94)
+        { "endermite-raw-vectors.reference.txt", EndermiteModelDefinition.Definition, 64, 32, "entity/endermite/endermite", 96, 0, 96, 0 },
+        // ghast BLOCKED (special DSL/jar geometry gap, task-94)
+        { "happy-ghast-raw-vectors.reference.txt", HappyGhastModelDefinition.Definition, 64, 64, "entity/ghast/happy_ghast", 240, 0, 240, 0 },
+        // giant BLOCKED (special DSL/jar geometry gap, task-94)
+        // guardian BLOCKED (special DSL/jar geometry gap, task-94)
+        // iron-golem BLOCKED (special DSL/jar geometry gap, task-94)
     };
 
     [Theory]
@@ -125,7 +136,7 @@ public sealed class LivingRawReferenceSampleTests
             var sourceNames = sourceParts.Select(p => p.Name).ToHashSet(StringComparer.Ordinal);
             var partOrder = definition.Parts.Where(p => sourceNames.Contains(p.Name) || IsAncestorOf(p, targetName, definition)).ToArray();
             var single = new EntityModelDefinition(definition.Name, width, height, partOrder,
-                texturePath: texturePath, baselinePx: 0f, rawSourceFrame: true);
+                texturePath: texturePath, scale: definition.Scale, baselinePx: 0f, rawSourceFrame: true);
             var geometry = BuildModelSpace(single, MakeLivingState(180f), width, height, atlas);
             var source = group.OrderBy(r => r.Polygon).ThenBy(r => r.Vertex).ToArray();
             // The target's 24 vertices are emitted after all preceding parts in partOrder; each part

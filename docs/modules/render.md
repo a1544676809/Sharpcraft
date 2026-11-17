@@ -796,3 +796,6 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 - 源 jar baked ModelPart 几何与 DSL 声明在 1e-5 下系统性不符（pivot/旋转/多 cube head 拆 flat）；horse/cat/polar-bear 另有 `MeshTransformer.scaling` root 偏移（#134 同类）未建模。
 - 已生成 27 个 #128 归一化 jar 样本（render-unit，1e-5）落盘 `tests/.../Repro/Data/` 作为验收真值；不放宽容差、不按样本拟合、不排除顶点。
+### task-94 special/large 第一组（#102 / #140）
+
+10 族试迁移结果：4 族（Shulker/Blaze/Endermite/HappyGhast）源正确并切 raw；6 族（Breeze/Creaking/Ghast/Giant/Guardian/IronGolem）因 DSL 几何与 jar 源真值在 1e-5 下系统性不符（multi-cube head、layer-scale pivot、真实 Mirror）保持 legacy，登记 R-033 / Issue #140。10 个 #128 归一化 jar 样本落盘 `Repro/Data/` 作为验收真值；不放宽容差、不拟合、不排除顶点。HappyGhast 的 layer-scale 4.0 root 偏移验证了 #134 同类公式。

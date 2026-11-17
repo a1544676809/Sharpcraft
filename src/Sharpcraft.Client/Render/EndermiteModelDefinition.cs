@@ -19,8 +19,8 @@ public static class EndermiteModelDefinition
         64,
         32,
         EndermiteMesh,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/endermite/endermite");
+        faceTransforms: null,
+        texturePath: "entity/endermite/endermite", baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildEndermiteMesh()
     {
