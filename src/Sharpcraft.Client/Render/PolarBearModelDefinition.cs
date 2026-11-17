@@ -19,9 +19,11 @@ public static class PolarBearModelDefinition
         128,
         64,
         PolarBearMesh,
-        PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         "entity/bear/polarbear",
-        1.2f);
+        1.2f,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildPolarBearMesh()
     {
@@ -34,9 +36,10 @@ public static class PolarBearModelDefinition
             new VanillaCubeDefinition("right_ear", 26, 0, -4.5f, -4f, -1f, 2f, 2f, 1f));
         root.AddOrReplaceChild("left_ear", VanillaPartPose.Offset(0f, 10f, -16f),
             new VanillaCubeDefinition("left_ear", 26, 0, 2.5f, -4f, -1f, 2f, 2f, 1f, Mirror: true));
-        root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(-2f, 9f, 12f, -MathF.PI / 2f, 0f, 0f),
+        // Source PolarBearModel.createBodyLayer: body xRot = +PI/2 (source literal).
+        root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(-2f, 9f, 12f, MathF.PI / 2f, 0f, 0f),
             new VanillaCubeDefinition("body", 0, 19, -5f, -13f, -7f, 14f, 14f, 11f));
-        root.AddOrReplaceChild("body_upper", VanillaPartPose.OffsetAndRotation(-2f, 9f, 12f, -MathF.PI / 2f, 0f, 0f),
+        root.AddOrReplaceChild("body_upper", VanillaPartPose.OffsetAndRotation(-2f, 9f, 12f, MathF.PI / 2f, 0f, 0f),
             new VanillaCubeDefinition("body_upper", 39, 0, -4f, -25f, -7f, 12f, 12f, 10f));
         root.AddOrReplaceChild("right_hind_leg", VanillaPartPose.Offset(-4.5f, 14f, 6f),
             new VanillaCubeDefinition("right_hind_leg", 50, 22, -2f, 0f, -2f, 4f, 10f, 8f));

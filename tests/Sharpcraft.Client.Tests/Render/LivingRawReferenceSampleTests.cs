@@ -118,6 +118,8 @@ public sealed class LivingRawReferenceSampleTests
         // task-108 humanoid batch (total, mirror, checked, degenerate).
         // task-135: Sheep raw (source Mirror per createLegs; #156 face order).
         { "sheep-raw-vectors.reference.txt", SheepModelDefinition.Definition, 64, 32, "entity/sheep/sheep", 144, 48, 96, 0 },
+        // task-135: PolarBear raw (scale 1.2, multi-cube head/body, #141 offset).
+        { "polar-bear-raw-vectors.reference.txt", PolarBearModelDefinition.Definition, 128, 64, "entity/bear/polarbear", 240, 24, 216, 0 },
         // player BLOCKED (Player legacy to avoid Piglin parts-reuse coupling, task-108)
         // player-slim BLOCKED (Player legacy to avoid Piglin parts-reuse coupling, task-108)
         // task-108 blockers (multi-cube head / zero-depth mushroom / overlay parts DSL gaps).
@@ -448,6 +450,11 @@ public sealed class LivingRawReferenceSampleTests
                 flatName = cube == 0 ? "head" : "head_cube"; break;
             case "/body/head/eyes" when definition.Name == "breeze":
                 flatName = cube == 0 ? "eyes" : "eyes_cube"; break;
+            // task-135: polar_bear source head has 4 cubes (head,mouth,right_ear,left_ear), body 2 (body,body_upper).
+            case "/head" when definition.Name == "polar_bear":
+                flatName = cube switch { 0 => "head", 1 => "mouth", 2 => "right_ear", _ => "left_ear" }; break;
+            case "/body" when definition.Name == "polar_bear":
+                flatName = cube == 0 ? "body" : "body_upper"; break;
             case "/head/beak": flatName = "beak"; break;
             case "/head/red_thing": flatName = "red_thing"; break;
             case "/ribcage" when definition.Name.StartsWith("wither", StringComparison.Ordinal):
