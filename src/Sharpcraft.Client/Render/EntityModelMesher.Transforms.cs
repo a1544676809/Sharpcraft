@@ -346,9 +346,9 @@ public sealed partial class EntityModelMesher
             (node.PivotY + poseOffset.Position.Y + yOffset) * px,
             (node.PivotZ + poseOffset.Position.Z) * px);
         var local = Matrix4x4.CreateScale(new Vector3(
-                1f + poseOffset.Scale.X,
-                1f + poseOffset.Scale.Y,
-                1f + poseOffset.Scale.Z))
+                node.ScaleX * (1f + poseOffset.Scale.X),
+                node.ScaleY * (1f + poseOffset.Scale.Y),
+                node.ScaleZ * (1f + poseOffset.Scale.Z)))
             * (rawSourceFrame
                 ? RotationZyx(
                     rotation.X + (rawPoseConjugation ? -poseOffset.Rotation.X : poseOffset.Rotation.X),
