@@ -746,11 +746,11 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **状态**：`已解决`（Issue #120 维持“设计选择已源验证”；#134 的 raw humanoid 迁移使用该 helper）。
 <!-- simplification:SIM-ENTITY-RAW-HELD-ITEM task:T-41 -->
 
-### SIM-ENTITY-RAW-MIRROR：raw mirror 语义（task-122 / #121 已解决）
-- **结论**：源 `CubeListBuilder.mirror()` 交换 cube min/max X（把几何关于 X 中心反射），使 X 法向的 WEST/EAST 面交换 UV 区间；我们 raw 路径此前只对 UV 做 FlipH，未交换 WEST/EAST 的 UV 区间，导致镜像部件两个面的 UV-位置配对错误（task-122 jar probe 实测 2/24 顶点错配）。
-- **修法（仅 raw 路径，legacy 不动）**：raw 面发射时，mirror 部件的 WEST 面取原 EAST 的 u 区间、EAST 面取原 WEST 的 u 区间（与 legacy 的 westU/eastU 交换同理，但在 raw UV 空间）；其余面仅 FlipH。源几何的 min/max X 交换在本仓用 pivot 表达，位置多重集本就匹配，无需改几何。
-- **验收证据**：`RawMirrorSourceTests` 用 `RawRenderUnitProbe` 源样本（spider 4 个真实 Mirror 左腿）按源 `part|cube|polygon` 身份逐顶点数值比较（位置 <=1e-5、UV half 量化后 <=1e-5，无字符串舍入/排序）4/4 严格通过；`LivingRawReferenceSampleTests` 仍按真实 `Mirror` 标记排除（保持既有口径，镜像正确性由本测试覆盖）。
-- **状态**：`已解决`（风险 R-027、Issue #121）。
+### SIM-ENTITY-RAW-MIRROR：raw mirror 语义（task-130 / #121/#156 已解决）
+- **结论**：源 `CubeListBuilder.mirror()` 在 `ModelPart.Cube` 内交换 `minX/maxX`（把立方体关于自身中心反射），随后 `Polygon` 构造函数把四个顶点顺序反转；UV 始终绑定在顶点上，所以镜像面是“反射后的四边形 + 顶点序反转”，不是单纯 U 翻转。此前 raw 只做 FlipH/WEST-EAST UV 交换，导致 DOWN 等面出现 `[t0,t1,l1,l0]` vs `[l1,l0,t0,t1]` 的角点配对错误。
+- **修法（仅 raw 路径，legacy 不动）**：raw 面发射现在先按源反射后的 `minX/maxX` 取四角（镜像时交换 X 边界），再用源 `ModelPart.Cube` 的六面顺序发射；mirror 部件把四个顶点和对应 UV 一起反序。非 mirror 面保持源顺序，位置/UV 均不变。
+- **验收证据**：`RawFaceOrderTests` 对 sheep 四条腿（源 `QuadrupedModel.createLegs`，右腿 mirror=true、左腿 mirror=false）按源 `part|polygon|vertex` 身份严格比较 24/24 顶点的位置与 UV（half 量化后 1e-5），共 4/4；`RawMirrorSourceTests` spider 4 个真实 Mirror 左腿 4/4 仍通过；`LivingRawReferenceSampleTests` 现有非 mirror 样本全绿。
+- **状态**：`已解决`（风险 R-027、Issue #121/#156）。
 <!-- simplification:SIM-ENTITY-RAW-MIRROR task:T-41 -->
 
 ### SIM-ENTITY-RAW-SCALE：raw 不支持 non-unit PartPose scale
