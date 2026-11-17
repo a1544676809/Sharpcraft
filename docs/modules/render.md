@@ -787,7 +787,7 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 本批 14+ 族（Player/HumanoidMob/Illager/Villager/Witch/ZombieVillager/Piglin + baby）经源真值试迁移后**未合入 raw**，保持 legacy（行为不退化），原因见 Issue #134 / R-031：
 
 - 源 hat/overlay 是独立 cube（不同尺寸/pivot/deformation，如 illager hat 8×12×8+0.45 vs head 8×10×8+0.45），仓内 DSL 用单一 `Grow` 近似，无法源正确表达；
-- 源 `MeshTransformer.scaling(factor)`（`MeshTransformer.java:7-9`）在 baked root 加 `yOffset=24.016*(1-factor)`，我们的 `Scale` 只折进 px；补此偏移会让 held-item/attack-arm/elytra 等依赖 humanoid frame 的测试回归（#120 范畴）；
+- 源 `MeshTransformer.scaling(factor)`（`MeshTransformer.java:7-9`）在 baked root 加 `yOffset=24.016*(1-factor)`；**规格与 living 路径实现已由 #141/R-034 解决**（见下节）。humanoid 仍受独立 hat/overlay DSL 缺口（#134）阻塞；
 - 已生成 28 个 #128 归一化 jar 样本（render-unit，1e-5）落盘 `tests/.../Repro/Data/`，作为后续解阻塞的验收真值；不放宽容差、不按样本拟合、不排除顶点。
 - 验收条件：DSL 扩展支持独立 overlay cube 维度/pivot/deformation + 补 layer-scale root 偏移并同步 #120 held-item frame，然后逐族严格 1e-5 通过后再切 raw。
 ### task-89 剩余 quadruped 批次：阻塞登记（#102 / #137）
@@ -803,4 +803,12 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 Blaze production definition 补齐 `rawSourceFrame:true`/`baselinePx:0`（此前只在 bake 调用上有，真实 living 渲染仍走 legacy）；新增测试 `Task94MigratedProductionDefinitionsCarryRawSourceFrameFlags` 防止隔离定义误绿。
 
-HappyGhast（Scale=4）**保持 legacy**：源 `MeshTransformer.scaling` 的 root yOffset `24.016*(1-factor)` 仅 `BuildModel` 路径已补，living 路径（factory=null）缺该偏移且符号/应用点待源真值规格，独立登记 R-034 / Issue #141（Husk/WitherSkeleton/Illager/Villager/Witch/Horse/Cat/PolarBear 等所有 Scale!=1 raw 族同类）。10 个 #128 jar 样本保留作验收真值，不放宽容差。
+HappyGhast（Scale=4）**保持 legacy**：其 layer-scale root yOffset 的 living 路径缺口已由 #141/R-034 的规格与 raw living 实现解决（见下节）；HappyGhast 本身仍因 #140 的几何/迁移批次保持 legacy。10 个 #128 jar 样本保留作验收真值，不放宽容差。
+
+### raw layer-scale root offset 规格（#141 / R-034）— 已解决
+
+- **源**：`MeshTransformer.scaling(f)` 只改 root `PartPose`：`yOffsetPx = 24.016*(1-f)`，`pose.translate(0, yOffsetPx/16, 0)` 后 `scale(f)`；root 旋转不变。`RootFrame` jar probe：`HAPPY_GHAST root.y=-72.048, scale=4`；`VILLAGER/PILLAGER root.y=+1.501, scale=0.9375`；`CAVE_SPIDER root.y=+7.2048, scale=0.7`。
+- **单位/作用点**：`yOffsetPx` 是源像素，root 平移为 `yOffsetPx/16` 块；它**不被 layer scale 乘**，且在 entity flip 之前施加。raw bake 已把 `f` 折进几何/ pivot 的 `px`，所以 offset 的模型空间量是 `24.016*(1-f)/16 * modelScale`（base px，不含 `f`）。
+- **BuildModel（factory != null，无 raw flip）**：entity translation 加 `+offset`（既有行为，不重复）。
+- **living（factory == null）**：offset 先进入 raw model y（等价于 `Translation.Y -= offset * entityScaleY`），再由 `ForRawSourceFrame` 翻转；最终世界贡献是 `-offset`。baseline 的 24px 在 layer scale 之外：`RawBaselineWorld = 24/16 * modelScale`，**不能**再乘 `Scale`（旧实现乘 `px`，CaveSpider 因此差 `0.405` 块）。
+- **验收**：`RawLayerScaleOffsetTests`：HappyGhast factor=4 全 **240/240** 源样本顶点 live world 1e-5；Villager/Pillager `.9375` 首 root 顶点；CaveSpider `.7` 四朝向源样本驱动；`BuildModelDoesNotApplyTheLivingOffsetTwice`。`LivingRawReferenceSampleTests` 的 CaveSpider legacy-twin 已替换为源 sample 驱动（旧 twin 保留错误坐标，不再作为 oracle）。

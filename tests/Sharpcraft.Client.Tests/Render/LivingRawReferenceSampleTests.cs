@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using System.Globalization;
+using System.Numerics;
 using Sharpcraft.Client.Assets;
 using Sharpcraft.Client.Render;
 using Sharpcraft.Client.World;
@@ -23,7 +24,8 @@ namespace Sharpcraft.Client.Tests.Render;
 ///    final world-vertex position multisets are compared strictly. This pins the frame flip+baseline
 ///    on real geometry, not hand-written points. UV equivalence is NOT claimed here: raw uses source
 ///    face UVs (verified by check 1), legacy uses the legacy face calibration (a documented deviation).
-/// 3) CaveSpider four-facing regression: real geometry vs a legacy spider twin at 0/90/180/270 yaw.
+/// 3) CaveSpider four-facing regression: real raw geometry at Scale=0.7 vs a source-sample-derived
+///    live world frame (spider source sample × 0.7 + 24.016*(1-0.7) px root offset + living flip).
 ///
 /// Baby: creeper/spider/wither have no distinct baby model - registered in docs/risks and render.md.
 /// Blocker R-027: mirrored parts' min/max-X swap + polygon reversal is not reproduced by raw; those
@@ -274,19 +276,36 @@ public sealed class LivingRawReferenceSampleTests
     [InlineData(90f)]
     [InlineData(180f)]
     [InlineData(270f)]
-    public void CaveSpiderFacingMatchesLegacyTwinPerVertex(float yaw)
+    public void CaveSpiderLayerScaleRootFrameMatchesSpiderSource(float yaw)
     {
-        // CaveSpider reuses raw spider geometry at scale 0.7. Build a legacy spider twin from the same
-        // DSL and compare final world positions across all four facings, strictly per-vertex set.
+        // CaveSpider reuses the raw spider geometry at Scale=0.7. Its world frame is source-driven:
+        // the spider model-space sample is scaled by 0.7, translated by 24.016*(1-0.7) px, then the
+        // living flip/baseline is applied. This replaces the old legacy-twin oracle, which kept the
+        // missing layer-scale root offset (R-034) and was therefore wrong for scaled raw models.
         var raw = CaveSpiderModelDefinition.Definition;
         Assert.True(raw.RawSourceFrame);
         Assert.Equal(0f, raw.BaselinePx);
         Assert.Null(raw.FaceTransforms is { Count: > 0 } ? raw.FaceTransforms : null);
 
-        var legacy = LegacyEntityTwinFactory.Spider(0.7f, "entity/spider/cave_spider");
+        var source = LoadSample("spider-raw-vectors.reference.txt").First();
+        var scaled = new Vector3(
+            -source.X * 0.7f,
+            24f / 16f - (24.016f * (1f - 0.7f) / 16f + source.Y * 0.7f),
+            source.Z * 0.7f);
+        var expected = Vector3.Transform(
+            scaled,
+            Matrix4x4.CreateRotationY((180f - yaw) * (MathF.PI / 180f)));
+
         var state = new EntityRenderState(1, CaveSpiderModelDefinition.CaveSpiderEntityTypeId, 0f, 0f, 0f, yaw, 0f);
         var atlas = MakeAtlas("entity/spider/cave_spider", 64, 32);
-        AssertFullModelWorldPositions(raw, legacy, state, 64, 32, atlas);
+        var geometry = BuildLivingWorld(raw, state, 64, 32, atlas, modelScale: 1f);
+        var actual = VertexFieldReader.Position(geometry.Vertices, 0);
+        Assert.True(
+            MathF.Abs(expected.X - actual.X) < 1e-5f
+                && MathF.Abs(expected.Y - actual.Y) < 1e-5f
+                && MathF.Abs(expected.Z - actual.Z) < 1e-5f,
+            $"yaw={yaw}: expected=({expected.X:F6},{expected.Y:F6},{expected.Z:F6})"
+                + $" actual=({actual.X:F6},{actual.Y:F6},{actual.Z:F6})");
     }
 
     /// <summary>
@@ -401,12 +420,12 @@ public sealed class LivingRawReferenceSampleTests
         // #128 render units: modelScale:1 gives px=1/16, so output matches normalized samples.
         new EntityModelMesher().BuildModel(def, state, atlas.Get(def.TexturePath)!, w, h, modelScale: 1f);
 
-    private static DynamicGeometry BuildLivingWorld(EntityModelDefinition def, EntityRenderState state, int w, int h, ItemAtlas atlas)
+    private static DynamicGeometry BuildLivingWorld(EntityModelDefinition def, EntityRenderState state, int w, int h, ItemAtlas atlas, float modelScale = EntityPlaceholderMesher.ModelScale)
     {
         // The internal BuildInto seam exposes the exact living-entity geometry path with a model override
         // and no block transform factory, so EntityModelTransform.ForRawSourceFrame is exercised on real parts.
         return new EntityModelMesher().BuildInto(new DynamicGeometry(), null, [state], new SpriteRect(0, 0, w, h, 1), w, h,
-            skinAtlas: atlas, modelOverride: def);
+            skinAtlas: atlas, modelOverride: def, modelScale: modelScale);
     }
 
     private static List<Sample> LoadSample(string fileName)

@@ -118,21 +118,33 @@ public sealed partial class EntityModelMesher
             if (model.RawSourceFrame)
             {
                 // Source layer scaling (MeshTransformer.scaling, ref://.../builders/MeshTransformer.java:7-9)
-                // applies root yOffset = 24.016*(1-scale). Our px folds Scale, so add the offset in the
-                // model-space (BuildModel) path whose samples include it; the living path compares raw vs
-                // legacy twins and must not apply it.
-                if (model.Scale != 1f && entityTransformFactory is not null)
+                // applies root yOffset = 24.016*(1-scale) in the y-down model frame. BuildModel has no
+                // entity flip, so its samples add the offset directly to the world translation. The living
+                // path flips y before the entity transform: add the model-space offset there (and subtract
+                // it from Translation to keep the flip), and keep the 24 px baseline outside Scale.
+                const float layerScalePivotPx = VanillaMeshBake.ReferencePivotHeight;
+                if (entityTransformFactory is not null)
                 {
-                    const float layerScalePivotPx = 24.016f;
-                    var offset = layerScalePivotPx * (1f - model.Scale) / 16f * modelScale;
+                    if (model.Scale != 1f)
+                    {
+                        var offset = layerScalePivotPx * (1f - model.Scale) / 16f * modelScale;
+                        entityTransform = entityTransform with
+                        {
+                            Translation = entityTransform.Translation + new Vector3(0f, offset, 0f)
+                        };
+                    }
+                }
+                else
+                {
+                    var modelSpaceOffset = layerScalePivotPx * (1f - model.Scale) / 16f * modelScale;
+                    // The source root translation sits before the entity's own scale; our Translation is
+                    // applied after EntityModelTransform scales the model, so pre-scale the offset here.
+                    var entityScaleY = entityTransform.Scale * entityTransform.ScaleY;
                     entityTransform = entityTransform with
                     {
-                        Translation = entityTransform.Translation + new Vector3(0f, offset, 0f)
+                        Translation = entityTransform.Translation - new Vector3(0f, modelSpaceOffset * entityScaleY, 0f)
                     };
-                }
-                if (entityTransformFactory is null)
-                {
-                    entityTransform = entityTransform.ForRawSourceFrame(model.SourceFrameBaselinePx * px);
+                    entityTransform = entityTransform.ForRawSourceFrame(model.SourceFrameBaselinePx / 16f * modelScale);
                 }
             }
             var sprite = skin;
