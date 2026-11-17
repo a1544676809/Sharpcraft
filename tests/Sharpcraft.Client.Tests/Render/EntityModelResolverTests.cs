@@ -15,8 +15,9 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("player", definition.Name);
-        // Six base parts plus the four humanoid armor slot layers (1 head, 3 chest, 3 legs, 2 feet) and two elytra wings.
-        Assert.Equal(17, definition.Parts.Count);
+        // Twelve base parts (6 body + 6 independent source overlay children) plus the four humanoid armor
+        // slot layers (1 head, 3 chest, 3 legs, 2 feet) and two elytra wings.
+        Assert.Equal(23, definition.Parts.Count);
     }
 
     [Fact]

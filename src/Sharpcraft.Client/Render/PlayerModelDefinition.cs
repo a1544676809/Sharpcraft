@@ -240,41 +240,54 @@ public static class PlayerModelDefinition
     internal static VanillaMeshDefinition AdultMeshDefinition => AdultMesh;
 
     /// <summary>The baked adult player parts, identical to the former hand-written flat array.</summary>
-    public static readonly EntityModelPart[] AdultParts = [.. VanillaMeshBake.Bake(AdultMesh, 0, 0)];
+    public static readonly EntityModelPart[] AdultParts = [.. VanillaMeshBake.Bake(AdultMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)];
 
     private static readonly CompiledEntityModel AdultCompiled =
-        VanillaMeshBakery.Build(AdultMesh, 64, 64);
+        VanillaMeshBakery.Build(AdultMesh, 64, 64, modelHeight: 0f, rawSourceFrame: true);
 
     /// <summary>Slim variant of the adult DSL tree; only the two arm boxes differ (T-752 follow-up).</summary>
     private static readonly VanillaMeshDefinition SlimMesh = BuildAdultMesh(slim: true);
 
     /// <summary>Baked slim player parts; every non-arm value is identical to <see cref="AdultParts"/>.</summary>
-    public static readonly EntityModelPart[] SlimParts = [.. VanillaMeshBake.Bake(SlimMesh, 0, 0)];
+    public static readonly EntityModelPart[] SlimParts = [.. VanillaMeshBake.Bake(SlimMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)];
 
     private static readonly CompiledEntityModel SlimCompiled =
-        VanillaMeshBakery.Build(SlimMesh, 64, 64);
+        VanillaMeshBakery.Build(SlimMesh, 64, 64, modelHeight: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildAdultMesh(bool slim = false)
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
-        root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 0f, 0f),
-            new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f,
-                Overlays: [new("hat", 0.5f, 32, 0, Kind: EntityGeometryLayerKind.Translucent)]));
-        root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, 0f, 0f),
-            new VanillaCubeDefinition("body", 16, 16, -4f, 0f, -2f, 8f, 12f, 4f,
-                Overlays: [new("jacket", 0.25f, 16, 32, Kind: EntityGeometryLayerKind.Translucent)]));
-        root.AddOrReplaceChild("left_arm", VanillaPartPose.Offset(5f, 2f, 0f),
-            new VanillaCubeDefinition("left_arm", 32, 48, -1f, -2f, -2f, slim ? 3f : 4f, 12f, 4f,
-                Overlays: [new("left_sleeve", 0.25f, 48, 48, Kind: EntityGeometryLayerKind.Translucent)]));
-        root.AddOrReplaceChild("right_arm", VanillaPartPose.Offset(-5f, 2f, 0f),
-            new VanillaCubeDefinition("right_arm", 40, 16, slim ? -2f : -3f, -2f, -2f, slim ? 3f : 4f, 12f, 4f,
-                Overlays: [new("right_sleeve", 0.25f, 40, 32, Kind: EntityGeometryLayerKind.Translucent)]));
-        root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(1.9f, 12f, 0f),
-            new VanillaCubeDefinition("left_leg", 16, 48, -2f, 0f, -2f, 4f, 12f, 4f,
-                Overlays: [new("left_pants", 0.25f, 0, 48, Kind: EntityGeometryLayerKind.Translucent)]));
-        root.AddOrReplaceChild("right_leg", VanillaPartPose.Offset(-1.9f, 12f, 0f),
-            new VanillaCubeDefinition("right_leg", 0, 16, -2f, 0f, -2f, 4f, 12f, 4f,
-                Overlays: [new("right_pants", 0.25f, 0, 32, Kind: EntityGeometryLayerKind.Translucent)]));
+        // Source: hat/jacket/sleeves/pants are independent inflated child cubes of their parent
+        // (CubeListBuilder with CubeDeformation), not generic OverlayLayers of the base cube.
+        var head = root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 0f, 0f),
+            new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f));
+        head.AddOrReplaceChild("hat", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("hat", 32, 0, -4f, -8f, -4f, 8f, 8f, 8f, Grow: 0.5f, Kind: EntityGeometryLayerKind.Translucent));
+
+        var body = root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, 0f, 0f),
+            new VanillaCubeDefinition("body", 16, 16, -4f, 0f, -2f, 8f, 12f, 4f));
+        body.AddOrReplaceChild("jacket", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("jacket", 16, 32, -4f, 0f, -2f, 8f, 12f, 4f, Grow: 0.25f, Kind: EntityGeometryLayerKind.Translucent));
+
+        var leftArm = root.AddOrReplaceChild("left_arm", VanillaPartPose.Offset(5f, 2f, 0f),
+            new VanillaCubeDefinition("left_arm", 32, 48, -1f, -2f, -2f, slim ? 3f : 4f, 12f, 4f));
+        leftArm.AddOrReplaceChild("left_sleeve", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("left_sleeve", 48, 48, -1f, -2f, -2f, slim ? 3f : 4f, 12f, 4f, Grow: 0.25f, Kind: EntityGeometryLayerKind.Translucent));
+
+        var rightArm = root.AddOrReplaceChild("right_arm", VanillaPartPose.Offset(-5f, 2f, 0f),
+            new VanillaCubeDefinition("right_arm", 40, 16, slim ? -2f : -3f, -2f, -2f, slim ? 3f : 4f, 12f, 4f));
+        rightArm.AddOrReplaceChild("right_sleeve", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("right_sleeve", 40, 32, slim ? -2f : -3f, -2f, -2f, slim ? 3f : 4f, 12f, 4f, Grow: 0.25f, Kind: EntityGeometryLayerKind.Translucent));
+
+        var leftLeg = root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(1.9f, 12f, 0f),
+            new VanillaCubeDefinition("left_leg", 16, 48, -2f, 0f, -2f, 4f, 12f, 4f));
+        leftLeg.AddOrReplaceChild("left_pants", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("left_pants", 0, 48, -2f, 0f, -2f, 4f, 12f, 4f, Grow: 0.25f, Kind: EntityGeometryLayerKind.Translucent));
+
+        var rightLeg = root.AddOrReplaceChild("right_leg", VanillaPartPose.Offset(-1.9f, 12f, 0f),
+            new VanillaCubeDefinition("right_leg", 0, 16, -2f, 0f, -2f, 4f, 12f, 4f));
+        rightLeg.AddOrReplaceChild("right_pants", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("right_pants", 0, 32, -2f, 0f, -2f, 4f, 12f, 4f, Grow: 0.25f, Kind: EntityGeometryLayerKind.Translucent));
         return new VanillaMeshDefinition(root);
     }
 
@@ -282,14 +295,14 @@ public static class PlayerModelDefinition
         new("player", 64, 64, AdultParts, DefaultFaceTransforms, "entity/player/wide/steve",
             textureSelector: static state => state.PlayerBodyTexture ?? DefaultPlayerSkin.Get(state.Uuid).Path,
             additionalTexturePaths: DefaultPlayerSkin.AllPaths,
-            compiled: AdultCompiled);
+            compiled: AdultCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     /// <summary>Slim (3px arm) player model; its default body texture belongs to the same model family.</summary>
     public static readonly EntityModelDefinition SlimDefinition =
         new("player_slim", 64, 64, SlimParts, DefaultFaceTransforms, "entity/player/slim/steve",
             textureSelector: static state => state.PlayerBodyTexture ?? DefaultPlayerSkin.Get(state.Uuid).Path,
             additionalTexturePaths: DefaultPlayerSkin.AllPaths,
-            compiled: SlimCompiled);
+            compiled: SlimCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     /// <summary>Selects the wide or slim player definition for an arm-width flag.</summary>
     public static EntityModelDefinition For(bool slim) => slim ? SlimDefinition : Definition;

@@ -831,3 +831,8 @@ task-121 用 jar 源 probe（`HumanoidAnimProbe`，源 `head.xRot=state.xRot*PI/
 
 - **7 族已切 raw 并全绿**：Skeleton/Stray/WitherSkeleton/Husk/Drowned/Enderman/Zombie。严格 1e-5 样本 + 11 个源动画断言（crouch/swim/head pose/attack）全通过；crouch head `+4.2` 断言按源字面值更新（PR #153 后 raw pose 存源值）。定义/resolver/tree 期望按独立源字面 `RawModelPartFactory` + 独立 hat 子 part 更新，bake hash 仅变更检测器刷新。
 - **仍阻塞（保持 legacy）**：Player/player-slim（raw 会污染 legacy Piglin 的 parts 复用帧，Player 保持 legacy）、Bogged（head 蘑菇零深度多 cube）、Witch/ZombieVillager/Piglin×3（ears + 衣服 overlay / 多 cube head DSL 缺口）。28 个 #128 样本保留作验收真值。不放宽容差、不拟合、不排除顶点。R-035 / Issue #150 更新为剩余 blocker。
+### task-128 Player raw + Piglin 解耦（#102 / #150）
+
+Player/player-slim 切 raw：hat/jacket/sleeve/pants 转为独立 inflated child cube（源 `PlayerModel.createMesh` 结构），严格 1e-5 样本 55/55，held/attack/elytra 回归由 core PR #147/#148/#149 覆盖。Piglin 改用独立 legacy 身体 DSL（5 身体 part 源字面，不引用 Player DSL/baked parts），保持现有 11-part legacy 结构与行为不变。
+
+**已知简化**：源 `AdultPiglinModel.createBodyLayer`（jar probe）含 jacket/sleeve/pants overlay 子 part，legacy Piglin 未建模——既有结构简化，登记 R-035 / #150，本次不改（改会破坏 legacy 行为）。Bogged/Witch/ZombieVillager/Piglin×3 仍 legacy blocker，不声称源正确。
