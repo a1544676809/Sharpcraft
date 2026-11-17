@@ -86,5 +86,19 @@ public sealed class ResolverRawFlagTests
             new Sharpcraft.Client.World.EntityRenderState(1, typeId, 0f, 0f, 0f, 0f, 0f),
             "right_arm");
         Assert.NotEqual(default(System.Numerics.Matrix4x4), hand);
+
+        // The body stays raw, but independent equipment/elytra/armor layers are still legacy models
+        // with their own legacy face calibration and 24 px baseline; inheriting the body's raw flag or
+        // null FaceTransforms is what broke elytra UV tiles and spear placement.
+        var elytra = Assert.Single(decorated.RenderLayers!, layer => layer.Name == "elytra").Model;
+        Assert.NotNull(elytra);
+        Assert.False(elytra.RawSourceFrame);
+        Assert.NotNull(elytra.FaceTransforms);
+        Assert.Equal(24f, elytra.BaselinePx);
+        var armor = decorated.RenderLayers!.First(layer => layer.Name.StartsWith("equipment_", StringComparison.Ordinal)).Model;
+        Assert.NotNull(armor);
+        Assert.False(armor.RawSourceFrame);
+        Assert.NotNull(armor.FaceTransforms);
+        Assert.Equal(24f, armor.BaselinePx);
     }
 }
