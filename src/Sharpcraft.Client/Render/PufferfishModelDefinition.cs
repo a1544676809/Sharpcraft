@@ -14,24 +14,24 @@ public static class PufferfishModelDefinition
     /// <summary>Declarative DSL trees for the three puff states (T-680).</summary>
     private static readonly VanillaMeshDefinition SmallMesh = BuildSmallMesh();
 
-    private static readonly EntityModelPart[] SmallParts = [.. VanillaMeshBake.Bake(SmallMesh, 0, 0)];
+    private static readonly EntityModelPart[] SmallParts = [.. VanillaMeshBake.Bake(SmallMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)];
 
     private static readonly CompiledEntityModel SmallCompiled =
-        VanillaMeshBakery.Build(SmallMesh, 32, 32);
+        VanillaMeshBakery.Build(SmallMesh, 32, 32, modelHeight: 0f, rawSourceFrame: true);
 
     private static readonly VanillaMeshDefinition MediumMesh = BuildMediumMesh();
 
-    private static readonly EntityModelPart[] MediumParts = [.. VanillaMeshBake.Bake(MediumMesh, 0, 0)];
+    private static readonly EntityModelPart[] MediumParts = [.. VanillaMeshBake.Bake(MediumMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)];
 
     private static readonly CompiledEntityModel MediumCompiled =
-        VanillaMeshBakery.Build(MediumMesh, 32, 32);
+        VanillaMeshBakery.Build(MediumMesh, 32, 32, modelHeight: 0f, rawSourceFrame: true);
 
     private static readonly VanillaMeshDefinition LargeMesh = BuildLargeMesh();
 
-    private static readonly EntityModelPart[] LargeParts = [.. VanillaMeshBake.Bake(LargeMesh, 0, 0)];
+    private static readonly EntityModelPart[] LargeParts = [.. VanillaMeshBake.Bake(LargeMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)];
 
     private static readonly CompiledEntityModel LargeCompiled =
-        VanillaMeshBakery.Build(LargeMesh, 32, 32);
+        VanillaMeshBakery.Build(LargeMesh, 32, 32, modelHeight: 0f, rawSourceFrame: true);
 
     /// <summary>Puff state ids: 0 small, 1 medium, 2 large.</summary>
     public static readonly IReadOnlyList<string> VariantKeys = ["small", "medium", "large"];
@@ -41,16 +41,16 @@ public static class PufferfishModelDefinition
         32,
         32,
         SmallParts,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/fish/pufferfish",
-        compiled: SmallCompiled);
+        faceTransforms: null,
+        texturePath: "entity/fish/pufferfish",
+        compiled: SmallCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants =
         new Dictionary<string, EntityModelDefinition>(StringComparer.Ordinal)
         {
             ["small"] = Definition,
-            ["medium"] = new("pufferfish_medium", 32, 32, MediumParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/fish/pufferfish", compiled: MediumCompiled),
-            ["large"] = new("pufferfish_large", 32, 32, LargeParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/fish/pufferfish", compiled: LargeCompiled)
+            ["medium"] = new("pufferfish_medium", 32, 32, MediumParts, faceTransforms: null, texturePath: "entity/fish/pufferfish", compiled: MediumCompiled, baselinePx: 0f, rawSourceFrame: true),
+            ["large"] = new("pufferfish_large", 32, 32, LargeParts, faceTransforms: null, texturePath: "entity/fish/pufferfish", compiled: LargeCompiled, baselinePx: 0f, rawSourceFrame: true)
         };
 
     private static VanillaMeshDefinition BuildSmallMesh()
@@ -80,21 +80,21 @@ public static class PufferfishModelDefinition
             new VanillaCubeDefinition("right_blue_fin", 24, 0, -2f, 0f, 0f, 2f, 0f, 2f));
         root.AddOrReplaceChild("left_blue_fin", VanillaPartPose.Offset(2.5f, 18f, -1.5f),
             new VanillaCubeDefinition("left_blue_fin", 24, 3, 0f, 0f, 0f, 2f, 0f, 2f));
-        root.AddOrReplaceChild("top_front_fin", VanillaPartPose.OffsetAndRotation(0f, 17f, -2.5f, -MathF.PI / 4f, 0f, 0f),
+        root.AddOrReplaceChild("top_front_fin", VanillaPartPose.OffsetAndRotation(0f, 17f, -2.5f,MathF.PI / 4f,-0f,-0f),
             new VanillaCubeDefinition("top_front_fin", 19, 17, -2.5f, -1f, 0f, 5f, 1f, 0f));
-        root.AddOrReplaceChild("top_back_fin", VanillaPartPose.OffsetAndRotation(0f, 17f, 2.5f, MathF.PI / 4f, 0f, 0f),
+        root.AddOrReplaceChild("top_back_fin", VanillaPartPose.OffsetAndRotation(0f, 17f, 2.5f,-MathF.PI / 4f,-0f,-0f),
             new VanillaCubeDefinition("top_back_fin", 11, 17, -2.5f, -1f, 0f, 5f, 1f, 0f));
-        root.AddOrReplaceChild("right_front_fin", VanillaPartPose.OffsetAndRotation(-2.5f, 22f, -2.5f, 0f, MathF.PI / 4f, 0f),
+        root.AddOrReplaceChild("right_front_fin", VanillaPartPose.OffsetAndRotation(-2.5f, 22f, -2.5f,-0f,-MathF.PI / 4f,-0f),
             new VanillaCubeDefinition("right_front_fin", 5, 17, -1f, -5f, 0f, 1f, 5f, 0f));
-        root.AddOrReplaceChild("right_back_fin", VanillaPartPose.OffsetAndRotation(-2.5f, 22f, 2.5f, 0f, -MathF.PI / 4f, 0f),
+        root.AddOrReplaceChild("right_back_fin", VanillaPartPose.OffsetAndRotation(-2.5f, 22f, 2.5f,-0f,MathF.PI / 4f,-0f),
             new VanillaCubeDefinition("right_back_fin", 9, 17, -1f, -5f, 0f, 1f, 5f, 0f));
-        root.AddOrReplaceChild("left_back_fin", VanillaPartPose.OffsetAndRotation(2.5f, 22f, 2.5f, 0f, MathF.PI / 4f, 0f),
+        root.AddOrReplaceChild("left_back_fin", VanillaPartPose.OffsetAndRotation(2.5f, 22f, 2.5f,-0f,-MathF.PI / 4f,-0f),
             new VanillaCubeDefinition("left_back_fin", 1, 17, 0f, -5f, 0f, 1f, 5f, 0f));
-        root.AddOrReplaceChild("left_front_fin", VanillaPartPose.OffsetAndRotation(2.5f, 22f, -2.5f, 0f, -MathF.PI / 4f, 0f),
+        root.AddOrReplaceChild("left_front_fin", VanillaPartPose.OffsetAndRotation(2.5f, 22f, -2.5f,-0f,MathF.PI / 4f,-0f),
             new VanillaCubeDefinition("left_front_fin", 1, 17, 0f, -5f, 0f, 1f, 5f, 0f));
-        root.AddOrReplaceChild("bottom_back_fin", VanillaPartPose.OffsetAndRotation(-2.5f, 22f, 2.5f, -MathF.PI / 4f, 0f, 0f),
+        root.AddOrReplaceChild("bottom_back_fin", VanillaPartPose.OffsetAndRotation(-2.5f, 22f, 2.5f,MathF.PI / 4f,-0f,-0f),
             new VanillaCubeDefinition("bottom_back_fin", 18, 20, 0f, 0f, 0f, 5f, 1f, 0f));
-        root.AddOrReplaceChild("bottom_front_fin", VanillaPartPose.OffsetAndRotation(0f, 22f, -2.5f, MathF.PI / 4f, 0f, 0f),
+        root.AddOrReplaceChild("bottom_front_fin", VanillaPartPose.OffsetAndRotation(0f, 22f, -2.5f,-MathF.PI / 4f,-0f,-0f),
             new VanillaCubeDefinition("bottom_front_fin", 17, 19, -2.5f, 0f, 0f, 5f, 1f, 1f));
         return new VanillaMeshDefinition(root);
     }
@@ -108,25 +108,25 @@ public static class PufferfishModelDefinition
             new VanillaCubeDefinition("right_blue_fin", 24, 0, -2f, 0f, -1f, 2f, 1f, 2f));
         root.AddOrReplaceChild("left_blue_fin", VanillaPartPose.Offset(4f, 15f, -2f),
             new VanillaCubeDefinition("left_blue_fin", 24, 3, 0f, 0f, -1f, 2f, 1f, 2f));
-        root.AddOrReplaceChild("top_front_fin", VanillaPartPose.OffsetAndRotation(0f, 14f, -4f, -MathF.PI / 4f, 0f, 0f),
+        root.AddOrReplaceChild("top_front_fin", VanillaPartPose.OffsetAndRotation(0f, 14f, -4f,MathF.PI / 4f,-0f,-0f),
             new VanillaCubeDefinition("top_front_fin", 15, 17, -4f, -1f, 0f, 8f, 1f, 0f));
         root.AddOrReplaceChild("top_middle_fin", VanillaPartPose.Offset(0f, 14f, 0f),
             new VanillaCubeDefinition("top_middle_fin", 14, 16, -4f, -1f, 0f, 8f, 1f, 1f));
-        root.AddOrReplaceChild("top_back_fin", VanillaPartPose.OffsetAndRotation(0f, 14f, 4f, MathF.PI / 4f, 0f, 0f),
+        root.AddOrReplaceChild("top_back_fin", VanillaPartPose.OffsetAndRotation(0f, 14f, 4f,-MathF.PI / 4f,-0f,-0f),
             new VanillaCubeDefinition("top_back_fin", 23, 18, -4f, -1f, 0f, 8f, 1f, 0f));
-        root.AddOrReplaceChild("right_front_fin", VanillaPartPose.OffsetAndRotation(-4f, 22f, -4f, 0f, MathF.PI / 4f, 0f),
+        root.AddOrReplaceChild("right_front_fin", VanillaPartPose.OffsetAndRotation(-4f, 22f, -4f,-0f,-MathF.PI / 4f,-0f),
             new VanillaCubeDefinition("right_front_fin", 5, 17, -1f, -8f, 0f, 1f, 8f, 0f));
-        root.AddOrReplaceChild("left_front_fin", VanillaPartPose.OffsetAndRotation(4f, 22f, -4f, 0f, -MathF.PI / 4f, 0f),
+        root.AddOrReplaceChild("left_front_fin", VanillaPartPose.OffsetAndRotation(4f, 22f, -4f,-0f,MathF.PI / 4f,-0f),
             new VanillaCubeDefinition("left_front_fin", 1, 17, 0f, -8f, 0f, 1f, 8f, 0f));
-        root.AddOrReplaceChild("bottom_front_fin", VanillaPartPose.OffsetAndRotation(0f, 22f, -4f, MathF.PI / 4f, 0f, 0f),
+        root.AddOrReplaceChild("bottom_front_fin", VanillaPartPose.OffsetAndRotation(0f, 22f, -4f,-MathF.PI / 4f,-0f,-0f),
             new VanillaCubeDefinition("bottom_front_fin", 15, 20, -4f, 0f, 0f, 8f, 1f, 0f));
         root.AddOrReplaceChild("bottom_middle_fin", VanillaPartPose.Offset(0f, 22f, 0f),
             new VanillaCubeDefinition("bottom_middle_fin", 15, 20, -4f, 0f, 0f, 8f, 1f, 0f));
-        root.AddOrReplaceChild("bottom_back_fin", VanillaPartPose.OffsetAndRotation(0f, 22f, 4f, -MathF.PI / 4f, 0f, 0f),
+        root.AddOrReplaceChild("bottom_back_fin", VanillaPartPose.OffsetAndRotation(0f, 22f, 4f,MathF.PI / 4f,-0f,-0f),
             new VanillaCubeDefinition("bottom_back_fin", 15, 20, -4f, 0f, 0f, 8f, 1f, 0f));
-        root.AddOrReplaceChild("right_back_fin", VanillaPartPose.OffsetAndRotation(-4f, 22f, 4f, 0f, -MathF.PI / 4f, 0f),
+        root.AddOrReplaceChild("right_back_fin", VanillaPartPose.OffsetAndRotation(-4f, 22f, 4f,-0f,MathF.PI / 4f,-0f),
             new VanillaCubeDefinition("right_back_fin", 9, 17, -1f, -8f, 0f, 1f, 8f, 0f));
-        root.AddOrReplaceChild("left_back_fin", VanillaPartPose.OffsetAndRotation(4f, 22f, 4f, 0f, MathF.PI / 4f, 0f),
+        root.AddOrReplaceChild("left_back_fin", VanillaPartPose.OffsetAndRotation(4f, 22f, 4f,-0f,-MathF.PI / 4f,-0f),
             new VanillaCubeDefinition("left_back_fin", 9, 17, 0f, -8f, 0f, 1f, 8f, 0f));
         return new VanillaMeshDefinition(root);
     }

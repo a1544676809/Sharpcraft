@@ -14,12 +14,12 @@ public static class BabyModelDefinitionsMisc
     private static readonly VanillaMeshDefinition PolarBearMesh = BuildPolarBearMesh();
     private static readonly EntityModelPart[] PolarBearParts = [.. VanillaMeshBake.Bake(PolarBearMesh, 0, 0)];
     private static readonly VanillaMeshDefinition TurtleMesh = BuildTurtleMesh();
-    private static readonly EntityModelPart[] TurtleParts = [.. VanillaMeshBake.Bake(TurtleMesh, 0, 0)];
+    private static readonly EntityModelPart[] TurtleParts = [.. VanillaMeshBake.Bake(TurtleMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)];
 
     private static readonly CompiledEntityModel GoatCompiled = VanillaMeshBakery.Build(GoatMesh, 64, 64);
     private static readonly CompiledEntityModel PandaCompiled = VanillaMeshBakery.Build(PandaMesh, 64, 64);
     private static readonly CompiledEntityModel PolarBearCompiled = VanillaMeshBakery.Build(PolarBearMesh, 64, 64);
-    private static readonly CompiledEntityModel TurtleCompiled = VanillaMeshBakery.Build(TurtleMesh, 16, 16);
+    private static readonly CompiledEntityModel TurtleCompiled = VanillaMeshBakery.Build(TurtleMesh, 16, 16, modelHeight: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Goat = new(
         "baby_goat", 64, 64, GoatParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/goat/goat_baby",
@@ -34,8 +34,8 @@ public static class BabyModelDefinitionsMisc
         compiled: PolarBearCompiled);
 
     public static readonly EntityModelDefinition Turtle = new(
-        "baby_turtle", 16, 16, TurtleParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/turtle/turtle_baby",
-        compiled: TurtleCompiled);
+        "baby_turtle", 16, 16, TurtleParts, faceTransforms: null, texturePath: "entity/turtle/turtle_baby",
+        compiled: TurtleCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly IReadOnlyDictionary<int, EntityModelDefinition> Models =
         new Dictionary<int, EntityModelDefinition>

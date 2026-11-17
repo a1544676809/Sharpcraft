@@ -17,10 +17,10 @@ public static class AxolotlModelDefinition
 
     private static readonly VanillaMeshDefinition AxolotlMesh = BuildAxolotlMesh();
 
-    private static readonly EntityModelPart[] Parts = [.. VanillaMeshBake.Bake(AxolotlMesh, 0, 0)];
+    private static readonly EntityModelPart[] Parts = [.. VanillaMeshBake.Bake(AxolotlMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)];
 
     private static readonly CompiledEntityModel AxolotlCompiled =
-        VanillaMeshBakery.Build(AxolotlMesh, 64, 64);
+        VanillaMeshBakery.Build(AxolotlMesh, 64, 64, modelHeight: 0f, rawSourceFrame: true);
 
     /// <summary>Synced variant ids: LUCY, WILD, GOLD, CYAN, BLUE.</summary>
     public static readonly IReadOnlyList<string> VariantKeys = ["lucy", "wild", "gold", "cyan", "blue"];
@@ -30,9 +30,9 @@ public static class AxolotlModelDefinition
         64,
         64,
         Parts,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/axolotl/axolotl_lucy",
-        compiled: AxolotlCompiled);
+        faceTransforms: null,
+        texturePath: "entity/axolotl/axolotl_lucy",
+        compiled: AxolotlCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants = BuildVariants();
 
@@ -55,7 +55,7 @@ public static class AxolotlModelDefinition
                 64,
                 64,
                 Parts,
-                PlayerModelDefinition.DefaultFaceTransforms,
+                faceTransforms: null,
                 "entity/axolotl/axolotl_" + key,
                 compiled: AxolotlCompiled);
         }

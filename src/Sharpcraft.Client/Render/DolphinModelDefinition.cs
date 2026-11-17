@@ -17,14 +17,14 @@ public static class DolphinModelDefinition
     private static readonly VanillaMeshDefinition DolphinMesh = BuildDolphinMesh();
 
     private static readonly CompiledEntityModel DolphinCompiled =
-        VanillaMeshBakery.Build(DolphinMesh, 64, 64);
+        VanillaMeshBakery.Build(DolphinMesh, 64, 64, modelHeight: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Definition = new(
         "dolphin",
         64,
         64,
-        [.. VanillaMeshBake.Bake(DolphinMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms,
+        [.. VanillaMeshBake.Bake(DolphinMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
+        faceTransforms: null,
         "entity/dolphin/dolphin",
         compiled: DolphinCompiled);
 

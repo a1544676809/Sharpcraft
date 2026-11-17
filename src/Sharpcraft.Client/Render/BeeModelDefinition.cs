@@ -26,7 +26,7 @@ public static class BeeModelDefinition
         64,
         64,
         BeeMesh,
-        PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         "entity/bee/bee",
         textureSelector: state => state.IsAngry
             ? (state.HasNectar ? "entity/bee/bee_angry_nectar" : "entity/bee/bee_angry")
@@ -34,7 +34,7 @@ public static class BeeModelDefinition
         additionalTexturePaths:
         [
             "entity/bee/bee_angry", "entity/bee/bee_nectar", "entity/bee/bee_angry_nectar"
-        ]);
+        ], baselinePx: 0f, rawSourceFrame: true);
 
     /// <summary>
     /// Empty bone pivot carrying the body (with stinger/antennae), the two wings (grow 0.001, ±0.2618 rotationY) and the

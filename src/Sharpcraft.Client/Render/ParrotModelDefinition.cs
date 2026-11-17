@@ -18,7 +18,7 @@ public static class ParrotModelDefinition
     private static readonly EntityModelPart[] Parts = BuildParts();
 
     private static readonly CompiledEntityModel ParrotCompiled =
-        VanillaMeshBakery.Build(ParrotMesh, 32, 32);
+        VanillaMeshBakery.Build(ParrotMesh, 32, 32, modelHeight: 0f, rawSourceFrame: true);
 
     /// <summary>Synced variant ids in enum order: RED_BLUE, BLUE, GREEN, YELLOW_BLUE, GRAY.</summary>
     public static readonly IReadOnlyList<string> VariantKeys = ["red_blue", "blue", "green", "yellow_blue", "gray"];
@@ -30,9 +30,9 @@ public static class ParrotModelDefinition
         32,
         32,
         Parts,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/parrot/parrot_red_blue",
-        compiled: ParrotCompiled);
+        faceTransforms: null,
+        texturePath: "entity/parrot/parrot_red_blue",
+        compiled: ParrotCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants = BuildVariants();
 
@@ -55,7 +55,7 @@ public static class ParrotModelDefinition
                 32,
                 32,
                 Parts,
-                PlayerModelDefinition.DefaultFaceTransforms,
+                faceTransforms: null,
                 "entity/parrot/" + VariantFiles[i],
                 compiled: ParrotCompiled);
         }
@@ -66,7 +66,7 @@ public static class ParrotModelDefinition
     private static EntityModelPart[] BuildParts()
     {
         var byName = new Dictionary<string, EntityModelPart>(StringComparer.Ordinal);
-        foreach (var part in VanillaMeshBake.Bake(ParrotMesh, 0, 0))
+        foreach (var part in VanillaMeshBake.Bake(ParrotMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true))
         {
             byName[part.Name] = part;
         }
@@ -82,13 +82,13 @@ public static class ParrotModelDefinition
     private static VanillaMeshDefinition BuildParrotMesh()
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
-        root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 16.5f, -3f, -0.4937f, 0f, 0f),
+        root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 16.5f, -3f, 0.4937f, 0f, 0f),
             new VanillaCubeDefinition("body", 2, 8, -1.5f, 0f, -1.5f, 3f, 6f, 3f));
-        root.AddOrReplaceChild("tail", VanillaPartPose.OffsetAndRotation(0f, 21.07f, 1.16f, -1.015f, 0f, 0f),
+        root.AddOrReplaceChild("tail", VanillaPartPose.OffsetAndRotation(0f, 21.07f, 1.16f, 1.015f, 0f, 0f),
             new VanillaCubeDefinition("tail", 22, 1, -1.5f, -1f, -1f, 3f, 4f, 1f));
-        root.AddOrReplaceChild("left_wing", VanillaPartPose.OffsetAndRotation(1.5f, 16.94f, -2.76f, 0.6981f, MathF.PI, 0f),
+        root.AddOrReplaceChild("left_wing", VanillaPartPose.OffsetAndRotation(1.5f, 16.94f, -2.76f, -0.6981f, -MathF.PI, 0f),
             new VanillaCubeDefinition("left_wing", 19, 8, -0.5f, 0f, -1.5f, 1f, 5f, 3f));
-        root.AddOrReplaceChild("right_wing", VanillaPartPose.OffsetAndRotation(-1.5f, 16.94f, -2.76f, 0.6981f, MathF.PI, 0f),
+        root.AddOrReplaceChild("right_wing", VanillaPartPose.OffsetAndRotation(-1.5f, 16.94f, -2.76f, -0.6981f, -MathF.PI, 0f),
             new VanillaCubeDefinition("right_wing", 19, 8, -0.5f, 0f, -1.5f, 1f, 5f, 3f));
         var head = root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 15.69f, -2.76f),
             new VanillaCubeDefinition("head", 2, 2, -1f, -1.5f, -1f, 2f, 3f, 2f));
@@ -100,9 +100,9 @@ public static class ParrotModelDefinition
             new VanillaCubeDefinition("beak2", 16, 7, -0.5f, 0f, -0.5f, 1f, 2f, 1f));
         head.AddOrReplaceChild("feather", VanillaPartPose.OffsetAndRotation(0f, -2.15f, 0.15f, -0.2214f, 0f, 0f),
             new VanillaCubeDefinition("feather", 2, 18, 0f, -4f, -2f, 0f, 5f, 4f));
-        root.AddOrReplaceChild("left_leg", VanillaPartPose.OffsetAndRotation(1f, 22f, -1.05f, 0.0299f, 0f, 0f),
+        root.AddOrReplaceChild("left_leg", VanillaPartPose.OffsetAndRotation(1f, 22f, -1.05f, -0.0299f, 0f, 0f),
             new VanillaCubeDefinition("left_leg", 14, 18, -0.5f, 0f, -0.5f, 1f, 2f, 1f));
-        root.AddOrReplaceChild("right_leg", VanillaPartPose.OffsetAndRotation(-1f, 22f, -1.05f, 0.0299f, 0f, 0f),
+        root.AddOrReplaceChild("right_leg", VanillaPartPose.OffsetAndRotation(-1f, 22f, -1.05f, -0.0299f, 0f, 0f),
             new VanillaCubeDefinition("right_leg", 14, 18, -0.5f, 0f, -0.5f, 1f, 2f, 1f));
         return new VanillaMeshDefinition(root);
     }

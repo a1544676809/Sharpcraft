@@ -12,19 +12,19 @@ public static class BabyModelDefinitionsAquatic
     private static readonly VanillaMeshDefinition DolphinMesh = BuildDolphinMesh();
     private static readonly VanillaMeshDefinition AxolotlMesh = BuildAxolotlMesh();
 
-    private static readonly CompiledEntityModel SquidCompiled = VanillaMeshBakery.Build(SquidMesh, 32, 32);
-    private static readonly CompiledEntityModel BeeCompiled = VanillaMeshBakery.Build(BeeMesh, 32, 32);
-    private static readonly CompiledEntityModel DolphinCompiled = VanillaMeshBakery.Build(DolphinMesh, 64, 64);
-    private static readonly CompiledEntityModel AxolotlCompiled = VanillaMeshBakery.Build(AxolotlMesh, 32, 32);
+    private static readonly CompiledEntityModel SquidCompiled = VanillaMeshBakery.Build(SquidMesh, 32, 32, modelHeight: 0f, rawSourceFrame: true);
+    private static readonly CompiledEntityModel BeeCompiled = VanillaMeshBakery.Build(BeeMesh, 32, 32, modelHeight: 0f, rawSourceFrame: true);
+    private static readonly CompiledEntityModel DolphinCompiled = VanillaMeshBakery.Build(DolphinMesh, 64, 64, modelHeight: 0f, rawSourceFrame: true);
+    private static readonly CompiledEntityModel AxolotlCompiled = VanillaMeshBakery.Build(AxolotlMesh, 32, 32, modelHeight: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Squid = new(
-        "baby_squid", 32, 32, [.. VanillaMeshBake.Bake(SquidMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms, "entity/squid/squid_baby",
+        "baby_squid", 32, 32, [.. VanillaMeshBake.Bake(SquidMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
+        faceTransforms: null, "entity/squid/squid_baby",
         compiled: SquidCompiled);
 
     public static readonly EntityModelDefinition Bee = new(
-        "baby_bee", 32, 32, [.. VanillaMeshBake.Bake(BeeMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms, "entity/bee/bee_baby",
+        "baby_bee", 32, 32, [.. VanillaMeshBake.Bake(BeeMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
+        faceTransforms: null, "entity/bee/bee_baby",
         textureSelector: state => state.IsAngry
             ? (state.HasNectar ? "entity/bee/bee_angry_nectar_baby" : "entity/bee/bee_angry_baby")
             : (state.HasNectar ? "entity/bee/bee_nectar_baby" : "entity/bee/bee_baby"),
@@ -35,13 +35,13 @@ public static class BabyModelDefinitionsAquatic
         compiled: BeeCompiled);
 
     public static readonly EntityModelDefinition Dolphin = new(
-        "baby_dolphin", 64, 64, [.. VanillaMeshBake.Bake(DolphinMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms, "entity/dolphin/dolphin_baby",
+        "baby_dolphin", 64, 64, [.. VanillaMeshBake.Bake(DolphinMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
+        faceTransforms: null, "entity/dolphin/dolphin_baby",
         compiled: DolphinCompiled);
 
     public static readonly EntityModelDefinition Axolotl = new(
-        "baby_axolotl", 32, 32, [.. VanillaMeshBake.Bake(AxolotlMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms, "entity/axolotl/axolotl_lucy_baby",
+        "baby_axolotl", 32, 32, [.. VanillaMeshBake.Bake(AxolotlMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
+        faceTransforms: null, "entity/axolotl/axolotl_lucy_baby",
         compiled: AxolotlCompiled);
 
     public static readonly IReadOnlyDictionary<int, EntityModelDefinition> Models =
@@ -65,7 +65,7 @@ public static class BabyModelDefinitionsAquatic
         {
             if (key != "lucy")
             {
-                variants[(7, key)] = new("baby_axolotl_" + key, 32, 32, Axolotl.Parts, PlayerModelDefinition.DefaultFaceTransforms, "entity/axolotl/axolotl_" + key + "_baby", compiled: AxolotlCompiled);
+                variants[(7, key)] = new("baby_axolotl_" + key, 32, 32, Axolotl.Parts, faceTransforms: null, texturePath: "entity/axolotl/axolotl_" + key + "_baby", compiled: AxolotlCompiled, baselinePx: 0f, rawSourceFrame: true);
             }
         }
 

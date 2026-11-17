@@ -18,7 +18,7 @@ public static class SalmonModelDefinition
     private static readonly EntityModelPart[] Parts = BuildParts();
 
     private static readonly CompiledEntityModel SalmonCompiled =
-        VanillaMeshBakery.Build(SalmonMesh, 32, 32);
+        VanillaMeshBakery.Build(SalmonMesh, 32, 32, modelHeight: 0f, rawSourceFrame: true);
 
     /// <summary>
     /// The reference lists the three root body parts before the child fins, while <c>Bake</c> emits children
@@ -26,7 +26,7 @@ public static class SalmonModelDefinition
     /// </summary>
     private static EntityModelPart[] BuildParts()
     {
-        var baked = VanillaMeshBake.Bake(SalmonMesh, 0, 0);
+        var baked = VanillaMeshBake.Bake(SalmonMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true);
         var byName = new Dictionary<string, EntityModelPart>(StringComparer.Ordinal);
         foreach (var part in baked)
         {
@@ -51,9 +51,9 @@ public static class SalmonModelDefinition
         32,
         32,
         Parts,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/fish/salmon",
-        compiled: SalmonCompiled);
+        faceTransforms: null,
+        texturePath: "entity/fish/salmon",
+        compiled: SalmonCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants = BuildVariants();
 
@@ -70,7 +70,7 @@ public static class SalmonModelDefinition
                     32,
                     32,
                     Parts,
-                    PlayerModelDefinition.DefaultFaceTransforms,
+                    faceTransforms: null,
                     "entity/fish/salmon",
                     VariantScale[i],
                     compiled: SalmonCompiled);
@@ -94,9 +94,9 @@ public static class SalmonModelDefinition
             new VanillaCubeDefinition("top_back_fin", 0, 2, 0f, 0f, 0f, 0f, 2f, 4f));
         root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 20f, -7.2f),
             new VanillaCubeDefinition("head", 22, 0, -1f, -2f, -3f, 2f, 4f, 3f));
-        root.AddOrReplaceChild("right_fin", VanillaPartPose.OffsetAndRotation(-1.5f, 21.5f, -7.2f, 0f, 0f, MathF.PI / 4f),
+        root.AddOrReplaceChild("right_fin", VanillaPartPose.OffsetAndRotation(-1.5f, 21.5f, -7.2f,-0f,-0f,-MathF.PI / 4f),
             new VanillaCubeDefinition("right_fin", 28, 0, -2f, 0f, 0f, 2f, 0f, 2f));
-        root.AddOrReplaceChild("left_fin", VanillaPartPose.OffsetAndRotation(1.5f, 21.5f, -7.2f, 0f, 0f, -MathF.PI / 4f),
+        root.AddOrReplaceChild("left_fin", VanillaPartPose.OffsetAndRotation(1.5f, 21.5f, -7.2f,-0f,-0f,MathF.PI / 4f),
             new VanillaCubeDefinition("left_fin", 0, 0, 0f, 0f, 0f, 2f, 0f, 2f));
         return new VanillaMeshDefinition(root);
     }

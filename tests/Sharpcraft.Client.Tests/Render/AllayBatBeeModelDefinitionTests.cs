@@ -17,19 +17,19 @@ namespace Sharpcraft.Client.Tests.Render;
 public sealed class AllayBatBeeModelDefinitionTests
 {
     [Fact]
-    public void AllayPartsMatchLegacyFromVanillaRecords()
+    public void AllayPartsMatchSourceFrameRecords()
     {
         AssertPartsMatch(ExpectedAllayParts(), AllayModelDefinition.Definition.Parts);
     }
 
     [Fact]
-    public void BatPartsMatchLegacyFromVanillaRecords()
+    public void BatPartsMatchSourceFrameRecords()
     {
         AssertPartsMatch(ExpectedBatParts(), BatModelDefinition.Definition.Parts);
     }
 
     [Fact]
-    public void BeePartsMatchLegacyFromVanillaRecords()
+    public void BeePartsMatchSourceFrameRecords()
     {
         AssertPartsMatch(ExpectedBeeParts(), BeeModelDefinition.Definition.Parts);
     }
@@ -103,14 +103,14 @@ public sealed class AllayBatBeeModelDefinitionTests
     {
         var parts = new[]
         {
-            LegacyModelPartFactory.FromVanilla("root", 0f, 23.5f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-            LegacyModelPartFactory.FromVanillaChild("head", "root", 0f, -3.99f, 0f, -2.5f, -5f, -2.5f, 5f, 5f, 5f, 0, 0),
-            LegacyModelPartFactory.FromVanillaChild("body", "root", 0f, -4f, 0f, -1.5f, 0f, -1f, 3f, 4f, 2f, 0, 10),
-            LegacyModelPartFactory.FromVanillaChild("body_inner", "body", 0f, 0f, 0f, -1.5f, 0f, -1f, 3f, 5f, 2f, 0, 16, grow: -0.2f),
-            LegacyModelPartFactory.FromVanillaChild("right_arm", "body", -1.75f, 0.5f, 0f, -0.75f, -0.5f, -1f, 1f, 4f, 2f, 23, 0, grow: -0.01f),
-            LegacyModelPartFactory.FromVanillaChild("left_arm", "body", 1.75f, 0.5f, 0f, -0.25f, -0.5f, -1f, 1f, 4f, 2f, 23, 6, grow: -0.01f),
-            LegacyModelPartFactory.FromVanillaChild("right_wing", "body", -0.5f, 0f, 0.6f, 0f, 1f, 0f, 0f, 5f, 8f, 16, 14),
-            LegacyModelPartFactory.FromVanillaChild("left_wing", "body", 0.5f, 0f, 0.6f, 0f, 1f, 0f, 0f, 5f, 8f, 16, 14)
+            RawModelPartFactory.FromVanilla("root", 0f, 23.5f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
+            RawModelPartFactory.FromVanillaChild("head", "root", 0f, -3.99f, 0f, -2.5f, -5f, -2.5f, 5f, 5f, 5f, 0, 0),
+            RawModelPartFactory.FromVanillaChild("body", "root", 0f, -4f, 0f, -1.5f, 0f, -1f, 3f, 4f, 2f, 0, 10),
+            RawModelPartFactory.FromVanillaChild("body_inner", "body", 0f, 0f, 0f, -1.5f, 0f, -1f, 3f, 5f, 2f, 0, 16, grow: -0.2f),
+            RawModelPartFactory.FromVanillaChild("right_arm", "body", -1.75f, 0.5f, 0f, -0.75f, -0.5f, -1f, 1f, 4f, 2f, 23, 0, grow: -0.01f),
+            RawModelPartFactory.FromVanillaChild("left_arm", "body", 1.75f, 0.5f, 0f, -0.25f, -0.5f, -1f, 1f, 4f, 2f, 23, 6, grow: -0.01f),
+            RawModelPartFactory.FromVanillaChild("right_wing", "body", -0.5f, 0f, 0.6f, 0f, 1f, 0f, 0f, 5f, 8f, 16, 14),
+            RawModelPartFactory.FromVanillaChild("left_wing", "body", 0.5f, 0f, 0.6f, 0f, 1f, 0f, 0f, 5f, 8f, 16, 14)
         };
 
         for (var i = 0; i < parts.Length; i++)
@@ -123,31 +123,31 @@ public sealed class AllayBatBeeModelDefinitionTests
 
     private static EntityModelPart[] ExpectedBatParts() =>
     [
-        LegacyModelPartFactory.FromVanilla("body", 0f, 17f, 0f, -1.5f, 0f, -1f, 3f, 5f, 2f, 0, 0),
-        LegacyModelPartFactory.FromVanillaChild("feet", "body", 0f, 5f, 0f, -1.5f, 0f, 0f, 3f, 2f, 0f, 16, 16),
-        LegacyModelPartFactory.FromVanillaChild("right_wing", "body", -1.5f, 0f, 0f, -2f, -2f, 0f, 2f, 7f, 0f, 12, 0),
-        LegacyModelPartFactory.FromVanillaChild("right_wing_tip", "right_wing", -2f, 0f, 0f, -6f, -2f, 0f, 6f, 8f, 0f, 16, 0),
-        LegacyModelPartFactory.FromVanillaChild("left_wing", "body", 1.5f, 0f, 0f, 0f, -2f, 0f, 2f, 7f, 0f, 12, 7),
-        LegacyModelPartFactory.FromVanillaChild("left_wing_tip", "left_wing", 2f, 0f, 0f, 0f, -2f, 0f, 6f, 8f, 0f, 16, 8),
-        LegacyModelPartFactory.FromVanilla("head", 0f, 17f, 0f, -2f, -3f, -1f, 4f, 3f, 2f, 0, 7),
-        LegacyModelPartFactory.FromVanillaChild("right_ear", "head", -1.5f, -2f, 0f, -2.5f, -4f, 0f, 3f, 5f, 0f, 1, 15),
-        LegacyModelPartFactory.FromVanillaChild("left_ear", "head", 1.1f, -3f, 0f, -0.1f, -3f, 0f, 3f, 5f, 0f, 8, 15)
+        RawModelPartFactory.FromVanilla("body", 0f, 17f, 0f, -1.5f, 0f, -1f, 3f, 5f, 2f, 0, 0),
+        RawModelPartFactory.FromVanillaChild("feet", "body", 0f, 5f, 0f, -1.5f, 0f, 0f, 3f, 2f, 0f, 16, 16),
+        RawModelPartFactory.FromVanillaChild("right_wing", "body", -1.5f, 0f, 0f, -2f, -2f, 0f, 2f, 7f, 0f, 12, 0),
+        RawModelPartFactory.FromVanillaChild("right_wing_tip", "right_wing", -2f, 0f, 0f, -6f, -2f, 0f, 6f, 8f, 0f, 16, 0),
+        RawModelPartFactory.FromVanillaChild("left_wing", "body", 1.5f, 0f, 0f, 0f, -2f, 0f, 2f, 7f, 0f, 12, 7),
+        RawModelPartFactory.FromVanillaChild("left_wing_tip", "left_wing", 2f, 0f, 0f, 0f, -2f, 0f, 6f, 8f, 0f, 16, 8),
+        RawModelPartFactory.FromVanilla("head", 0f, 17f, 0f, -2f, -3f, -1f, 4f, 3f, 2f, 0, 7),
+        RawModelPartFactory.FromVanillaChild("right_ear", "head", -1.5f, -2f, 0f, -2.5f, -4f, 0f, 3f, 5f, 0f, 1, 15),
+        RawModelPartFactory.FromVanillaChild("left_ear", "head", 1.1f, -3f, 0f, -0.1f, -3f, 0f, 3f, 5f, 0f, 8, 15)
     ];
 
     private static EntityModelPart[] ExpectedBeeParts() =>
     [
-        LegacyModelPartFactory.FromVanilla("bone", 0f, 19f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-        LegacyModelPartFactory.FromVanillaChild("body", "bone", 0f, 0f, 0f, -3.5f, -4f, -5f, 7f, 7f, 10f, 0, 0),
-        LegacyModelPartFactory.FromVanillaChild("stinger", "body", 0f, 0f, 0f, 0f, -1f, 5f, 0f, 1f, 2f, 26, 7),
-        LegacyModelPartFactory.FromVanillaChild("left_antenna", "body", 0f, -2f, -5f, 1.5f, -2f, -3f, 1f, 2f, 3f, 2, 0),
-        LegacyModelPartFactory.FromVanillaChild("right_antenna", "body", 0f, -2f, -5f, -2.5f, -2f, -3f, 1f, 2f, 3f, 2, 3),
-        LegacyModelPartFactory.FromVanillaChild("right_wing", "bone", -1.5f, -4f, -3f, -9f, 0f, 0f, 9f, 0f, 6f, 0, 18,
+        RawModelPartFactory.FromVanilla("bone", 0f, 19f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
+        RawModelPartFactory.FromVanillaChild("body", "bone", 0f, 0f, 0f, -3.5f, -4f, -5f, 7f, 7f, 10f, 0, 0),
+        RawModelPartFactory.FromVanillaChild("stinger", "body", 0f, 0f, 0f, 0f, -1f, 5f, 0f, 1f, 2f, 26, 7),
+        RawModelPartFactory.FromVanillaChild("left_antenna", "body", 0f, -2f, -5f, 1.5f, -2f, -3f, 1f, 2f, 3f, 2, 0),
+        RawModelPartFactory.FromVanillaChild("right_antenna", "body", 0f, -2f, -5f, -2.5f, -2f, -3f, 1f, 2f, 3f, 2, 3),
+        RawModelPartFactory.FromVanillaChild("right_wing", "bone", -1.5f, -4f, -3f, -9f, 0f, 0f, 9f, 0f, 6f, 0, 18,
             rotationY: -0.2618f, grow: 0.001f),
-        LegacyModelPartFactory.FromVanillaChild("left_wing", "bone", 1.5f, -4f, -3f, 0f, 0f, 0f, 9f, 0f, 6f, 0, 18,
+        RawModelPartFactory.FromVanillaChild("left_wing", "bone", 1.5f, -4f, -3f, 0f, 0f, 0f, 9f, 0f, 6f, 0, 18,
             mirror: true, rotationY: 0.2618f, grow: 0.001f),
-        LegacyModelPartFactory.FromVanillaChild("front_legs", "bone", 1.5f, 3f, -2f, -5f, 0f, 0f, 7f, 2f, 0f, 26, 1),
-        LegacyModelPartFactory.FromVanillaChild("middle_legs", "bone", 1.5f, 3f, 0f, -5f, 0f, 0f, 7f, 2f, 0f, 26, 3),
-        LegacyModelPartFactory.FromVanillaChild("back_legs", "bone", 1.5f, 3f, 2f, -5f, 0f, 0f, 7f, 2f, 0f, 26, 5)
+        RawModelPartFactory.FromVanillaChild("front_legs", "bone", 1.5f, 3f, -2f, -5f, 0f, 0f, 7f, 2f, 0f, 26, 1),
+        RawModelPartFactory.FromVanillaChild("middle_legs", "bone", 1.5f, 3f, 0f, -5f, 0f, 0f, 7f, 2f, 0f, 26, 3),
+        RawModelPartFactory.FromVanillaChild("back_legs", "bone", 1.5f, 3f, 2f, -5f, 0f, 0f, 7f, 2f, 0f, 26, 5)
     ];
 
     private static void AssertNamesAndParents(IReadOnlyList<EntityModelPart> parts, string[] names, string?[] parents)

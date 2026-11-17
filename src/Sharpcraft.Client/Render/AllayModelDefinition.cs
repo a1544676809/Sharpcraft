@@ -23,8 +23,8 @@ public static class AllayModelDefinition
         32,
         32,
         AllayMesh,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/allay/allay");
+        faceTransforms: null,
+        "entity/allay/allay", baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildAllayMesh()
     {

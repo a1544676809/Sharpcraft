@@ -78,7 +78,7 @@ internal static class LegacyEntityTwinFactory
             Child("rib_1", "ribcage", 0f, 0f, 0f, -4f, 1.5f, 0.5f, 11f, 2f, 2f, 24, 22),
             Child("rib_2", "ribcage", 0f, 0f, 0f, -4f, 4f, 0.5f, 11f, 2f, 2f, 24, 22),
             Child("rib_3", "ribcage", 0f, 0f, 0f, -4f, 6.5f, 0.5f, 11f, 2f, 2f, 24, 22),
-            Root("tail", -2f, 16.692228f, 1.527873f, 0f, 0f, 0f, 3f, 6f, 3f, 12, 22, rx: -0.83252203f),
+            Root("tail", -2f, 16.692407608f, 1.527009249f, 0f, 0f, 0f, 3f, 6f, 3f, 12, 22, rx: -0.83252203f),
             Root("center_head", 0f, 0f, 0f, -4f, -4f, -4f, 8f, 8f, 8f, 0, 0),
             Root("right_head", -8f, 4f, 0f, -4f, -4f, -4f, 6f, 6f, 6f, 32, 0),
             Root("left_head", 10f, 4f, 0f, -4f, -4f, -4f, 6f, 6f, 6f, 32, 0)

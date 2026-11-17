@@ -16,25 +16,25 @@ namespace Sharpcraft.Client.Tests.Render;
 public sealed class AquaticModelDefinitionTests
 {
     [Fact]
-    public void CodPartsMatchLegacyFromVanillaRecords()
+    public void CodPartsMatchSourceFrameRecords()
     {
         AssertPartsMatch(ExpectedCodParts(), CodModelDefinition.Definition.Parts);
     }
 
     [Fact]
-    public void SalmonPartsMatchLegacyFromVanillaRecords()
+    public void SalmonPartsMatchSourceFrameRecords()
     {
         AssertPartsMatch(ExpectedSalmonParts(), SalmonModelDefinition.Definition.Parts);
     }
 
     [Fact]
-    public void DolphinPartsMatchLegacyFromVanillaRecords()
+    public void DolphinPartsMatchSourceFrameRecords()
     {
         AssertPartsMatch(ExpectedDolphinParts(), DolphinModelDefinition.Definition.Parts);
     }
 
     [Fact]
-    public void PufferfishPartsMatchLegacyFromVanillaRecords()
+    public void PufferfishPartsMatchSourceFrameRecords()
     {
         AssertPartsMatch(ExpectedPufferfishSmallParts(), PufferfishModelDefinition.Definition.Parts);
         AssertPartsMatch(ExpectedPufferfishMediumParts(), PufferfishModelDefinition.Variants["medium"].Parts);
@@ -42,7 +42,7 @@ public sealed class AquaticModelDefinitionTests
     }
 
     [Fact]
-    public void TropicalFishPartsMatchLegacyFromVanillaRecords()
+    public void TropicalFishPartsMatchSourceFrameRecords()
     {
         // The base body parts are the first half of each variant's parts (the rest are pattern copies).
         AssertPrefixMatch(ExpectedTropicalSmallParts(), TropicalFishModelDefinition.Definition.Parts);
@@ -142,122 +142,122 @@ public sealed class AquaticModelDefinitionTests
 
     private static EntityModelPart[] ExpectedCodParts() =>
     [
-        LegacyModelPartFactory.FromVanilla("body", 0f, 22f, 0f, -1f, -2f, 0f, 2f, 4f, 7f, 0, 0),
-        LegacyModelPartFactory.FromVanilla("head", 0f, 22f, 0f, -1f, -2f, -3f, 2f, 4f, 3f, 11, 0),
-        LegacyModelPartFactory.FromVanilla("nose", 0f, 22f, -3f, -1f, -2f, -1f, 2f, 3f, 1f, 0, 0),
-        LegacyModelPartFactory.FromVanilla("right_fin", -1f, 23f, 0f, -2f, 0f, -1f, 2f, 0f, 2f, 22, 1,
-            rotationZ: MathF.PI / 4f),
-        LegacyModelPartFactory.FromVanilla("left_fin", 1f, 23f, 0f, 0f, 0f, -1f, 2f, 0f, 2f, 22, 4,
+        RawModelPartFactory.FromVanilla("body", 0f, 22f, 0f, -1f, -2f, 0f, 2f, 4f, 7f, 0, 0),
+        RawModelPartFactory.FromVanilla("head", 0f, 22f, 0f, -1f, -2f, -3f, 2f, 4f, 3f, 11, 0),
+        RawModelPartFactory.FromVanilla("nose", 0f, 22f, -3f, -1f, -2f, -1f, 2f, 3f, 1f, 0, 0),
+        RawModelPartFactory.FromVanilla("right_fin", -1f, 23f, 0f, -2f, 0f, -1f, 2f, 0f, 2f, 22, 1,
             rotationZ: -MathF.PI / 4f),
-        LegacyModelPartFactory.FromVanilla("tail_fin", 0f, 22f, 7f, 0f, -2f, 0f, 0f, 4f, 4f, 22, 3),
-        LegacyModelPartFactory.FromVanilla("top_fin", 0f, 20f, 0f, 0f, -1f, -1f, 0f, 1f, 6f, 20, -6)
+        RawModelPartFactory.FromVanilla("left_fin", 1f, 23f, 0f, 0f, 0f, -1f, 2f, 0f, 2f, 22, 4,
+            rotationZ: MathF.PI / 4f),
+        RawModelPartFactory.FromVanilla("tail_fin", 0f, 22f, 7f, 0f, -2f, 0f, 0f, 4f, 4f, 22, 3),
+        RawModelPartFactory.FromVanilla("top_fin", 0f, 20f, 0f, 0f, -1f, -1f, 0f, 1f, 6f, 20, -6)
     ];
 
     private static EntityModelPart[] ExpectedSalmonParts() =>
     [
-        LegacyModelPartFactory.FromVanilla("body_front", 0f, 20f, -7.2f, -1.5f, -2.5f, 0f, 3f, 5f, 8f, 0, 0),
-        LegacyModelPartFactory.FromVanilla("body_back", 0f, 20f, 0.8f, -1.5f, -2.5f, 0f, 3f, 5f, 8f, 0, 13),
-        LegacyModelPartFactory.FromVanilla("head", 0f, 20f, -7.2f, -1f, -2f, -3f, 2f, 4f, 3f, 22, 0),
-        LegacyModelPartFactory.FromVanillaChild("back_fin", "body_back", 0f, 0f, 8f, 0f, -2.5f, 0f, 0f, 5f, 6f, 20, 10),
-        LegacyModelPartFactory.FromVanillaChild("top_front_fin", "body_front", 0f, -4.5f, 5f, 0f, 0f, 0f, 0f, 2f, 3f, 2, 1),
-        LegacyModelPartFactory.FromVanillaChild("top_back_fin", "body_back", 0f, -4.5f, -1f, 0f, 0f, 0f, 0f, 2f, 4f, 0, 2),
-        LegacyModelPartFactory.FromVanilla("right_fin", -1.5f, 21.5f, -7.2f, -2f, 0f, 0f, 2f, 0f, 2f, 28, 0,
-            rotationZ: MathF.PI / 4f),
-        LegacyModelPartFactory.FromVanilla("left_fin", 1.5f, 21.5f, -7.2f, 0f, 0f, 0f, 2f, 0f, 2f, 0, 0,
-            rotationZ: -MathF.PI / 4f)
+        RawModelPartFactory.FromVanilla("body_front", 0f, 20f, -7.2f, -1.5f, -2.5f, 0f, 3f, 5f, 8f, 0, 0),
+        RawModelPartFactory.FromVanilla("body_back", 0f, 20f, 0.8f, -1.5f, -2.5f, 0f, 3f, 5f, 8f, 0, 13),
+        RawModelPartFactory.FromVanilla("head", 0f, 20f, -7.2f, -1f, -2f, -3f, 2f, 4f, 3f, 22, 0),
+        RawModelPartFactory.FromVanillaChild("back_fin", "body_back", 0f, 0f, 8f, 0f, -2.5f, 0f, 0f, 5f, 6f, 20, 10),
+        RawModelPartFactory.FromVanillaChild("top_front_fin", "body_front", 0f, -4.5f, 5f, 0f, 0f, 0f, 0f, 2f, 3f, 2, 1),
+        RawModelPartFactory.FromVanillaChild("top_back_fin", "body_back", 0f, -4.5f, -1f, 0f, 0f, 0f, 0f, 2f, 4f, 0, 2),
+        RawModelPartFactory.FromVanilla("right_fin", -1.5f, 21.5f, -7.2f, -2f, 0f, 0f, 2f, 0f, 2f, 28, 0,
+            rotationZ: -MathF.PI / 4f),
+        RawModelPartFactory.FromVanilla("left_fin", 1.5f, 21.5f, -7.2f, 0f, 0f, 0f, 2f, 0f, 2f, 0, 0,
+            rotationZ: MathF.PI / 4f)
     ];
 
     private static EntityModelPart[] ExpectedDolphinParts() =>
     [
-        LegacyModelPartFactory.FromVanilla("body", 0f, 22f, -5f, -4f, -7f, 0f, 8f, 7f, 13f, 22, 0),
-        LegacyModelPartFactory.FromVanillaChild("back_fin", "body", 0f, 0f, 0f, -0.5f, 0f, 8f, 1f, 4f, 5f, 51, 0,
+        RawModelPartFactory.FromVanilla("body", 0f, 22f, -5f, -4f, -7f, 0f, 8f, 7f, 13f, 22, 0),
+        RawModelPartFactory.FromVanillaChild("back_fin", "body", 0f, 0f, 0f, -0.5f, 0f, 8f, 1f, 4f, 5f, 51, 0,
             rotationX: MathF.PI / 3f),
-        LegacyModelPartFactory.FromVanillaChild("left_fin", "body", 2f, -2f, 4f, -0.5f, -4f, 0f, 1f, 4f, 7f, 48, 20,
+        RawModelPartFactory.FromVanillaChild("left_fin", "body", 2f, -2f, 4f, -0.5f, -4f, 0f, 1f, 4f, 7f, 48, 20,
             mirror: true, rotationX: MathF.PI / 3f, rotationZ: MathF.PI * 2f / 3f),
-        LegacyModelPartFactory.FromVanillaChild("right_fin", "body", -2f, -2f, 4f, -0.5f, -4f, 0f, 1f, 4f, 7f, 48, 20,
+        RawModelPartFactory.FromVanillaChild("right_fin", "body", -2f, -2f, 4f, -0.5f, -4f, 0f, 1f, 4f, 7f, 48, 20,
             rotationX: MathF.PI / 3f, rotationZ: -MathF.PI * 2f / 3f),
-        LegacyModelPartFactory.FromVanillaChild("tail", "body", 0f, -2.5f, 11f, -2f, -2.5f, 0f, 4f, 5f, 11f, 0, 19,
+        RawModelPartFactory.FromVanillaChild("tail", "body", 0f, -2.5f, 11f, -2f, -2.5f, 0f, 4f, 5f, 11f, 0, 19,
             rotationX: -0.10471976f),
-        LegacyModelPartFactory.FromVanillaChild("tail_fin", "tail", 0f, 0f, 9f, -5f, -0.5f, 0f, 10f, 1f, 6f, 19, 20),
-        LegacyModelPartFactory.FromVanillaChild("head", "body", 0f, -4f, -3f, -4f, -3f, -3f, 8f, 7f, 6f, 0, 0),
-        LegacyModelPartFactory.FromVanillaChild("nose", "head", 0f, 0f, 0f, -1f, 2f, -7f, 2f, 2f, 4f, 0, 13)
+        RawModelPartFactory.FromVanillaChild("tail_fin", "tail", 0f, 0f, 9f, -5f, -0.5f, 0f, 10f, 1f, 6f, 19, 20),
+        RawModelPartFactory.FromVanillaChild("head", "body", 0f, -4f, -3f, -4f, -3f, -3f, 8f, 7f, 6f, 0, 0),
+        RawModelPartFactory.FromVanillaChild("nose", "head", 0f, 0f, 0f, -1f, 2f, -7f, 2f, 2f, 4f, 0, 13)
     ];
 
     private static EntityModelPart[] ExpectedPufferfishSmallParts() =>
     [
-        LegacyModelPartFactory.FromVanilla("body", 0f, 23f, 0f, -1.5f, -2f, -1.5f, 3f, 2f, 3f, 0, 27),
-        LegacyModelPartFactory.FromVanilla("right_eye", 0f, 20f, 0f, -1.5f, 0f, -1.5f, 1f, 1f, 1f, 24, 6),
-        LegacyModelPartFactory.FromVanilla("left_eye", 0f, 20f, 0f, 0.5f, 0f, -1.5f, 1f, 1f, 1f, 28, 6),
-        LegacyModelPartFactory.FromVanilla("back_fin", 0f, 22f, 1.5f, -1.5f, 0f, 0f, 3f, 0f, 3f, -3, 0),
-        LegacyModelPartFactory.FromVanilla("right_fin", -1.5f, 22f, -1.5f, -1f, 0f, 0f, 1f, 0f, 2f, 25, 0),
-        LegacyModelPartFactory.FromVanilla("left_fin", 1.5f, 22f, -1.5f, 0f, 0f, 0f, 1f, 0f, 2f, 25, 0)
+        RawModelPartFactory.FromVanilla("body", 0f, 23f, 0f, -1.5f, -2f, -1.5f, 3f, 2f, 3f, 0, 27),
+        RawModelPartFactory.FromVanilla("right_eye", 0f, 20f, 0f, -1.5f, 0f, -1.5f, 1f, 1f, 1f, 24, 6),
+        RawModelPartFactory.FromVanilla("left_eye", 0f, 20f, 0f, 0.5f, 0f, -1.5f, 1f, 1f, 1f, 28, 6),
+        RawModelPartFactory.FromVanilla("back_fin", 0f, 22f, 1.5f, -1.5f, 0f, 0f, 3f, 0f, 3f, -3, 0),
+        RawModelPartFactory.FromVanilla("right_fin", -1.5f, 22f, -1.5f, -1f, 0f, 0f, 1f, 0f, 2f, 25, 0),
+        RawModelPartFactory.FromVanilla("left_fin", 1.5f, 22f, -1.5f, 0f, 0f, 0f, 1f, 0f, 2f, 25, 0)
     ];
 
     private static EntityModelPart[] ExpectedPufferfishMediumParts() =>
     [
-        LegacyModelPartFactory.FromVanilla("body", 0f, 22f, 0f, -2.5f, -5f, -2.5f, 5f, 5f, 5f, 12, 22),
-        LegacyModelPartFactory.FromVanilla("right_blue_fin", -2.5f, 18f, -1.5f, -2f, 0f, 0f, 2f, 0f, 2f, 24, 0),
-        LegacyModelPartFactory.FromVanilla("left_blue_fin", 2.5f, 18f, -1.5f, 0f, 0f, 0f, 2f, 0f, 2f, 24, 3),
-        LegacyModelPartFactory.FromVanilla("top_front_fin", 0f, 17f, -2.5f, -2.5f, -1f, 0f, 5f, 1f, 0f, 19, 17,
-            rotationX: -MathF.PI / 4f),
-        LegacyModelPartFactory.FromVanilla("top_back_fin", 0f, 17f, 2.5f, -2.5f, -1f, 0f, 5f, 1f, 0f, 11, 17,
+        RawModelPartFactory.FromVanilla("body", 0f, 22f, 0f, -2.5f, -5f, -2.5f, 5f, 5f, 5f, 12, 22),
+        RawModelPartFactory.FromVanilla("right_blue_fin", -2.5f, 18f, -1.5f, -2f, 0f, 0f, 2f, 0f, 2f, 24, 0),
+        RawModelPartFactory.FromVanilla("left_blue_fin", 2.5f, 18f, -1.5f, 0f, 0f, 0f, 2f, 0f, 2f, 24, 3),
+        RawModelPartFactory.FromVanilla("top_front_fin", 0f, 17f, -2.5f, -2.5f, -1f, 0f, 5f, 1f, 0f, 19, 17,
             rotationX: MathF.PI / 4f),
-        LegacyModelPartFactory.FromVanilla("right_front_fin", -2.5f, 22f, -2.5f, -1f, -5f, 0f, 1f, 5f, 0f, 5, 17,
-            rotationY: MathF.PI / 4f),
-        LegacyModelPartFactory.FromVanilla("right_back_fin", -2.5f, 22f, 2.5f, -1f, -5f, 0f, 1f, 5f, 0f, 9, 17,
-            rotationY: -MathF.PI / 4f),
-        LegacyModelPartFactory.FromVanilla("left_back_fin", 2.5f, 22f, 2.5f, 0f, -5f, 0f, 1f, 5f, 0f, 1, 17,
-            rotationY: MathF.PI / 4f),
-        LegacyModelPartFactory.FromVanilla("left_front_fin", 2.5f, 22f, -2.5f, 0f, -5f, 0f, 1f, 5f, 0f, 1, 17,
-            rotationY: -MathF.PI / 4f),
-        LegacyModelPartFactory.FromVanilla("bottom_back_fin", -2.5f, 22f, 2.5f, 0f, 0f, 0f, 5f, 1f, 0f, 18, 20,
+        RawModelPartFactory.FromVanilla("top_back_fin", 0f, 17f, 2.5f, -2.5f, -1f, 0f, 5f, 1f, 0f, 11, 17,
             rotationX: -MathF.PI / 4f),
-        LegacyModelPartFactory.FromVanilla("bottom_front_fin", 0f, 22f, -2.5f, -2.5f, 0f, 0f, 5f, 1f, 1f, 17, 19,
-            rotationX: MathF.PI / 4f)
+        RawModelPartFactory.FromVanilla("right_front_fin", -2.5f, 22f, -2.5f, -1f, -5f, 0f, 1f, 5f, 0f, 5, 17,
+            rotationY: -MathF.PI / 4f),
+        RawModelPartFactory.FromVanilla("right_back_fin", -2.5f, 22f, 2.5f, -1f, -5f, 0f, 1f, 5f, 0f, 9, 17,
+            rotationY: MathF.PI / 4f),
+        RawModelPartFactory.FromVanilla("left_back_fin", 2.5f, 22f, 2.5f, 0f, -5f, 0f, 1f, 5f, 0f, 1, 17,
+            rotationY: -MathF.PI / 4f),
+        RawModelPartFactory.FromVanilla("left_front_fin", 2.5f, 22f, -2.5f, 0f, -5f, 0f, 1f, 5f, 0f, 1, 17,
+            rotationY: MathF.PI / 4f),
+        RawModelPartFactory.FromVanilla("bottom_back_fin", -2.5f, 22f, 2.5f, 0f, 0f, 0f, 5f, 1f, 0f, 18, 20,
+            rotationX: MathF.PI / 4f),
+        RawModelPartFactory.FromVanilla("bottom_front_fin", 0f, 22f, -2.5f, -2.5f, 0f, 0f, 5f, 1f, 1f, 17, 19,
+            rotationX: -MathF.PI / 4f)
     ];
 
     private static EntityModelPart[] ExpectedPufferfishLargeParts() =>
     [
-        LegacyModelPartFactory.FromVanilla("body", 0f, 22f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0),
-        LegacyModelPartFactory.FromVanilla("right_blue_fin", -4f, 15f, -2f, -2f, 0f, -1f, 2f, 1f, 2f, 24, 0),
-        LegacyModelPartFactory.FromVanilla("left_blue_fin", 4f, 15f, -2f, 0f, 0f, -1f, 2f, 1f, 2f, 24, 3),
-        LegacyModelPartFactory.FromVanilla("top_front_fin", 0f, 14f, -4f, -4f, -1f, 0f, 8f, 1f, 0f, 15, 17,
-            rotationX: -MathF.PI / 4f),
-        LegacyModelPartFactory.FromVanilla("top_middle_fin", 0f, 14f, 0f, -4f, -1f, 0f, 8f, 1f, 1f, 14, 16),
-        LegacyModelPartFactory.FromVanilla("top_back_fin", 0f, 14f, 4f, -4f, -1f, 0f, 8f, 1f, 0f, 23, 18,
+        RawModelPartFactory.FromVanilla("body", 0f, 22f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0),
+        RawModelPartFactory.FromVanilla("right_blue_fin", -4f, 15f, -2f, -2f, 0f, -1f, 2f, 1f, 2f, 24, 0),
+        RawModelPartFactory.FromVanilla("left_blue_fin", 4f, 15f, -2f, 0f, 0f, -1f, 2f, 1f, 2f, 24, 3),
+        RawModelPartFactory.FromVanilla("top_front_fin", 0f, 14f, -4f, -4f, -1f, 0f, 8f, 1f, 0f, 15, 17,
             rotationX: MathF.PI / 4f),
-        LegacyModelPartFactory.FromVanilla("right_front_fin", -4f, 22f, -4f, -1f, -8f, 0f, 1f, 8f, 0f, 5, 17,
+        RawModelPartFactory.FromVanilla("top_middle_fin", 0f, 14f, 0f, -4f, -1f, 0f, 8f, 1f, 1f, 14, 16),
+        RawModelPartFactory.FromVanilla("top_back_fin", 0f, 14f, 4f, -4f, -1f, 0f, 8f, 1f, 0f, 23, 18,
+            rotationX: -MathF.PI / 4f),
+        RawModelPartFactory.FromVanilla("right_front_fin", -4f, 22f, -4f, -1f, -8f, 0f, 1f, 8f, 0f, 5, 17,
+            rotationY: -MathF.PI / 4f),
+        RawModelPartFactory.FromVanilla("left_front_fin", 4f, 22f, -4f, 0f, -8f, 0f, 1f, 8f, 0f, 1, 17,
             rotationY: MathF.PI / 4f),
-        LegacyModelPartFactory.FromVanilla("left_front_fin", 4f, 22f, -4f, 0f, -8f, 0f, 1f, 8f, 0f, 1, 17,
-            rotationY: -MathF.PI / 4f),
-        LegacyModelPartFactory.FromVanilla("bottom_front_fin", 0f, 22f, -4f, -4f, 0f, 0f, 8f, 1f, 0f, 15, 20,
-            rotationX: MathF.PI / 4f),
-        LegacyModelPartFactory.FromVanilla("bottom_middle_fin", 0f, 22f, 0f, -4f, 0f, 0f, 8f, 1f, 0f, 15, 20),
-        LegacyModelPartFactory.FromVanilla("bottom_back_fin", 0f, 22f, 4f, -4f, 0f, 0f, 8f, 1f, 0f, 15, 20,
+        RawModelPartFactory.FromVanilla("bottom_front_fin", 0f, 22f, -4f, -4f, 0f, 0f, 8f, 1f, 0f, 15, 20,
             rotationX: -MathF.PI / 4f),
-        LegacyModelPartFactory.FromVanilla("right_back_fin", -4f, 22f, 4f, -1f, -8f, 0f, 1f, 8f, 0f, 9, 17,
-            rotationY: -MathF.PI / 4f),
-        LegacyModelPartFactory.FromVanilla("left_back_fin", 4f, 22f, 4f, 0f, -8f, 0f, 1f, 8f, 0f, 9, 17,
-            rotationY: MathF.PI / 4f)
+        RawModelPartFactory.FromVanilla("bottom_middle_fin", 0f, 22f, 0f, -4f, 0f, 0f, 8f, 1f, 0f, 15, 20),
+        RawModelPartFactory.FromVanilla("bottom_back_fin", 0f, 22f, 4f, -4f, 0f, 0f, 8f, 1f, 0f, 15, 20,
+            rotationX: MathF.PI / 4f),
+        RawModelPartFactory.FromVanilla("right_back_fin", -4f, 22f, 4f, -1f, -8f, 0f, 1f, 8f, 0f, 9, 17,
+            rotationY: MathF.PI / 4f),
+        RawModelPartFactory.FromVanilla("left_back_fin", 4f, 22f, 4f, 0f, -8f, 0f, 1f, 8f, 0f, 9, 17,
+            rotationY: -MathF.PI / 4f)
     ];
 
     private static EntityModelPart[] ExpectedTropicalSmallParts() =>
     [
-        LegacyModelPartFactory.FromVanilla("body", 0f, 22f, 0f, -1f, -1.5f, -3f, 2f, 3f, 6f, 0, 0),
-        LegacyModelPartFactory.FromVanilla("tail", 0f, 22f, 3f, 0f, -1.5f, 0f, 0f, 3f, 6f, 22, -6),
-        LegacyModelPartFactory.FromVanilla("right_fin", -1f, 22.5f, 0f, -2f, -1f, 0f, 2f, 2f, 0f, 2, 16, rotationY: -MathF.PI / 4f),
-        LegacyModelPartFactory.FromVanilla("left_fin", 1f, 22.5f, 0f, 0f, -1f, 0f, 2f, 2f, 0f, 2, 12, rotationY: MathF.PI / 4f),
-        LegacyModelPartFactory.FromVanilla("top_fin", 0f, 20.5f, -3f, 0f, -3f, 0f, 0f, 3f, 6f, 10, -5)
+        RawModelPartFactory.FromVanilla("body", 0f, 22f, 0f, -1f, -1.5f, -3f, 2f, 3f, 6f, 0, 0),
+        RawModelPartFactory.FromVanilla("tail", 0f, 22f, 3f, 0f, -1.5f, 0f, 0f, 3f, 6f, 22, -6),
+        RawModelPartFactory.FromVanilla("right_fin", -1f, 22.5f, 0f, -2f, -1f, 0f, 2f, 2f, 0f, 2, 16, rotationY: MathF.PI / 4f),
+        RawModelPartFactory.FromVanilla("left_fin", 1f, 22.5f, 0f, 0f, -1f, 0f, 2f, 2f, 0f, 2, 12, rotationY: -MathF.PI / 4f),
+        RawModelPartFactory.FromVanilla("top_fin", 0f, 20.5f, -3f, 0f, -3f, 0f, 0f, 3f, 6f, 10, -5)
     ];
 
     private static EntityModelPart[] ExpectedTropicalLargeParts() =>
     [
-        LegacyModelPartFactory.FromVanilla("body", 0f, 19f, 0f, -1f, -3f, -3f, 2f, 6f, 6f, 0, 20),
-        LegacyModelPartFactory.FromVanilla("tail", 0f, 19f, 3f, 0f, -3f, 0f, 0f, 6f, 5f, 21, 16),
-        LegacyModelPartFactory.FromVanilla("right_fin", -1f, 20f, 0f, -2f, 0f, 0f, 2f, 2f, 0f, 2, 16, rotationY: -MathF.PI / 4f),
-        LegacyModelPartFactory.FromVanilla("left_fin", 1f, 20f, 0f, 0f, 0f, 0f, 2f, 2f, 0f, 2, 12, rotationY: MathF.PI / 4f),
-        LegacyModelPartFactory.FromVanilla("top_fin", 0f, 16f, -3f, 0f, -4f, 0f, 0f, 4f, 6f, 20, 11),
-        LegacyModelPartFactory.FromVanilla("bottom_fin", 0f, 22f, -3f, 0f, 0f, 0f, 0f, 4f, 6f, 20, 21)
+        RawModelPartFactory.FromVanilla("body", 0f, 19f, 0f, -1f, -3f, -3f, 2f, 6f, 6f, 0, 20),
+        RawModelPartFactory.FromVanilla("tail", 0f, 19f, 3f, 0f, -3f, 0f, 0f, 6f, 5f, 21, 16),
+        RawModelPartFactory.FromVanilla("right_fin", -1f, 20f, 0f, -2f, 0f, 0f, 2f, 2f, 0f, 2, 16, rotationY: MathF.PI / 4f),
+        RawModelPartFactory.FromVanilla("left_fin", 1f, 20f, 0f, 0f, 0f, 0f, 2f, 2f, 0f, 2, 12, rotationY: -MathF.PI / 4f),
+        RawModelPartFactory.FromVanilla("top_fin", 0f, 16f, -3f, 0f, -4f, 0f, 0f, 4f, 6f, 20, 11),
+        RawModelPartFactory.FromVanilla("bottom_fin", 0f, 22f, -3f, 0f, 0f, 0f, 0f, 4f, 6f, 20, 21)
     ];
 
     private static void AssertNamesAndParents(IReadOnlyList<EntityModelPart> parts, string[] names, string?[] parents)
