@@ -531,26 +531,46 @@ public sealed partial class EntityModelMesher
         }
         if (emitBase && rawSourceFrame)
         {
-            // Raw source faces ignore the legacy face UV calibration tables. The only source
-            // adjustment is CubeListBuilder.mirror, which flips U for every face.
-            FaceUvTransform RawFace() => part.Mirror
-                ? FaceUvTransform.Identity with { FlipH = true }
-                : FaceUvTransform.Identity;
-            // Source CubeListBuilder.mirror swaps cube minX/maxX. That reflects the cube about its
-            // X centre, moving the WEST-face geometry (with u0..u1) to the maxX side and the
-            // EAST-face geometry (u2..u3) to the minX side. Our cube geometry is not reflected, so
-            // for mirror parts the X-normal faces must sample the opposite side's UV range. Other
-            // faces only FlipH. This mirrors the legacy path's westU/eastU swap, but in raw UV space.
-            var westUHi = part.Mirror ? u3 : u1;
-            var westULo = part.Mirror ? u2 : u0;
-            var eastUHi = part.Mirror ? u1 : u3;
-            var eastULo = part.Mirror ? u0 : u2;
-            AddFace(l1, l0, t0, t1, u2, v0, u1, v0, u1, v1, u2, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, RawFace(), partTint, target);
-            AddFace(t2, t3, l3, l2, u22, v1, u2, v1, u2, v0, u22, v0, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, RawFace(), partTint, target);
-            AddFace(t0, l0, l3, t3, westUHi, v1, westULo, v1, westULo, v2, westUHi, v2, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, RawFace(), partTint, target);
-            AddFace(t1, t0, t3, t2, u2, v1, u1, v1, u1, v2, u2, v2, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, RawFace(), partTint, target);
-            AddFace(l1, t1, t2, l2, eastUHi, v1, eastULo, v1, eastULo, v2, eastUHi, v2, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, RawFace(), partTint, target);
-            AddFace(l0, l1, l2, l3, u4, v1, u3, v1, u3, v2, u4, v2, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, RawFace(), partTint, target);
+            // Raw source faces use the reference ModelPart.Cube polygon order and UV corners. A mirrored
+            // CubeListBuilder reflects the cube in X inside ModelPart.Cube (minX/maxX swap) and the
+            // Polygon constructor then reverses the four vertices; both steps are replayed here.
+            var sourceMinX = part.Mirror ? max.X : min.X;
+            var sourceMaxX = part.Mirror ? min.X : max.X;
+            var rt0 = ToWorld(new Vector3(sourceMinX, min.Y, min.Z));
+            var rt1 = ToWorld(new Vector3(sourceMaxX, min.Y, min.Z));
+            var rt2 = ToWorld(new Vector3(sourceMaxX, max.Y, min.Z));
+            var rt3 = ToWorld(new Vector3(sourceMinX, max.Y, min.Z));
+            var rl0 = ToWorld(new Vector3(sourceMinX, min.Y, max.Z));
+            var rl1 = ToWorld(new Vector3(sourceMaxX, min.Y, max.Z));
+            var rl2 = ToWorld(new Vector3(sourceMaxX, max.Y, max.Z));
+            var rl3 = ToWorld(new Vector3(sourceMinX, max.Y, max.Z));
+
+            var rawVertexFloats = vertexFloats;
+            var rawIndexCount = indexCount;
+            void EmitRawFace(Vector3 a, Vector3 b, Vector3 c, Vector3 d,
+                float au, float av, float bu, float bv, float cu, float cv, float du, float dv)
+            {
+                if (part.Mirror)
+                {
+                    AddFace(d, c, b, a, du, dv, cu, cv, bu, bv, au, av,
+                        skin, skinWidth, skinHeight, ref rawVertexFloats, ref rawIndexCount,
+                        FaceUvTransform.Identity, partTint, target);
+                    return;
+                }
+
+                AddFace(a, b, c, d, au, av, bu, bv, cu, cv, du, dv,
+                    skin, skinWidth, skinHeight, ref rawVertexFloats, ref rawIndexCount,
+                    FaceUvTransform.Identity, partTint, target);
+            }
+
+            EmitRawFace(rl1, rl0, rt0, rt1, u2, v0, u1, v0, u1, v1, u2, v1);
+            EmitRawFace(rt2, rt3, rl3, rl2, u22, v1, u2, v1, u2, v0, u22, v0);
+            EmitRawFace(rt0, rl0, rl3, rt3, u1, v1, u0, v1, u0, v2, u1, v2);
+            EmitRawFace(rt1, rt0, rt3, rt2, u2, v1, u1, v1, u1, v2, u2, v2);
+            EmitRawFace(rl1, rt1, rt2, rl2, u3, v1, u2, v1, u2, v2, u3, v2);
+            EmitRawFace(rl0, rl1, rl2, rl3, u4, v1, u3, v1, u3, v2, u4, v2);
+            vertexFloats = rawVertexFloats;
+            indexCount = rawIndexCount;
         }
         else if (emitBase)
         {
