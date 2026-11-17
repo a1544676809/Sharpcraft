@@ -25,7 +25,7 @@ public static class BabyModelDefinitionsOdd
 
     private static readonly CompiledEntityModel StriderCompiled = VanillaMeshBakery.Build(StriderMesh, 32, 32);
     private static readonly CompiledEntityModel SniffletCompiled = VanillaMeshBakery.Build(SniffletMesh, 128, 128);
-    private static readonly CompiledEntityModel ArmadilloCompiled = VanillaMeshBakery.Build(ArmadilloMesh, 64, 64);
+    private static readonly CompiledEntityModel ArmadilloCompiled = VanillaMeshBakery.Build(ArmadilloMesh, 64, 64, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Strider = new(
         "baby_strider", 32, 32, StriderParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/strider/strider_baby",
@@ -41,8 +41,8 @@ public static class BabyModelDefinitionsOdd
         compiled: SniffletCompiled);
 
     public static readonly EntityModelDefinition Armadillo = new(
-        "baby_armadillo", 64, 64, ArmadilloParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/armadillo/armadillo_baby",
-        compiled: ArmadilloCompiled);
+        "baby_armadillo", 64, 64, ArmadilloParts, faceTransforms: null, "entity/armadillo/armadillo_baby",
+        compiled: ArmadilloCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly IReadOnlyDictionary<int, EntityModelDefinition> Models =
         new Dictionary<int, EntityModelDefinition>
@@ -66,7 +66,7 @@ public static class BabyModelDefinitionsOdd
 
     private static EntityModelPart[] BuildArmadilloParts()
     {
-        var baked = VanillaMeshBake.Bake(ArmadilloMesh, 0, 0);
+        var baked = VanillaMeshBake.Bake(ArmadilloMesh, 0, 0, rawSourceFrame: true);
         return [.. baked];
     }
 
@@ -145,14 +145,15 @@ public static class BabyModelDefinitionsOdd
             new VanillaCubeDefinition("right_ear", 28, 8, -1.8f, -2f, 0f, 2f, 3f, 0f, Mirror: true));
         headCube.AddOrReplaceChild("left_ear", VanillaPartPose.OffsetAndRotation(1f, -2f, -0.3f, -0.4363f, 0.1134f, -0.0524f),
             new VanillaCubeDefinition("left_ear", 28, 8, -0.2f, -2f, 0f, 2f, 3f, 0f));
+        // Source BabyArmadilloModel: right_hind_leg and left_front_leg carry CubeListBuilder.mirror().
         root.AddOrReplaceChild("right_hind_leg", VanillaPartPose.Offset(-1.5f, 22f, 2.5f),
-            new VanillaCubeDefinition("right_hind_leg", 20, 27, -1f, 0f, -1f, 2f, 2f, 2f, VisibleWhen: Unrolled));
+            new VanillaCubeDefinition("right_hind_leg", 20, 27, -1f, 0f, -1f, 2f, 2f, 2f, Mirror: true, VisibleWhen: Unrolled));
         root.AddOrReplaceChild("left_hind_leg", VanillaPartPose.Offset(1.5f, 22f, 2.5f),
             new VanillaCubeDefinition("left_hind_leg", 20, 27, -1f, 0f, -1f, 2f, 2f, 2f, VisibleWhen: Unrolled));
         root.AddOrReplaceChild("right_front_leg", VanillaPartPose.Offset(1.5f, 22f, -1.5f),
             new VanillaCubeDefinition("right_front_leg", 20, 23, -1f, 0f, -1f, 2f, 2f, 2f, VisibleWhen: Unrolled));
         root.AddOrReplaceChild("left_front_leg", VanillaPartPose.Offset(-1.5f, 22f, -1.5f),
-            new VanillaCubeDefinition("left_front_leg", 24, 0, -1f, 0f, -1f, 2f, 2f, 2f, VisibleWhen: Unrolled));
+            new VanillaCubeDefinition("left_front_leg", 24, 0, -1f, 0f, -1f, 2f, 2f, 2f, Mirror: true, VisibleWhen: Unrolled));
         root.AddOrReplaceChild("cube", VanillaPartPose.Offset(0f, 20.7f, 0.5f),
             new VanillaCubeDefinition("cube", 0, 25, -3f, -3f, -3f, 6f, 6f, 6f, Grow: 0.3f, VisibleWhen: Rolled));
         return new VanillaMeshDefinition(root);

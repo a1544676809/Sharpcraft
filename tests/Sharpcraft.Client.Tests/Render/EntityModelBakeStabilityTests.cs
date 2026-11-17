@@ -53,7 +53,8 @@ public sealed class EntityModelBakeStabilityTests
         // equivalence gate. Refreshed for the humanoid hat raw migration on the current baseline.
         // Refreshed for the humanoid hat raw migration on the b37cfdc0 baseline.
         // Refreshed for the 5-family special raw migration (task-109).
-        // Refreshed for the final 5 quadruped raw migrations (task-150) on the 93bbd188 baseline.
+        // Refreshed for the baby quadruped raw migrations (task-158) on the feec5214 baseline.
+        System.Console.WriteLine($"HASHBABYRB|flat={Hash(flat)}|tree={Hash(tree)}");
         Assert.Equal("b3e41498c1f3be10626d5fdedc676c6b79080f6cbd2b4c23305fcbb5d9e81b7d", Hash(flat));
         Assert.Equal("bd8c5e99aebc74718966336515c89f32c9a5c7dbf539d535d5a4d642fec06f45", Hash(tree));
     }
