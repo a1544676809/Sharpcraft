@@ -368,7 +368,7 @@ public sealed partial class EntityModelMesher
                 return;
             }
 
-            var frame = NodeFrame(node, parentFrame, entity, pose, px);
+            var frame = NodeFrame(node, parentFrame, entity, pose, px, rawSourceFrame);
             if (string.Equals(node.Name, partName, StringComparison.Ordinal))
             {
                 // Return the full frame. The geometry path subtracts a root part's pivot because its cube vertices are

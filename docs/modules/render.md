@@ -534,8 +534,8 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **源单位**：`ModelPart.translateAndRotate` 先把 part 的 `x/y/z` 按 `1/16` 转成块位移，再应用 `rotationZYX(z,y,x)`，最后应用 `xScale/yScale/zScale`；cube `Vertex` 坐标仍是模型像素。`root.visit` 的 ModelProbe 输出因此是混合单位 `R * v_pixels + T_blocks`；真实渲染顶点是 `R * (v_pixels/16) + T_blocks`。
 - **raw px**：`px = (1/16) * modelScale`。raw 几何顶点与 part/root pose 位移统一使用该 `px`，即生产和 probe 的**实际渲染单位**都是 `R * (v*px) + T*px`；不存在额外的 translation scale 参数。Book probe 若要和 raw 比，必须先只把旋转顶点项除以 16、位移保持块单位，不能把整个混合样本除以 16。
 - **T/R 顺序**：源是 `T * R`（顶点先旋转再加位移）；row-vector 表示为 `R_row * T_row`。raw NodeFrame 的 rotation 使用源字面 ZYX（`x/y/z` 相加，不做 legacy X/Y 共轭），平移在 R 之后；base pivot 的 cube 扣除使用 `px`。legacy 保持原共轭/px 语义。
-- **pivot 基准**：root child cube 是绝对源像素，先扣除 base pivot（`px`），再 R，再加源位移；child cube 保持 parent-local。`PartWorldMatrix` 使用同一 raw 分支。
-- **判定（Issue #128）**：`modelScale=1` 下生产 raw 的 Position+Rotation 已与源 `T*R` 等价；Book 报告的 `(0.364,...)` 是 `modelScale=16` probe 把混合单位整段比较造成的，不是 T/R 缺陷。`RawNodeFramePoseTests` 使用 Book `right_pages` 源样本（`x=0.997491, yRot=-1.5`, local first vertex `(5,-4,0.99)`），先归一化 probe 首顶点 `(-0.571491,-4,5.057505)` 再逐点比较；不按实现反推。
+- **pivot 基准**：root child cube 是绝对源像素，先扣除 base pivot（`px`），再 R，再加源位移；child cube 保持 parent-local。`PartWorldMatrix` 的 `Walk` 每层都把 `rawSourceFrame` 传给 `NodeFrame`（raw flag 不只作用于 rootFrame）；`PartMatrix`/`PartFrame` 的 flat 分支同样逐层传播该 flag。
+- **判定（Issue #128）**：`modelScale=1` 下生产 raw 的 Position+Rotation 已与源 `T*R` 等价；Book 报告的 `(0.364,...)` 是 `modelScale=16` probe 把混合单位整段比较造成的，不是 T/R 缺陷。`RawNodeFramePoseTests` 使用 Book `right_pages` 源样本（`x=0.997491, yRot=-1.5`, local first vertex `(5,-4,0.99)`），对单 cube 的 **24/24** 顶点逐点比较位置+UV（独立公式 `R*(v/16)+T_blocks`），并用同一 cube 的 Position+Rotation part 验证 `PartWorldMatrix(rawSourceFrame:true)`；不按实现反推。
 
 ## 已知刻意的简化
 
