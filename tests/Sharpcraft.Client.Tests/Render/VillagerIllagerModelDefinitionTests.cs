@@ -35,12 +35,14 @@ public sealed class VillagerIllagerModelDefinitionTests
     }
 
     [Fact]
-    public void IllagerPartsMatchLegacyFromVanillaRecords()
+    public void IllagerPartsMatchSourceFrameRecords()
     {
-        AssertPartsMatch(ExpectedIllagerParts(), IllagerModelDefinition.Vindicator.Parts);
-        AssertPartsMatch(ExpectedIllagerParts(), IllagerModelDefinition.Evoker.Parts);
-        AssertPartsMatch(ExpectedIllagerParts(), IllagerModelDefinition.Pillager.Parts);
-        AssertPartsMatch(ExpectedIllagerParts(), IllagerModelDefinition.Illusioner.Parts);
+        // task-95: Illager migrated to raw source frame with the hat as an independent child cube
+        // and source-literal arms rotation (-0.75). Source oracle: RawModelPartFactory (independent).
+        AssertPartsMatch(ExpectedIllagerPartsRaw(), IllagerModelDefinition.Vindicator.Parts);
+        AssertPartsMatch(ExpectedIllagerPartsRaw(), IllagerModelDefinition.Evoker.Parts);
+        AssertPartsMatch(ExpectedIllagerPartsRaw(), IllagerModelDefinition.Pillager.Parts);
+        AssertPartsMatch(ExpectedIllagerPartsRaw(), IllagerModelDefinition.Illusioner.Parts);
     }
 
     [Fact]
@@ -105,7 +107,9 @@ public sealed class VillagerIllagerModelDefinitionTests
             Assert.Equal(64, definition.TextureWidth);
             Assert.Equal(64, definition.TextureHeight);
             Assert.Equal("entity/illager/" + name, definition.TexturePath);
-            Assert.Equal(11, definition.Parts.Count);
+            // task-95: hat is now an independent child cube (12 parts, was 11 with the overlay).
+            Assert.Equal(12, definition.Parts.Count);
+            Assert.Equal(0.9375f, definition.Scale);
         }
     }
 
@@ -205,6 +209,29 @@ public sealed class VillagerIllagerModelDefinitionTests
         LegacyModelPartFactory.FromVanillaChild("arms_right", "arms", 0f, 0f, 0f, 4f, -2f, -2f, 4f, 8f, 4f, 44, 22, mirror: true),
         LegacyModelPartFactory.FromVanilla("right_leg", -2f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 22),
         LegacyModelPartFactory.FromVanilla("left_leg", 2f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 22, mirror: true)
+    ];
+
+    // task-95: source-frame records for the migrated illager (raw bake, independent hat cube).
+    // Source: ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/illager/IllagerModel.java:41-78.
+    private static EntityModelPart[] ExpectedIllagerPartsRaw() =>
+    [
+        RawModelPartFactory.FromVanilla("head", 0f, 0f, 0f, -4f, -10f, -4f, 8f, 10f, 8f, 0, 0),
+        RawModelPartFactory.FromVanillaChild("hat", "head", 0f, 0f, 0f, -4f, -10f, -4f, 8f, 12f, 8f, 32, 0, grow: 0.45f),
+        RawModelPartFactory.FromVanilla("nose", 0f, -2f, 0f, -1f, -1f, -6f, 2f, 4f, 2f, 24, 0),
+        RawModelPartFactory.FromVanilla("body", 0f, 0f, 0f, -4f, 0f, -3f, 8f, 12f, 6f, 16, 20),
+        RawModelPartFactory.FromVanilla("body_outer", 0f, 0f, 0f, -4f, 0f, -3f, 8f, 20f, 6f, 0, 38, grow: 0.5f),
+        RawModelPartFactory.FromVanilla("arms_right", 0f, 3f, -1f, -8f, -2f, -2f, 4f, 8f, 4f, 44, 22,
+            rotationX: -0.75f) with { VisibleWhen = static state => state.ArmPose == (int)IllagerArmPose.Crossed },
+        RawModelPartFactory.FromVanilla("arms_cross", 0f, 3f, -1f, -4f, 2f, -2f, 8f, 4f, 4f, 40, 38,
+            rotationX: -0.75f) with { VisibleWhen = static state => state.ArmPose == (int)IllagerArmPose.Crossed },
+        RawModelPartFactory.FromVanilla("arms_left", 0f, 3f, -1f, 4f, -2f, -2f, 4f, 8f, 4f, 44, 22,
+            mirror: true, rotationX: -0.75f) with { VisibleWhen = static state => state.ArmPose == (int)IllagerArmPose.Crossed },
+        RawModelPartFactory.FromVanilla("right_arm", -5f, 2f, 0f, -3f, -2f, -2f, 4f, 12f, 4f, 40, 46)
+            with { VisibleWhen = static state => state.ArmPose != (int)IllagerArmPose.Crossed },
+        RawModelPartFactory.FromVanilla("left_arm", 5f, 2f, 0f, -1f, -2f, -2f, 4f, 12f, 4f, 40, 46, mirror: true)
+            with { VisibleWhen = static state => state.ArmPose != (int)IllagerArmPose.Crossed },
+        RawModelPartFactory.FromVanilla("right_leg", -2f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 22),
+        RawModelPartFactory.FromVanilla("left_leg", 2f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 22, mirror: true)
     ];
 
     private static EntityModelPart[] ExpectedIllagerParts() =>
