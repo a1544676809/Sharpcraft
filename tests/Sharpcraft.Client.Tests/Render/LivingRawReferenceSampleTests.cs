@@ -117,6 +117,14 @@ public sealed class LivingRawReferenceSampleTests
         { "enderman-raw-vectors.reference.txt", HumanoidMobModelDefinition.Enderman, 64, 32, "entity/enderman/enderman", 168, 48, 120, 0 },
         { "zombie-raw-vectors.reference.txt", HumanoidMobModelDefinition.Zombie, 64, 64, "entity/zombie/zombie", 168, 48, 120, 0 },
         // task-108 humanoid batch (total, mirror, checked, degenerate).
+        // task-143: Camel raw (multi-cube head, zero-size group marker degenerate).
+        { "camel-raw-vectors.reference.txt", CamelModelDefinition.Definition, 128, 128, "entity/camel/camel", 288, 0, 264, 24 },
+        // task-143: Goat raw (multi-cube head/body, source nose xRot +0.9599, left-ear Mirror).
+        { "goat-raw-vectors.reference.txt", GoatModelDefinition.Definition, 64, 64, "entity/goat/goat", 288, 24, 240, 24 },
+        // task-143: Rabbit raw (nested pivots, source body xRot -0.3927).
+        { "rabbit-raw-vectors.reference.txt", RabbitModelDefinition.Definition, 64, 64, "entity/rabbit/rabbit_brown", 216, 0, 216, 0 },
+        // task-143: Panda raw (multi-cube head, source body +PI/2).
+        { "panda-raw-vectors.reference.txt", PandaModelDefinition.Definition, 64, 64, "entity/panda/panda", 216, 0, 216, 0 },
         // task-137: Horse raw (scale 1.1 #141, source rotations, mirror legs).
         { "horse-raw-vectors.reference.txt", HorseModelDefinition.Definition, 64, 64, "entity/horse/horse_brown", 288, 48, 240, 0 },
         // task-137: Cat raw (scale 0.8 #141, multi-cube head, source rotations).
@@ -459,6 +467,17 @@ public sealed class LivingRawReferenceSampleTests
                 flatName = cube == 0 ? "head" : "head_cube"; break;
             case "/body/head/eyes" when definition.Name == "breeze":
                 flatName = cube == 0 ? "eyes" : "eyes_cube"; break;
+            // task-143: camel source /body/head has 3 cubes (head_lower,head_upper,head_snout).
+            case "/body/head" when definition.Name == "camel":
+                flatName = cube switch { 0 => "head_lower", 1 => "head_upper", _ => "head_snout" }; break;
+            // task-143: goat source /head has 3 cubes (right_ear,left_ear,goatee), body 2 (body_lower,body_upper).
+            case "/head" when definition.Name == "goat":
+                flatName = cube switch { 0 => "right_ear", 1 => "left_ear", _ => "goatee" }; break;
+            case "/body" when definition.Name == "goat":
+                flatName = cube == 0 ? "body_lower" : "body_upper"; break;
+            // task-143: panda source /head has 4 cubes (head,nose,left_ear,right_ear).
+            case "/head" when definition.Name == "panda":
+                flatName = cube switch { 0 => "head", 1 => "nose", 2 => "left_ear", _ => "right_ear" }; break;
             // task-137: cat source /head has 4 cubes (main,nose,ear1,ear2).
             case "/head" when definition.Name == "cat":
                 flatName = cube switch { 0 => "head_main", 1 => "nose", 2 => "ear1", _ => "ear2" }; break;

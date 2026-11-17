@@ -22,7 +22,7 @@ public static class CamelModelDefinition
     internal static VanillaMeshDefinition Mesh => CamelMesh;
 
     private static readonly CompiledEntityModel CompiledModel =
-        VanillaMeshBakery.Build(CamelMesh, 128, 128, texturePath: "entity/camel/camel");
+        VanillaMeshBakery.Build(CamelMesh, 128, 128, texturePath: "entity/camel/camel", rawSourceFrame: true);
 
     internal static VanillaMeshDefinition BuildBodyMesh() => BuildCamelMesh();
 
@@ -56,10 +56,12 @@ public static class CamelModelDefinition
         "camel",
         128,
         128,
-        [.. VanillaMeshBake.Bake(CamelMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms,
+        [.. VanillaMeshBake.Bake(CamelMesh, 0, 0, rawSourceFrame: true)],
+        faceTransforms: null,
         "entity/camel/camel",
-        compiled: CompiledModel);
+        compiled: CompiledModel,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildCamelMesh()
     {

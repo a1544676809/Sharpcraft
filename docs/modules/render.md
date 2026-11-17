@@ -805,7 +805,7 @@ task-95 已把 **Illager 4 族（vindicator/evoker/pillager/illusioner）+ Villa
 - 验收条件：DSL 扩展支持独立 overlay cube 维度/pivot/deformation + 补 layer-scale root 偏移并同步 #120 held-item frame，然后逐族严格 1e-5 通过后再切 raw。
 ### task-89 剩余 quadruped 批次：阻塞登记（#102 / #137）
 
-本批 15 族（Sheep/Wolf/Fox/Cat/Horse/Camel/Goat/Panda/PolarBear/Rabbit/Armadillo/Llama/TraderLlama/Hoglin/Ravager + baby）：**6 族已切 raw**（task-135: Sheep/PolarBear；task-137: Fox/Wolf/Cat/Horse），每族严格 1e-5 jar 样本通过（144/240/240/264/264/288 行），基于 main 的 #156 face order + #141 offset + #121 mirror；独立源 bug 修正含 Cat tail_g=-0.02、Horse head_parts +π/6、Wolf 右腿 Mirror 等。**其余 9 族**（Camel/Goat/Panda/Rabbit/Armadillo/Llama/TraderLlama/Hoglin/Ravager + baby）仍 legacy（行为不退化），见 Issue #137 / R-032：
+本批 15 族（Sheep/Wolf/Fox/Cat/Horse/Camel/Goat/Panda/PolarBear/Rabbit/Armadillo/Llama/TraderLlama/Hoglin/Ravager + baby）：**10 族已切 raw**（task-135: Sheep/PolarBear；task-137: Fox/Wolf/Cat/Horse；task-143: Camel/Goat/Panda/Rabbit），每族严格 1e-5 jar 样本通过，基于 main 的 #156 face order + #141 offset + #121 mirror；独立源 bug 修正含 Cat tail_g=-0.02、Horse head_parts +π/6、Wolf 右腿 Mirror、Goat nose +0.9599、Rabbit body -0.3927 等，全部 coat 变体 raw + 变体 flag 断言。**其余 5 族**（Armadillo/Llama/TraderLlama/Hoglin/Ravager + baby）仍 legacy（行为不退化），见 Issue #137 / R-032：
 
 - 剩余族源 jar 几何与 DSL 在 1e-5 下不符（自定义几何 / multi-cube head 拆 flat / layer-scale），需逐族按源 probe 修正。
 - 已生成 27 个 #128 归一化 jar 样本（render-unit，1e-5）落盘 `tests/.../Repro/Data/` 作为验收真值；不放宽容差、不按样本拟合、不排除顶点。

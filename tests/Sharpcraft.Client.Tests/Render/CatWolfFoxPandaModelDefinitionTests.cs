@@ -57,13 +57,17 @@ public sealed class CatWolfFoxPandaModelDefinitionTests
     }
 
     [Fact]
-    public void PandaPartsMatchLegacyFromVanillaRecords()
+    public void PandaPartsMatchSourceFrameRecords()
     {
         var expected = ExpectedPandaParts();
         AssertPartsMatch(expected, PandaModelDefinition.Definition.Parts);
         foreach (var key in PandaModelDefinition.VariantKeys)
         {
-            AssertPartsMatch(expected, PandaModelDefinition.Variants[key].Parts);
+            var def = PandaModelDefinition.Variants[key];
+            AssertPartsMatch(expected, def.Parts);
+            Assert.True(def.RawSourceFrame, $"panda variant {key}: must be rawSourceFrame");
+            Assert.Equal(0f, def.BaselinePx);
+            Assert.Null(def.FaceTransforms is { Count: > 0 } ? def.FaceTransforms : null);
         }
     }
 
@@ -250,15 +254,15 @@ public sealed class CatWolfFoxPandaModelDefinitionTests
 
     private static EntityModelPart[] ExpectedPandaParts() =>
     [
-        LegacyModelPartFactory.FromVanilla("head", 0f, 11.5f, -17f, -6.5f, -5f, -4f, 13f, 10f, 9f, 0, 6),
-        LegacyModelPartFactory.FromVanilla("nose", 0f, 11.5f, -17f, -3.5f, 0f, -6f, 7f, 5f, 2f, 45, 16),
-        LegacyModelPartFactory.FromVanilla("left_ear", 0f, 11.5f, -17f, 3.5f, -8f, -1f, 5f, 4f, 1f, 52, 25),
-        LegacyModelPartFactory.FromVanilla("right_ear", 0f, 11.5f, -17f, -8.5f, -8f, -1f, 5f, 4f, 1f, 52, 25),
-        LegacyModelPartFactory.FromVanilla("body", 0f, 10f, 0f, -9.5f, -13f, -6.5f, 19f, 26f, 13f, 0, 25, rotationX: -MathF.PI / 2f),
-        LegacyModelPartFactory.FromVanilla("right_hind_leg", -5.5f, 15f, 9f, -3f, 0f, -3f, 6f, 9f, 6f, 40, 0),
-        LegacyModelPartFactory.FromVanilla("left_hind_leg", 5.5f, 15f, 9f, -3f, 0f, -3f, 6f, 9f, 6f, 40, 0),
-        LegacyModelPartFactory.FromVanilla("right_front_leg", -5.5f, 15f, -9f, -3f, 0f, -3f, 6f, 9f, 6f, 40, 0),
-        LegacyModelPartFactory.FromVanilla("left_front_leg", 5.5f, 15f, -9f, -3f, 0f, -3f, 6f, 9f, 6f, 40, 0)
+        RawModelPartFactory.FromVanilla("head", 0f, 11.5f, -17f, -6.5f, -5f, -4f, 13f, 10f, 9f, 0, 6),
+        RawModelPartFactory.FromVanilla("nose", 0f, 11.5f, -17f, -3.5f, 0f, -6f, 7f, 5f, 2f, 45, 16),
+        RawModelPartFactory.FromVanilla("left_ear", 0f, 11.5f, -17f, 3.5f, -8f, -1f, 5f, 4f, 1f, 52, 25),
+        RawModelPartFactory.FromVanilla("right_ear", 0f, 11.5f, -17f, -8.5f, -8f, -1f, 5f, 4f, 1f, 52, 25),
+        RawModelPartFactory.FromVanilla("body", 0f, 10f, 0f, -9.5f, -13f, -6.5f, 19f, 26f, 13f, 0, 25, rotationX: MathF.PI / 2f),
+        RawModelPartFactory.FromVanilla("right_hind_leg", -5.5f, 15f, 9f, -3f, 0f, -3f, 6f, 9f, 6f, 40, 0),
+        RawModelPartFactory.FromVanilla("left_hind_leg", 5.5f, 15f, 9f, -3f, 0f, -3f, 6f, 9f, 6f, 40, 0),
+        RawModelPartFactory.FromVanilla("right_front_leg", -5.5f, 15f, -9f, -3f, 0f, -3f, 6f, 9f, 6f, 40, 0),
+        RawModelPartFactory.FromVanilla("left_front_leg", 5.5f, 15f, -9f, -3f, 0f, -3f, 6f, 9f, 6f, 40, 0)
     ];
 
     private static void AssertNamesAndParentsPrefix(IReadOnlyList<EntityModelPart> parts, string[] names, string?[] parents)

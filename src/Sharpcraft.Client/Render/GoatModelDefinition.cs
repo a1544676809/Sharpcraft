@@ -20,8 +20,10 @@ public static class GoatModelDefinition
         64,
         64,
         GoatMesh,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/goat/goat");
+        faceTransforms: null,
+        "entity/goat/goat",
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildGoatMesh()
     {
@@ -32,7 +34,8 @@ public static class GoatModelDefinition
             new VanillaCubeDefinition("left_ear", 2, 61, 2f, -11f, -10f, 3f, 2f, 1f, Mirror: true));
         root.AddOrReplaceChild("goatee", VanillaPartPose.Offset(1f, 14f, 0f),
             new VanillaCubeDefinition("goatee", 23, 52, -0.5f, -3f, -14f, 0f, 7f, 5f));
-        root.AddOrReplaceChild("nose", VanillaPartPose.OffsetAndRotation(1f, 6f, -8f, -0.9599f, 0f, 0f),
+        // Source GoatModel.createBodyLayer: nose xRot = +0.9599F (source literal).
+        root.AddOrReplaceChild("nose", VanillaPartPose.OffsetAndRotation(1f, 6f, -8f, 0.9599f, 0f, 0f),
             new VanillaCubeDefinition("nose", 34, 46, -3f, -4f, -8f, 5f, 7f, 10f));
         root.AddOrReplaceChild("left_horn", VanillaPartPose.Offset(1f, 14f, 0f),
             new VanillaCubeDefinition("left_horn", 12, 55, -0.01f, -16f, -10f, 2f, 7f, 2f));

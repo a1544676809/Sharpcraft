@@ -19,16 +19,18 @@ public static class RabbitModelDefinition
     internal static VanillaMeshDefinition Mesh => RabbitMesh;
 
     private static readonly CompiledEntityModel CompiledModel =
-        VanillaMeshBakery.Build(RabbitMesh, 64, 64, texturePath: "entity/rabbit/rabbit_brown");
+        VanillaMeshBakery.Build(RabbitMesh, 64, 64, texturePath: "entity/rabbit/rabbit_brown", rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Definition = new(
         "rabbit",
         64,
         64,
-        [.. VanillaMeshBake.Bake(RabbitMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms,
+        [.. VanillaMeshBake.Bake(RabbitMesh, 0, 0, rawSourceFrame: true)],
+        faceTransforms: null,
         "entity/rabbit/rabbit_brown",
-        compiled: CompiledModel);
+        compiled: CompiledModel,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     public static readonly IReadOnlyList<string> VariantKeys = ["brown", "white", "black", "white_splotched", "gold", "salt", "evil"];
 
@@ -54,7 +56,7 @@ public static class RabbitModelDefinition
         {
             if (key != "brown")
             {
-                variants[key] = new EntityModelDefinition("rabbit_" + key, 64, 64, Definition.Parts, PlayerModelDefinition.DefaultFaceTransforms, "entity/rabbit/" + files[key], compiled: CompiledModel);
+                variants[key] = new EntityModelDefinition("rabbit_" + key, 64, 64, Definition.Parts, faceTransforms: null, "entity/rabbit/" + files[key], compiled: CompiledModel, baselinePx: 0f, rawSourceFrame: true);
             }
         }
 
@@ -68,7 +70,8 @@ public static class RabbitModelDefinition
     private static VanillaMeshDefinition BuildRabbitMesh()
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
-        var body = root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 23f, 4f, 0.3927f, 0f, 0f),
+        // Source AdultRabbitModel.createBodyLayer: body xRot = -0.3927F (source literal).
+        var body = root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 23f, 4f, -0.3927f, 0f, 0f),
             new VanillaCubeDefinition("body", 0, 0, -4f, -6f, -9f, 8f, 6f, 10f));
         body.AddOrReplaceChild("tail", VanillaPartPose.Offset(0f, -4.9916f, 0.0125f),
             new VanillaCubeDefinition("tail", 20, 16, -2f, -3.0084f, -1.0125f, 4f, 4f, 4f));
