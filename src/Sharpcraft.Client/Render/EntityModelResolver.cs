@@ -251,7 +251,10 @@ public static partial class EntityModelResolver
                 definition.EmissiveTexturePath,
                 definition.TextureSelector,
                 definition.AdditionalTexturePaths,
-                compiled: baseCompiled);
+                compiled: baseCompiled,
+                baselinePx: definition.BaselinePx,
+                rawSourceFrame: definition.RawSourceFrame,
+                sourceFrameBaselinePx: definition.SourceFrameBaselinePx);
             var customLayers = new List<EntityRenderLayerDefinition>();
             foreach (var baseLayer in definition.RenderLayers)
             {
@@ -310,7 +313,10 @@ public static partial class EntityModelResolver
                     additionalTexturePaths: [layerTexture],
                     compiled: EntityModelLayerHelpers.WithTint(
                         equipmentTree,
-                        state => EntityModelResolver.ResolveEquipmentTint(state, effectiveKind, slot)));
+                        state => EntityModelResolver.ResolveEquipmentTint(state, effectiveKind, slot)),
+                    baselinePx: definition.BaselinePx,
+                    rawSourceFrame: definition.RawSourceFrame,
+                    sourceFrameBaselinePx: definition.SourceFrameBaselinePx);
                 customLayers.Add(new EntityRenderLayerDefinition(
                     layerName,
                     EntityGeometryLayerKind.Elytra,
@@ -340,7 +346,10 @@ public static partial class EntityModelResolver
                         texturePath: null,
                         definition.Scale,
                         textureSelector: trimSelector,
-                        compiled: equipmentTree);
+                        compiled: equipmentTree,
+                        baselinePx: definition.BaselinePx,
+                        rawSourceFrame: definition.RawSourceFrame,
+                        sourceFrameBaselinePx: definition.SourceFrameBaselinePx);
                     customLayers.Add(new EntityRenderLayerDefinition(
                         trimName,
                         EntityGeometryLayerKind.Elytra,
@@ -364,7 +373,10 @@ public static partial class EntityModelResolver
                     emissiveTexturePath: glintTexture,
                     textureSelector: state => ResolveEquipmentFoil(state, slot) ? glintTexture : null,
                     additionalTexturePaths: [glintTexture],
-                    compiled: EntityModelLayerHelpers.WithEmissiveTexture(equipmentTree, glintTexture));
+                    compiled: EntityModelLayerHelpers.WithEmissiveTexture(equipmentTree, glintTexture),
+                    baselinePx: definition.BaselinePx,
+                    rawSourceFrame: definition.RawSourceFrame,
+                    sourceFrameBaselinePx: definition.SourceFrameBaselinePx);
                 customLayers.Add(new EntityRenderLayerDefinition(
                     "glint_" + effectiveKind + "_" + slot,
                     EntityGeometryLayerKind.Glint,
@@ -400,7 +412,10 @@ public static partial class EntityModelResolver
                         "entity/wolf/wolf_armor_crackiness_medium",
                         "entity/wolf/wolf_armor_crackiness_high"
                     ],
-                    compiled: wolfArmor);
+                    compiled: wolfArmor,
+                    baselinePx: definition.BaselinePx,
+                    rawSourceFrame: definition.RawSourceFrame,
+                    sourceFrameBaselinePx: definition.SourceFrameBaselinePx);
                 customLayers.Add(new EntityRenderLayerDefinition(
                     "crackiness",
                     EntityGeometryLayerKind.Elytra,
@@ -425,7 +440,10 @@ public static partial class EntityModelResolver
                     definition.Scale,
                     textureSelector: state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4),
                     additionalTexturePaths: ["entity/equipment/wings/elytra"],
-                    compiled: elytraCompiled);
+                    compiled: elytraCompiled,
+                    baselinePx: definition.BaselinePx,
+                    rawSourceFrame: definition.RawSourceFrame,
+                    sourceFrameBaselinePx: definition.SourceFrameBaselinePx);
                 customLayers.Add(new EntityRenderLayerDefinition(
                     "elytra",
                     EntityGeometryLayerKind.Elytra,
@@ -550,7 +568,10 @@ public static partial class EntityModelResolver
             definition.TextureSelector,
             definition.AdditionalTexturePaths.Concat(EquipmentTextureCatalog.AllTexturePaths).Distinct(StringComparer.Ordinal).ToArray(),
             compiled: compiled,
-            renderLayers: renderLayers);
+            renderLayers: renderLayers,
+            baselinePx: definition.BaselinePx,
+            rawSourceFrame: definition.RawSourceFrame,
+            sourceFrameBaselinePx: definition.SourceFrameBaselinePx);
         EquippedModels[key] = decorated;
         return decorated;
     }
