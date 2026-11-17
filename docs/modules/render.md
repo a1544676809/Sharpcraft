@@ -782,3 +782,11 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **旋转字面值**：改为源原版字面值（如 Turtle body `+π/2`、Parrot body `+0.4937`、Cod 鳍 `-π/4`、Dolphin `+π/3`）；源 literal 与迁移前 legacy DSL 的共轭关系逐族核对，非一刀切取反（Parrot feather 等保持原值）。
 - **多 cube 拆flat 映射**：源一个 ModelPart 含多 cube、DSL 拆为独立 part 的（Turtle body+belly、frog body/head+layer、axolotl body+body_fin/body_layer、bee-baby bone+antenna_left、allay body+body_inner 等）在 `FlatPartsForSampleCube` 按源 `addBox` 顺序显式映射；源文件 cube 顺序已逐族核对。
 - **blocker**：零面积部件（鱼鳍、蝙蝠翼、蜂脚、Turtle egg_belly 等）的退化面按 R-029 / Issue #126 显式登记——这些顶点未纳入严格 UV 比较，位置也未被独立 oracle 覆盖（显式缺口）；mirror 部件按真实 `Mirror` 标记排除（R-027 / #121）。squid 触手等无退化部件的族全顶点严格通过。
+### task-79 humanoid / 村民 / 灾厄 / Piglin 批次：阻塞登记（#102 / #134）
+
+本批 14+ 族（Player/HumanoidMob/Illager/Villager/Witch/ZombieVillager/Piglin + baby）经源真值试迁移后**未合入 raw**，保持 legacy（行为不退化），原因见 Issue #134 / R-031：
+
+- 源 hat/overlay 是独立 cube（不同尺寸/pivot/deformation，如 illager hat 8×12×8+0.45 vs head 8×10×8+0.45），仓内 DSL 用单一 `Grow` 近似，无法源正确表达；
+- 源 `MeshTransformer.scaling(factor)`（`MeshTransformer.java:7-9`）在 baked root 加 `yOffset=24.016*(1-factor)`，我们的 `Scale` 只折进 px；补此偏移会让 held-item/attack-arm/elytra 等依赖 humanoid frame 的测试回归（#120 范畴）；
+- 已生成 28 个 #128 归一化 jar 样本（render-unit，1e-5）落盘 `tests/.../Repro/Data/`，作为后续解阻塞的验收真值；不放宽容差、不按样本拟合、不排除顶点。
+- 验收条件：DSL 扩展支持独立 overlay cube 维度/pivot/deformation + 补 layer-scale root 偏移并同步 #120 held-item frame，然后逐族严格 1e-5 通过后再切 raw。
