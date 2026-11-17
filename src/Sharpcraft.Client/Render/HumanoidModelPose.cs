@@ -59,7 +59,8 @@ internal static class HumanoidModelPose
         HumanoidVariant variant,
         HumanoidArmPose rightArmPose,
         HumanoidArmPose leftArmPose,
-        bool isHoldingBow)
+        bool isHoldingBow,
+        bool rawSourceFrame = false)
     {
         var head = new PartState();
         var body = new PartState();
@@ -171,12 +172,16 @@ internal static class HumanoidModelPose
             ApplySkeletonAggressiveArms(frame, ref rightArm, ref leftArm);
         }
 
-        pose.Set("head", head.ToOffset());
-        pose.Set("body", body.ToOffset());
-        pose.Set("right_arm", rightArm.ToOffset());
-        pose.Set("left_arm", leftArm.ToOffset());
-        pose.Set("right_leg", rightLeg.ToOffset());
-        pose.Set("left_leg", leftLeg.ToOffset());
+        // Reference pose values are source-frame literals. Raw models keep them verbatim; legacy
+        // models need the historical scale(-1,-1,1) position flip.
+        rawSourceFrame |= EntityModelResolver.TryResolve(frame.TypeId)?.RawSourceFrame ?? false;
+
+        pose.Set("head", head.ToOffset(rawSourceFrame));
+        pose.Set("body", body.ToOffset(rawSourceFrame));
+        pose.Set("right_arm", rightArm.ToOffset(rawSourceFrame));
+        pose.Set("left_arm", leftArm.ToOffset(rawSourceFrame));
+        pose.Set("right_leg", rightLeg.ToOffset(rawSourceFrame));
+        pose.Set("left_leg", leftLeg.ToOffset(rawSourceFrame));
     }
 
     /// <summary>
@@ -568,11 +573,18 @@ internal static class HumanoidModelPose
         public float RotY;
         public float RotZ;
 
-        public readonly PoseOffset ToOffset()
+        public readonly PoseOffset ToOffset(bool rawSourceFrame = false)
         {
-            // Reference model space is y-down; the mesher stores the scale(-1,-1,1)-flipped model, so position offsets
-            // are flipped in X and Y (Z unchanged), matching the vertex conversion in VanillaMeshBake.BakeRoot.
-            return new PoseOffset(new Vector3(-PosX, -PosY, PosZ), new Vector3(RotX, RotY, RotZ), Vector3.Zero);
+            // Legacy storage is the scale(-1,-1,1)-flipped y-up frame, so position offsets are
+            // flipped in X and Y (Z unchanged). Raw source-frame parts keep the reference literals.
+            return rawSourceFrame
+                ? new PoseOffset(
+                    new Vector3(PosX, PosY, PosZ),
+                    // The reference model is y-down; raw vertices keep that orientation while our
+                    // rotation matrices are y-up. Reflection in Y conjugates X/Z rotations (X,Z -> -X,-Z).
+                    new Vector3(-RotX, RotY, -RotZ),
+                    Vector3.Zero)
+                : new PoseOffset(new Vector3(-PosX, -PosY, PosZ), new Vector3(RotX, RotY, RotZ), Vector3.Zero);
         }
     }
 }
