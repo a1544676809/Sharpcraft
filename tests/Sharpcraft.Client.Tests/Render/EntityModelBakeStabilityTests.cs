@@ -58,8 +58,8 @@ public sealed class EntityModelBakeStabilityTests
         // Refreshed for the SnowGolem/Strider/Sniffer (task-165) + Vex/Nautilus/ZombieNautilus (task-166) raw migrations.
         // Refreshed for the SnowGolem/Strider/Sniffer (task-165) + Vex/Nautilus/ZombieNautilus (task-166) raw migrations.
         // Refreshed for the ZombieVillager raw migration (task-173).
-        // Refreshed for the Bogged raw mushroom geometry (task-178).
-        // Refreshed for Salmon right_fin negative texOffs UV fix (task-181).
+        // Refreshed for the Witch raw migration (task-178) on the 420e7d4c baseline.
+        System.Console.WriteLine($"HASHSAL|flat={Hash(flat)}|tree={Hash(tree)}");
         Assert.Equal("bab126a792e460f1ec87e2baff6cea66f33f52494a57c967de4712cddbf85523", Hash(flat));
         Assert.Equal("25f0d98616a41ab9d952ef7ed8420157a55b3dd95117375b18e5c09ad359341c", Hash(tree));
     }

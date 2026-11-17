@@ -175,6 +175,8 @@ public sealed class LivingRawReferenceSampleTests
         // player BLOCKED (Player legacy to avoid Piglin parts-reuse coupling, task-108)
         // player-slim BLOCKED (Player legacy to avoid Piglin parts-reuse coupling, task-108)
         // task-108 blockers (multi-cube head / zero-depth mushroom / overlay parts DSL gaps).
+        // task-178: Witch raw (scale 0.9375 #141, multi-tier hat, head UV source calibration).
+        { "witch-raw-vectors.reference.txt", WitchModelDefinition.Definition, 64, 128, "entity/witch/witch", 360, 48, 312, 0 },
         // bogged BLOCKED (head mushrooms) / witch BLOCKED / zombie-villager BLOCKED /
         // piglin, piglin-brute, zombified-piglin BLOCKED (ears + clothing overlays).
     };
@@ -525,6 +527,9 @@ public sealed class LivingRawReferenceSampleTests
                 flatName = cube == 0 ? "head" : "head_cube"; break;
             case "/body/head/eyes" when definition.Name == "breeze":
                 flatName = cube == 0 ? "eyes" : "eyes_cube"; break;
+            // task-178: witch source /arms has 3 cubes (arms,arms_left,arms_right).
+            case "/arms" when definition.Name == "witch":
+                flatName = cube switch { 0 => "arms_left", 1 => "arms_right", _ => "arms" }; break;
             // task-173: zombie_villager source /head has 2 cubes (head,nose); /body has 2 (body,body_outer).
             case "/head" when definition.Name == "zombie_villager":
                 flatName = cube == 0 ? "head" : "nose"; break;
