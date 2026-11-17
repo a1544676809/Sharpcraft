@@ -784,6 +784,14 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **旋转字面值**：改为源原版字面值（如 Turtle body `+π/2`、Parrot body `+0.4937`、Cod 鳍 `-π/4`、Dolphin `+π/3`）；源 literal 与迁移前 legacy DSL 的共轭关系逐族核对，非一刀切取反（Parrot feather 等保持原值）。
 - **多 cube 拆flat 映射**：源一个 ModelPart 含多 cube、DSL 拆为独立 part 的（Turtle body+belly、frog body/head+layer、axolotl body+body_fin/body_layer、bee-baby bone+antenna_left、allay body+body_inner 等）在 `FlatPartsForSampleCube` 按源 `addBox` 顺序显式映射；源文件 cube 顺序已逐族核对。
 - **blocker**：零面积部件（鱼鳍、蝙蝠翼、蜂脚、Turtle egg_belly 等）的退化面按 R-029 / Issue #126 显式登记——这些顶点未纳入严格 UV 比较，位置也未被独立 oracle 覆盖（显式缺口）；mirror 部件按真实 `Mirror` 标记排除（R-027 / #121）。squid 触手等无退化部件的族全顶点严格通过。
+### task-116 raw humanoid attack-arm pose frame（#134）
+
+- **根因**：`HumanoidModel.setupAttackAnimation` 把 `rightArm.x/z` 设为**绝对源 part 位置**（源 bind pivot `(-5,2,0)`）；legacy `ToOffset` 把位置 X/Y 翻转以适配 legacy bake，raw 路径若沿用会得到反向的 arm delta；同时源模型是 y-down，而 mesher 旋转矩阵按 y-up 语义使用，raw 帧中 pose rotation 的 X/Z 需要 Y 反射共轭。
+- **公式**：raw pose offset = 位置 `(PosX, PosY, PosZ)`（不翻转），旋转 `(-RotX, RotY, -RotZ)`；legacy 保持 `(-PosX, -PosY, PosZ)` + `(RotX,RotY,RotZ)`。attack 源 delta：`dx = 5 - cos(bodyYRot)*5`、`dz = sin(bodyYRot)*5`（源 pivot -5）。
+- **修复**：`HumanoidModelPose.Apply` 从 `EntityModelResolver.TryResolve(frame.TypeId).RawSourceFrame` 选择 raw 转换；`ToOffset(rawSourceFrame)`；legacy 分支不变。raw 帧的 attack 源 delta 按 `dx = 5 - cos(bodyYRot)*5` 重建；分支回归用测试内直接构造的 raw Zombie/Skeleton 定义 + `HumanoidModelPose.Apply(..., rawSourceFrame:true)`，不依赖当前 registry 的迁移状态。
+- **验证**：`RawHumanoidAttackArmTests` 2/2（raw Zombie 几何 world X delta ≤0.08；raw Skeleton 源 pivot delta ≤0.08 + 源 absolute position 公式）；legacy `HumanoidAttackArmTests` 2/2 期望未改。held-item/spear/elytra 定向 27/27；全量 3,493 passed / 0 failed（Client 2,530）；三门禁绿。
+- **集成状态**：当前 main 的 HumanoidMob/Player 定义仍 legacy，raw registry 分支的 `HumanoidAttackArmTests` 需在 #108 raw 定义合入后复跑；本 diff 不把“registry raw 2/2”当作已集成证据。Player/Player-slim 严格样本的 `FlatPartsForSampleCube` harness 缺口属 raw-entities 外部 WIP，未混入本 diff。
+
 ### task-95 humanoid hat 独立 cube（#134）——部分解阻塞
 
 task-95 已把 **Illager 4 族（vindicator/evoker/pillager/illusioner）+ Villager + WanderingTrader** 切 raw 并 1e-5 严格验收：hat/hat_rim 从单一 `Grow` OverlayLayer 改为源独立子 cube（用现有 `AddOrReplaceChild`/多 cube DSL，无需新增 API）、源字面 arms 旋转（−0.75）、layer scale 0.9375 + `MeshTransformer.scaling` 的 root yOffset（`BuildModel` 路径内 24.016*(1-scale)/16）。`LivingRawReferenceSampleTests` 对每组 288/264 行逐 `part|cube|polygon|vertex` 严格比较（剥离 `VisibleWhen` 以匹配 bind-pose 样本、携带 definition.Scale）。held-item/arm/elytra + RawLayerScaleOffset 回归 37/37 绿。其余 22 族（Player/HumanoidMob 8/Witch/ZombieVillager/Piglin + baby）仍 legacy，待逐族迁移（R-031 更新为进行中）。

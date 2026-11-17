@@ -15,10 +15,34 @@ namespace Sharpcraft.Client.Tests.Render;
 /// </summary>
 public sealed class HumanoidAttackArmTests
 {
-    private static Vector3 MaxOffsetX(EntityPose pose)
+    [Fact]
+    public void TheSkeletonAttackArmStaysAttachedToTheTorso()
+    {
+        var typeId = HumanoidMobModelDefinition.SkeletonEntityTypeId;
+        var provider = new HumanoidAnimationProvider(typeId);
+        var restFrame = new EntityAnimationFrame(
+            TypeId: typeId, AgeInTicks: 10f, WalkAnimationPos: 0f,
+            WalkAnimationSpeed: 0f, Pitch: 0f, Yaw: 0f, Flap: 0f, FlapSpeed: 0f, TentacleAngle: 0f,
+            IsResting: false, IsBaby: false, IsHidingInShell: false);
+
+        var restPose = new EntityPose();
+        provider.Apply(provider.CreateState(), in restFrame, restPose);
+
+        var attackPose = new EntityPose();
+        var attackFrame = restFrame with { SwingAnimation = 0.4f, SwingType = 1, SwingHand = 0, IsAggressive = true };
+        provider.Apply(provider.CreateState(), in attackFrame, attackPose);
+
+        var restInnerX = MaxOffsetX(restPose, typeId).X;
+        var attackInnerX = MaxOffsetX(attackPose, typeId).X;
+
+        Assert.InRange(MathF.Abs(attackInnerX - restInnerX), 0f, 0.08f);
+        Assert.True(MathF.Abs(attackPose.Get("right_arm").Rotation.X - restPose.Get("right_arm").Rotation.X) > 0.05f);
+    }
+
+    private static Vector3 MaxOffsetX(EntityPose pose, int typeId = HumanoidMobModelDefinition.ZombieEntityTypeId)
     {
         var mesher = new EntityModelMesher();
-        var state = new EntityRenderState(1, HumanoidMobModelDefinition.ZombieEntityTypeId, 0f, 0f, 0f, 180f, 0f);
+        var state = new EntityRenderState(1, typeId, 0f, 0f, 0f, 180f, 0f);
         var sprite = new SpriteRect(0, 0, 64, 64, 1);
         var geometry = mesher.Build([state], sprite, 64, 64, onlyPart: "right_arm", variants: EntityVariantTable.Builtin, pose: pose);
         var min = new Vector3(float.MaxValue);
