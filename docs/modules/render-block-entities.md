@@ -13,7 +13,7 @@
 | Conduit | `ConduitRenderer` / `ConduitModelDefinition` | 已 raw（main 基准，本批验证无退化） |
 | Banner | `BannerRenderer` / `BannerModelDefinition` | 已 raw；#111 静止倾角修正 |
 | Skull | `SkullRenderer` / `SkullModelDefinition` | 已 raw（mob 四型 + player head）；Piglin/Dragon 属 entity/scale bake，未改 |
-| Book/Lectern/Enchant | `LecternRenderer` / `EnchantTableRenderer` / `BookModelDefinition` | 阻塞于基准样本口径（见下）；本批未迁移 |
+| Book/Lectern/Enchant | `LecternRenderer` / `EnchantTableRenderer` / `BookModelDefinition` | 已 raw（#119 解除：UV 口径=源字面 14/64，unit-normalized 样本 5 组严格） |
 | Statue | `CopperGolemStatueMesher` / `CopperGolemStatueModelDefinition` | 与 entity 模型跨族约束，最后处理 |
 | Chest/ShulkerBox/Bell/Pot/Placeholder | 直接网格几何（`EntityPlaceholderMesher.AppendBox` 等） | N/A（不走 entity model bake，见下） |
 | Shelf/Campfire/Brushable/Vault | item mesher（`BlockEntityItemMesher`） | N/A（不走 entity model bake，见下） |
@@ -49,7 +49,7 @@
 
 ## 已知刻意的简化与阻塞（续）
 
-- **Book/Lectern/Enchant 阻塞于原版基准样本口径**：书模型带 `setupAnim` 姿态（lid/page 旋转 + page x 位移）与复合外层变换。已写独立 jar 探针 `ref://mc-26.3-analysis/vectors/BookVectorProbe.java`（应用源 setupAnim + Lectern/Enchant 外层 pose），位置与现有内联样本一致（如 lectern facing 2 的 (0.4375,0.8951,0.0958)），但 UV 与内联样本不同（内联 `u=6/64=0.09375`，探针 `u≈0.218828`）——该内联 UV 是 legacy face 校准值，需确认哪个是源字面值后再迁移，不得按实现反推。状态：**阻塞于评审**（Issue #119 / T-102-BOOK-UV）。已尝试路径：BookVectorProbe 采样、位置交叉校验；未提交任何 Book 代码改动。
+- **Book/Lectern/Enchant UV 口径（Issue #119）——已解决**：单 cube jar 探针 `BookSeamProbe` 确认 seam polygon0/vertex0 源字面 UV=(0.218828,0)=14/64（BookModel.java:45 texOffs(12,0)），旧内联 `u=6/64=0.09375` / vertex1 `12/64` 是 legacy face 校准伪影（Skull 0.375 / Banner #111 同类）。探针按 #128 归一化到源渲染单位（顶点用 `worldX/Y/Z=v/16`、part 位移 `x/16`，ModelPart.java:129-138,163-167,384-394），避免"像素顶点 + 块位移"混合单位。`BookRawReferenceTests` 用 `book-raw-vectors.golden.txt`（5 组×168，part|cube|polygon|vertex keyed，位置+UV 严格）验证通过。状态：**已解决**（refactor/raw-book）。
 - **直接网格 / item mesher 渲染器不适用 raw（N/A）**：`ChestMesher`、`ShulkerBoxMesher`、`BellMesher`、`DecoratedPotMesher`、`BlockEntityPlaceholderMesher` 用 `EntityPlaceholderMesher.AppendBox` 直接构造盒子（`grep AppendBox <file>` 可证）；`ShelfRenderer`、`CampfireRenderer`、`BrushableRenderer`、`VaultRenderer` 用 `BlockEntityItemMesher.AppendSlot` 直接构造物品几何。它们不消费 `EntityModelDefinition`/`BuildModel`，不存在 frame 烘焙补偿，故 raw 迁移不适用（非阻塞）。`ChestAtlas` 仅做纹理装载，不涉及模型帧。
 
 ## 实现说明：Skull raw 迁移
@@ -65,3 +65,5 @@
 - 2026-11-17：Skull（mob 四型 + player）切 raw；新增 jar 探针 skull reference sample；旧内联 face-calibration 顶点期望替换为 jar 值；全量 3,335 / 三门禁通过。
 - 2026-11-17（审阅修正 task-46）：Banner 样本扩为 36 组（4 jar 锚点 + 32 源公式派生），`BannerGoldenTests` 改严格逐顶点全元组比较；新增 Skull player head 2 组 jar 样本；`render.md` 的 #111 状态统一为已解决；全量 3,369 / 三门禁通过。
 - 2026-11-17（审阅修正 task-52）：Banner 样本改为稳定 key + 源声明顶点顺序（pole→bar），`BannerGoldenTests` 去掉排序/舍入集合改按下标逐顶点位置+UV 严格比较；新增 `BannerSourceFormulaConsistencyTests`，从 4 个 jar 锚点用独立源公式重算全部 36 组逐 key 逐值校验（含 wall flag pivot (0,-20.5,10.5)）；header 补锚点映射与双 pivot 公式；全量 3,406 / 三门禁通过。
+- 2026-11-17（task-63 / #119）：Book/Lectern/Enchant 切 raw（源字面 setupAnim pose，无 legacy 补偿）；UV 口径按 #128 归一化解决；新增 `book-raw-vectors.golden.txt`（5 组×168 keyed 位置+UV 严格）；旧内联 legacy UV / pose 角度按源值更新；全量 3,431 / 三门禁通过。
+- 2026-11-17（审阅修正 task-70 / comment 722）：R-024 更新为已解决（含证据入口）；`book-raw-vectors.golden.txt` 删重复/矛盾的旧混合单位 header，仅保留 #128 归一化口径；`BookRawReferenceTests` 容差从 0.002 收紧到 1e-5（UV 按 half-float 表示量化后比较，非放宽容差）；全量 3,431 / 三门禁通过。
