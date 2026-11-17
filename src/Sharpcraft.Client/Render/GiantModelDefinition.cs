@@ -16,8 +16,9 @@ public static class GiantModelDefinition
         64,
         64,
         HumanoidMobModelDefinition.Zombie.Parts,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/zombie/zombie",
+        faceTransforms: null,
+        texturePath: "entity/zombie/zombie",
         6f,
-        compiled: HumanoidMobModelDefinition.Zombie.Compiled);
+        compiled: HumanoidMobModelDefinition.Zombie.Compiled,
+        baselinePx: 0f, rawSourceFrame: true);
 }
