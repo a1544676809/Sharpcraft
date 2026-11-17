@@ -24,7 +24,7 @@ public sealed class CatWolfFoxPandaModelDefinitionTests
     }
 
     [Fact]
-    public void WolfPartsMatchLegacyFromVanillaRecords()
+    public void WolfPartsMatchSourceFrameRecords()
     {
         var expected = EntityModelLayerHelpers.WithCollar(ExpectedWolfBaseParts(), "entity/wolf/wolf_collar");
         AssertPartsMatch(expected, WolfModelDefinition.Definition.Parts);
@@ -203,20 +203,20 @@ public sealed class CatWolfFoxPandaModelDefinitionTests
 
     private static EntityModelPart[] ExpectedWolfBaseParts() =>
     [
-        LegacyModelPartFactory.FromVanilla("head", -1f, 13.5f, -7f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-        LegacyModelPartFactory.FromVanillaChild("real_head", "head", 0f, 0f, 0f, -2f, -3f, -2f, 6f, 6f, 4f, 0, 0),
-        LegacyModelPartFactory.FromVanillaChild("right_ear", "head", 0f, 0f, 0f, -2f, -5f, 0f, 2f, 2f, 1f, 16, 14),
-        LegacyModelPartFactory.FromVanillaChild("left_ear", "head", 0f, 0f, 0f, 2f, -5f, 0f, 2f, 2f, 1f, 16, 14),
-        LegacyModelPartFactory.FromVanillaChild("snout", "head", 0f, 0f, 0f, -0.5f, -0.001f, -5f, 3f, 3f, 4f, 0, 10),
-        LegacyModelPartFactory.FromVanilla("body", 0f, 14f, 2f, -3f, -2f, -3f, 6f, 9f, 6f, 18, 14, rotationX: -MathF.PI / 2f),
-        LegacyModelPartFactory.FromVanilla("upper_body", -1f, 14f, -3f, -3f, -3f, -3f, 8f, 6f, 7f, 21, 0, rotationX: -MathF.PI / 2f),
-        LegacyModelPartFactory.FromVanilla("right_hind_leg", -2.5f, 16f, 7f, 0f, 0f, -1f, 2f, 8f, 2f, 0, 18),
-        LegacyModelPartFactory.FromVanilla("left_hind_leg", 0.5f, 16f, 7f, 0f, 0f, -1f, 2f, 8f, 2f, 0, 18),
-        LegacyModelPartFactory.FromVanilla("right_front_leg", -2.5f, 16f, -4f, 0f, 0f, -1f, 2f, 8f, 2f, 0, 18),
-        LegacyModelPartFactory.FromVanilla("left_front_leg", 0.5f, 16f, -4f, 0f, 0f, -1f, 2f, 8f, 2f, 0, 18),
-        LegacyModelPartFactory.FromVanilla("tail", -1f, 12f, 8f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0,
-            rotationX: -MathF.PI / 5f),
-        LegacyModelPartFactory.FromVanillaChild("real_tail", "tail", 0f, 0f, 0f, 0f, 0f, -1f, 2f, 8f, 2f, 9, 18)
+        RawModelPartFactory.FromVanilla("head", -1f, 13.5f, -7f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
+        RawModelPartFactory.FromVanillaChild("real_head", "head", 0f, 0f, 0f, -2f, -3f, -2f, 6f, 6f, 4f, 0, 0),
+        RawModelPartFactory.FromVanillaChild("right_ear", "head", 0f, 0f, 0f, -2f, -5f, 0f, 2f, 2f, 1f, 16, 14),
+        RawModelPartFactory.FromVanillaChild("left_ear", "head", 0f, 0f, 0f, 2f, -5f, 0f, 2f, 2f, 1f, 16, 14),
+        RawModelPartFactory.FromVanillaChild("snout", "head", 0f, 0f, 0f, -0.5f, -0.001f, -5f, 3f, 3f, 4f, 0, 10),
+        RawModelPartFactory.FromVanilla("body", 0f, 14f, 2f, -3f, -2f, -3f, 6f, 9f, 6f, 18, 14, rotationX: MathF.PI / 2f),
+        RawModelPartFactory.FromVanilla("upper_body", -1f, 14f, -3f, -3f, -3f, -3f, 8f, 6f, 7f, 21, 0, rotationX: MathF.PI / 2f),
+        RawModelPartFactory.FromVanilla("right_hind_leg", -2.5f, 16f, 7f, 0f, 0f, -1f, 2f, 8f, 2f, 0, 18, mirror: true),
+        RawModelPartFactory.FromVanilla("left_hind_leg", 0.5f, 16f, 7f, 0f, 0f, -1f, 2f, 8f, 2f, 0, 18),
+        RawModelPartFactory.FromVanilla("right_front_leg", -2.5f, 16f, -4f, 0f, 0f, -1f, 2f, 8f, 2f, 0, 18, mirror: true),
+        RawModelPartFactory.FromVanilla("left_front_leg", 0.5f, 16f, -4f, 0f, 0f, -1f, 2f, 8f, 2f, 0, 18),
+        RawModelPartFactory.FromVanilla("tail", -1f, 12f, 8f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0,
+            rotationX: MathF.PI / 5f),
+        RawModelPartFactory.FromVanillaChild("real_tail", "tail", 0f, 0f, 0f, 0f, 0f, -1f, 2f, 8f, 2f, 9, 18)
     ];
 
     private static EntityModelPart[] ExpectedFoxParts() =>
@@ -268,4 +268,5 @@ public sealed class CatWolfFoxPandaModelDefinitionTests
         }
     }
 }
+
 

@@ -17,7 +17,7 @@ public static class WolfModelDefinition
     private static readonly VanillaMeshDefinition WolfMesh = BuildBodyMesh(0f);
 
     private static readonly CompiledEntityModel BaseCompiled =
-        VanillaMeshBakery.Build(WolfMesh, 64, 32, texturePath: "entity/wolf/wolf");
+        VanillaMeshBakery.Build(WolfMesh, 64, 32, texturePath: "entity/wolf/wolf", rawSourceFrame: true);
 
     private static readonly CompiledEntityModel CompiledModel =
         EntityModelLayerHelpers.WithCollar(BaseCompiled, "entity/wolf/wolf_collar", inflate: 0f);
@@ -27,9 +27,9 @@ public static class WolfModelDefinition
         64,
         32,
         EntityModelLayerHelpers.WithCollar(
-            [.. VanillaMeshBake.Bake(WolfMesh, 0, 0)],
+            [.. VanillaMeshBake.Bake(WolfMesh, 0, 0, rawSourceFrame: true)],
             "entity/wolf/wolf_collar"),
-        PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         "entity/wolf/wolf",
         textureSelector: state => state.IsTame
             ? "entity/wolf/wolf_tame"
@@ -37,7 +37,9 @@ public static class WolfModelDefinition
                 ? "entity/wolf/wolf_angry"
                 : "entity/wolf/wolf",
         additionalTexturePaths: ["entity/wolf/wolf_tame", "entity/wolf/wolf_angry"],
-        compiled: CompiledModel);
+        compiled: CompiledModel,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     /// <summary>Registry entry names of the wolf variants, in vanilla bootstrap order.</summary>
     public static readonly IReadOnlyList<string> VariantKeys =
@@ -100,19 +102,21 @@ public static class WolfModelDefinition
             new VanillaCubeDefinition("left_ear", 16, 14, 2f, -5f, 0f, 2f, 2f, 1f, Grow: addedGrow));
         head.AddOrReplaceChild("snout", VanillaPartPose.Zero,
             new VanillaCubeDefinition("snout", 0, 10, -0.5f, -0.001f, -5f, 3f, 3f, 4f, Grow: addedGrow));
-        root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 14f, 2f, -MathF.PI / 2f, 0f, 0f),
+        // Source AdultWolfModel.createBodyLayer: body/upper_body xRot +PI/2, tail +PI/5;
+        // right legs carry CubeListBuilder.mirror() (mirrorRightLeg), left legs do not.
+        root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 14f, 2f, MathF.PI / 2f, 0f, 0f),
             new VanillaCubeDefinition("body", 18, 14, -3f, -2f, -3f, 6f, 9f, 6f, Grow: addedGrow));
-        root.AddOrReplaceChild("upper_body", VanillaPartPose.OffsetAndRotation(-1f, 14f, -3f, -MathF.PI / 2f, 0f, 0f),
+        root.AddOrReplaceChild("upper_body", VanillaPartPose.OffsetAndRotation(-1f, 14f, -3f, MathF.PI / 2f, 0f, 0f),
             new VanillaCubeDefinition("upper_body", 21, 0, -3f, -3f, -3f, 8f, 6f, 7f, Grow: addedGrow));
         root.AddOrReplaceChild("right_hind_leg", VanillaPartPose.Offset(-2.5f, 16f, 7f),
-            new VanillaCubeDefinition("right_hind_leg", 0, 18, 0f, 0f, -1f, 2f, 8f, 2f, Grow: addedGrow));
+            new VanillaCubeDefinition("right_hind_leg", 0, 18, 0f, 0f, -1f, 2f, 8f, 2f, Mirror: true, Grow: addedGrow));
         root.AddOrReplaceChild("left_hind_leg", VanillaPartPose.Offset(0.5f, 16f, 7f),
             new VanillaCubeDefinition("left_hind_leg", 0, 18, 0f, 0f, -1f, 2f, 8f, 2f, Grow: addedGrow));
         root.AddOrReplaceChild("right_front_leg", VanillaPartPose.Offset(-2.5f, 16f, -4f),
-            new VanillaCubeDefinition("right_front_leg", 0, 18, 0f, 0f, -1f, 2f, 8f, 2f, Grow: addedGrow));
+            new VanillaCubeDefinition("right_front_leg", 0, 18, 0f, 0f, -1f, 2f, 8f, 2f, Mirror: true, Grow: addedGrow));
         root.AddOrReplaceChild("left_front_leg", VanillaPartPose.Offset(0.5f, 16f, -4f),
             new VanillaCubeDefinition("left_front_leg", 0, 18, 0f, 0f, -1f, 2f, 8f, 2f, Grow: addedGrow));
-        var tail = root.AddOrReplaceChild("tail", VanillaPartPose.OffsetAndRotation(-1f, 12f, 8f, -MathF.PI / 5f, 0f, 0f),
+        var tail = root.AddOrReplaceChild("tail", VanillaPartPose.OffsetAndRotation(-1f, 12f, 8f, MathF.PI / 5f, 0f, 0f),
             new VanillaCubeDefinition("tail", 0, 0, 0f, 0f, 0f, 0f, 0f, 0f));
         tail.AddOrReplaceChild("real_tail", VanillaPartPose.Zero,
             new VanillaCubeDefinition("real_tail", 9, 18, 0f, 0f, -1f, 2f, 8f, 2f, Grow: addedGrow));

@@ -117,6 +117,8 @@ public sealed class LivingRawReferenceSampleTests
         { "enderman-raw-vectors.reference.txt", HumanoidMobModelDefinition.Enderman, 64, 32, "entity/enderman/enderman", 168, 48, 120, 0 },
         { "zombie-raw-vectors.reference.txt", HumanoidMobModelDefinition.Zombie, 64, 64, "entity/zombie/zombie", 168, 48, 120, 0 },
         // task-108 humanoid batch (total, mirror, checked, degenerate).
+        // task-137: Wolf raw (multi-cube head, source rotations, right-leg Mirror).
+        { "wolf-raw-vectors.reference.txt", WolfModelDefinition.Definition, 64, 32, "entity/wolf/wolf", 264, 48, 216, 0 },
         // task-137: Fox raw (source body xRot +PI/2; tail child of body).
         { "fox-raw-vectors.reference.txt", FoxModelDefinition.Definition, 48, 32, "entity/fox/fox", 240, 0, 240, 0 },
         // task-135: Sheep raw (source Mirror per createLegs; #156 face order).
@@ -453,6 +455,9 @@ public sealed class LivingRawReferenceSampleTests
                 flatName = cube == 0 ? "head" : "head_cube"; break;
             case "/body/head/eyes" when definition.Name == "breeze":
                 flatName = cube == 0 ? "eyes" : "eyes_cube"; break;
+            // task-137: wolf source /head/real_head has 4 cubes (real_head,right_ear,left_ear,snout).
+            case "/head/real_head" when definition.Name == "wolf":
+                flatName = cube switch { 0 => "real_head", 1 => "right_ear", 2 => "left_ear", _ => "snout" }; break;
             // task-135: polar_bear source head has 4 cubes (head,mouth,right_ear,left_ear), body 2 (body,body_upper).
             case "/head" when definition.Name == "polar_bear":
                 flatName = cube switch { 0 => "head", 1 => "mouth", 2 => "right_ear", _ => "left_ear" }; break;
