@@ -845,3 +845,8 @@ task-144 用 jar `HeadTree` probe 逐族分析 Bogged/Witch/ZombieVillager/Pigli
 - **Piglin×3**：源含 jacket/sleeve/pants overlay 子 part，legacy 11-part 为既有结构简化（task-128 已登记）；补齐会破坏 legacy 行为，故不源正确、不迁移。
 
 28 个 #128 样本 + jar probe 保留作验收真值；不放宽容差、不拟合、不排除顶点。R-035 / Issue #150 同步。
+### task-151 Warden/Phantom raw（#102）
+
+两个大型特殊族切 raw，独立 jar probe（`RawRenderUnitProbe`/`HeadTree`）采源几何+UV，落 #128 归一化样本：Warden 240 行（144 checked + 96 degenerate，零深度肋骨/触须面）、Phantom 192 行（48 mirror + 144 checked）。严格 1e-5 位置 + UV half 全通过。
+- **源修复**：Phantom body `PartPose.rotation(-0.1F,0,0)`（DSL 原为 +0.1，符号错误）；Warden 复用 DSL 原几何本即源正确，仅 production 定义补 raw flags。
+- 定义/reference/分层测试改用独立源字面 `RawModelPartFactory` + raw oracle；bake hash 仅变更检测器刷新。无容差放宽、不拟合、不排除顶点。

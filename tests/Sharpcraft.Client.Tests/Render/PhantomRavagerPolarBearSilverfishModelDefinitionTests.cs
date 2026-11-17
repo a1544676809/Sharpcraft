@@ -17,14 +17,14 @@ public sealed class PhantomRavagerPolarBearSilverfishModelDefinitionTests
     {
         var expected = new[]
         {
-            LegacyModelPartFactory.FromVanilla("body", 0f, 0f, 0f, -3f, -2f, -8f, 5f, 3f, 9f, 0, 8, rotationX: 0.1f),
-            LegacyModelPartFactory.FromVanillaChild("head", "body", 0f, 1f, -7f, -4f, -2f, -5f, 7f, 3f, 5f, 0, 0, rotationX: 0.2f),
-            LegacyModelPartFactory.FromVanillaChild("tail_base", "body", 0f, -2f, 1f, -2f, 0f, 0f, 3f, 2f, 6f, 3, 20),
-            LegacyModelPartFactory.FromVanillaChild("tail_tip", "tail_base", 0f, 0.5f, 6f, -1f, 0f, 0f, 1f, 1f, 6f, 4, 29),
-            LegacyModelPartFactory.FromVanillaChild("left_wing_base", "body", 2f, -2f, -8f, 0f, 0f, 0f, 6f, 2f, 9f, 23, 12, rotationZ: 0.1f),
-            LegacyModelPartFactory.FromVanillaChild("left_wing_tip", "left_wing_base", 6f, 0f, 0f, 0f, 0f, 0f, 13f, 1f, 9f, 16, 24, rotationZ: 0.1f),
-            LegacyModelPartFactory.FromVanillaChild("right_wing_base", "body", -3f, -2f, -8f, -6f, 0f, 0f, 6f, 2f, 9f, 23, 12, mirror: true, rotationZ: -0.1f),
-            LegacyModelPartFactory.FromVanillaChild("right_wing_tip", "right_wing_base", -6f, 0f, 0f, -13f, 0f, 0f, 13f, 1f, 9f, 16, 24, mirror: true, rotationZ: -0.1f)
+            RawModelPartFactory.FromVanilla("body", 0f, 0f, 0f, -3f, -2f, -8f, 5f, 3f, 9f, 0, 8, rotationX: -0.1f),
+            RawModelPartFactory.FromVanillaChild("head", "body", 0f, 1f, -7f, -4f, -2f, -5f, 7f, 3f, 5f, 0, 0, rotationX: 0.2f),
+            RawModelPartFactory.FromVanillaChild("tail_base", "body", 0f, -2f, 1f, -2f, 0f, 0f, 3f, 2f, 6f, 3, 20),
+            RawModelPartFactory.FromVanillaChild("tail_tip", "tail_base", 0f, 0.5f, 6f, -1f, 0f, 0f, 1f, 1f, 6f, 4, 29),
+            RawModelPartFactory.FromVanillaChild("left_wing_base", "body", 2f, -2f, -8f, 0f, 0f, 0f, 6f, 2f, 9f, 23, 12, rotationZ: 0.1f),
+            RawModelPartFactory.FromVanillaChild("left_wing_tip", "left_wing_base", 6f, 0f, 0f, 0f, 0f, 0f, 13f, 1f, 9f, 16, 24, rotationZ: 0.1f),
+            RawModelPartFactory.FromVanillaChild("right_wing_base", "body", -3f, -2f, -8f, -6f, 0f, 0f, 6f, 2f, 9f, 23, 12, mirror: true, rotationZ: -0.1f),
+            RawModelPartFactory.FromVanillaChild("right_wing_tip", "right_wing_base", -6f, 0f, 0f, -13f, 0f, 0f, 13f, 1f, 9f, 16, 24, mirror: true, rotationZ: -0.1f)
         };
         AssertPartsMatch(expected, PhantomModelDefinition.Definition.Parts);
         Assert.Equal("entity/phantom/phantom_eyes", PhantomModelDefinition.Definition.EmissiveTexturePath);

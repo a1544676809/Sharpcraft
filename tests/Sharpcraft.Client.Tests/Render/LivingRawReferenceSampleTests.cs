@@ -106,6 +106,9 @@ public sealed class LivingRawReferenceSampleTests
         { "wandering-trader-raw-vectors.reference.txt", VillagerModelDefinition.WanderingTrader, 64, 64, "entity/wandering_trader/wandering_trader", 264, 48, 216, 0 },
         { "player-raw-vectors.reference.txt", PlayerModelDefinition.Definition, 64, 64, "entity/player/steve", 288, 0, 288, 0 },
         { "player-slim-raw-vectors.reference.txt", PlayerModelDefinition.SlimDefinition, 64, 64, "entity/player/alex", 288, 0, 288, 0 },
+        // task-151 Warden/Phantom (total, mirror, checked, degenerate).
+        { "warden-raw-vectors.reference.txt", WardenModelDefinition.Definition, 128, 128, "entity/warden/warden", 240, 0, 144, 96 },
+        { "phantom-raw-vectors.reference.txt", PhantomModelDefinition.Definition, 64, 64, "entity/phantom/phantom", 192, 48, 144, 0 },
         // task-121 humanoid subset (total, mirror, checked, degenerate).
         { "skeleton-raw-vectors.reference.txt", HumanoidMobModelDefinition.Skeleton, 64, 32, "entity/skeleton/skeleton", 168, 48, 120, 0 },
         { "stray-raw-vectors.reference.txt", HumanoidMobModelDefinition.Stray, 64, 32, "entity/skeleton/stray", 168, 48, 120, 0 },

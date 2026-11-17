@@ -20,14 +20,16 @@ public static class PhantomModelDefinition
         64,
         64,
         PhantomMesh,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/phantom/phantom",
-        emissiveTexturePath: "entity/phantom/phantom_eyes");
+        faceTransforms: null,
+        texturePath: "entity/phantom/phantom",
+        emissiveTexturePath: "entity/phantom/phantom_eyes",
+        baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildPhantomMesh()
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
-        var body = root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 0f, 0f, 0.1f, 0f, 0f),
+        // Source PhantomModel.createBodyLayer: body PartPose.rotation(-0.1F, 0, 0) in the y-down model frame.
+        var body = root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 0f, 0f, -0.1f, 0f, 0f),
             new VanillaCubeDefinition("body", 0, 8, -3f, -2f, -8f, 5f, 3f, 9f));
         body.AddOrReplaceChild("head", VanillaPartPose.OffsetAndRotation(0f, 1f, -7f, 0.2f, 0f, 0f),
             new VanillaCubeDefinition("head", 0, 0, -4f, -2f, -5f, 7f, 3f, 5f));

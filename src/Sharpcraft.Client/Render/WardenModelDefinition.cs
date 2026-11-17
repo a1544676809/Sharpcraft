@@ -18,10 +18,10 @@ public static class WardenModelDefinition
 
     private static readonly VanillaMeshDefinition WardenMesh = BuildWardenMesh();
 
-    private static readonly EntityModelPart[] BaseParts = [.. VanillaMeshBake.Bake(WardenMesh, 0, 0)];
+    private static readonly EntityModelPart[] BaseParts = [.. VanillaMeshBake.Bake(WardenMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)];
 
     private static readonly CompiledEntityModel BaseCompiled =
-        VanillaMeshBakery.Build(WardenMesh, 128, 128, texturePath: "entity/warden/warden");
+        VanillaMeshBakery.Build(WardenMesh, 128, 128, modelHeight: 0f, rawSourceFrame: true, texturePath: "entity/warden/warden");
 
     private static readonly CompiledEntityModel CompiledModel = BuildCompiled();
 
@@ -30,9 +30,9 @@ public static class WardenModelDefinition
         128,
         128,
         BuildParts(),
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/warden/warden",
-        compiled: CompiledModel);
+        faceTransforms: null,
+        texturePath: "entity/warden/warden",
+        compiled: CompiledModel, baselinePx: 0f, rawSourceFrame: true);
 
     private static EntityModelPart[] BuildParts()
     {
