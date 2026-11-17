@@ -580,9 +580,7 @@ internal static class HumanoidModelPose
             return rawSourceFrame
                 ? new PoseOffset(
                     new Vector3(PosX, PosY, PosZ),
-                    // The reference model is y-down; raw vertices keep that orientation while our
-                    // rotation matrices are y-up. Reflection in Y conjugates X/Z rotations (X,Z -> -X,-Z).
-                    new Vector3(-RotX, RotY, -RotZ),
+                    new Vector3(RotX, RotY, RotZ),
                     Vector3.Zero)
                 : new PoseOffset(new Vector3(-PosX, -PosY, PosZ), new Vector3(RotX, RotY, RotZ), Vector3.Zero);
         }

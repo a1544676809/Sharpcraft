@@ -787,8 +787,8 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 ### task-116 raw humanoid attack-arm pose frame（#134）
 
 - **根因**：`HumanoidModel.setupAttackAnimation` 把 `rightArm.x/z` 设为**绝对源 part 位置**（源 bind pivot `(-5,2,0)`）；legacy `ToOffset` 把位置 X/Y 翻转以适配 legacy bake，raw 路径若沿用会得到反向的 arm delta；同时源模型是 y-down，而 mesher 旋转矩阵按 y-up 语义使用，raw 帧中 pose rotation 的 X/Z 需要 Y 反射共轭。
-- **公式**：raw pose offset = 位置 `(PosX, PosY, PosZ)`（不翻转），旋转 `(-RotX, RotY, -RotZ)`；legacy 保持 `(-PosX, -PosY, PosZ)` + `(RotX,RotY,RotZ)`。attack 源 delta：`dx = 5 - cos(bodyYRot)*5`、`dz = sin(bodyYRot)*5`（源 pivot -5）。
-- **修复**：`HumanoidModelPose.Apply` 从 `EntityModelResolver.TryResolve(frame.TypeId).RawSourceFrame` 选择 raw 转换；`ToOffset(rawSourceFrame)`；legacy 分支不变。raw 帧的 attack 源 delta 按 `dx = 5 - cos(bodyYRot)*5` 重建；分支回归用测试内直接构造的 raw Zombie/Skeleton 定义 + `HumanoidModelPose.Apply(..., rawSourceFrame:true)`，不依赖当前 registry 的迁移状态。
+- **公式（task-123 定稿）**：`PoseOffset` 存**源字面值** position `(PosX, PosY, PosZ)` + rotation `(RotX, RotY, RotZ)`；living raw 的 mesher 合成时做 X/Z 共轭：`rotation = (baseX - poseX, baseY + poseY, baseZ - poseZ)`，位置直接 `pivot + pose`。legacy 保持 `(-PosX,-PosY,PosZ)` + `(RotX,RotY,RotZ)`；block raw（Banner/BoxProbe 等）保持作者源字面，不做 animation 共轭。attack 源 delta：`dx = 5 - cos(bodyYRot)*5`、`dz = sin(bodyYRot)*5`（源 pivot -5）。
+- **修复**：`HumanoidModelPose.ToOffset(raw)` 不再取负 X/Z；`NodeFrame`/`PartFrame`/`PartWorldMatrix` 在 living raw 路径合成 `-X/+Y/-Z` pose 共轭，block 路径不变；legacy 分支不变。raw 帧的 attack 源 delta 按 `dx = 5 - cos(bodyYRot)*5` 重建；分支回归用测试内直接构造的 raw Zombie/Skeleton 定义 + `HumanoidModelPose.Apply(..., rawSourceFrame:true)`，不依赖当前 registry 的迁移状态。
 - **验证**：`RawHumanoidAttackArmTests` 2/2（raw Zombie 几何 world X delta ≤0.08；raw Skeleton 源 pivot delta ≤0.08 + 源 absolute position 公式）；legacy `HumanoidAttackArmTests` 2/2 期望未改。held-item/spear/elytra 定向 27/27；全量 3,493 passed / 0 failed（Client 2,530）；三门禁绿。
 - **集成状态**：当前 main 的 HumanoidMob/Player 定义仍 legacy，raw registry 分支的 `HumanoidAttackArmTests` 需在 #108 raw 定义合入后复跑；本 diff 不把“registry raw 2/2”当作已集成证据。Player/Player-slim 严格样本的 `FlatPartsForSampleCube` harness 缺口属 raw-entities 外部 WIP，未混入本 diff。
 
