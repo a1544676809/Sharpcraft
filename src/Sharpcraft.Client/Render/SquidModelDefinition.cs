@@ -40,13 +40,13 @@ public static class SquidModelDefinition
         root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, 8f, 0f),
             new VanillaCubeDefinition("body", 0, 0, -6f, -8f, -6f, 12f, 16f, 12f, Grow: 0.02f));
         AddTentacle(root, 0, 5f, 0f, MathF.PI / 2f);
-        AddTentacle(root, 1, 3.535f, 3.535f, MathF.PI / 4f);
+        AddTentacle(root, 1, 3.5355339f, 3.5355339f, MathF.PI / 4f);
         AddTentacle(root, 2, 0f, 5f, 0f);
-        AddTentacle(root, 3, -3.535f, 3.535f, -MathF.PI / 4f);
+        AddTentacle(root, 3, -3.5355339f, 3.5355339f, -MathF.PI / 4f);
         AddTentacle(root, 4, -5f, 0f, -MathF.PI / 2f);
-        AddTentacle(root, 5, -3.535f, -3.535f, -3f * MathF.PI / 4f);
+        AddTentacle(root, 5, -3.5355339f, -3.5355339f, -3f * MathF.PI / 4f);
         AddTentacle(root, 6, 0f, -5f, MathF.PI);
-        AddTentacle(root, 7, 3.535f, -3.535f, 3f * MathF.PI / 4f);
+        AddTentacle(root, 7, 3.5355339f, -3.5355339f, 3f * MathF.PI / 4f);
         return new VanillaMeshDefinition(root);
     }
 

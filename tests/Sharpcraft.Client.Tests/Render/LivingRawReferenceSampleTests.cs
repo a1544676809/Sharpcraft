@@ -144,13 +144,15 @@ public sealed class LivingRawReferenceSampleTests
                 var s = source[i];
                 var p = VertexFieldReader.Position(geometry.Vertices, vertexOffset + i);
                 var uv = VertexFieldReader.Uv(geometry.Vertices, vertexOffset + i);
-                Assert.True(MathF.Abs(s.X - p.X) < 0.001f && MathF.Abs(s.Y - p.Y) < 0.001f && MathF.Abs(s.Z - p.Z) < 0.001f,
+                // #128: samples are in normalized render units; production built with modelScale:1.
+                // Tight 1e-5 tolerance (Book standard) for both position and UV. The sample UV is
+                // quantized to half-float first, matching what the geometry buffer actually stores.
+                Assert.True(MathF.Abs(s.X - p.X) < 1e-5f && MathF.Abs(s.Y - p.Y) < 1e-5f && MathF.Abs(s.Z - p.Z) < 1e-5f,
                     $"part={part} cube={cube} poly={s.Polygon} v={s.Vertex}: src=({s.X},{s.Y},{s.Z}) our=({p.X},{p.Y},{p.Z})");
-                // Geometry stores UVs as half-floats; the probe writes full-float values (e.g. 25/48 =
-                // 0.520833 vs half-float 0.520996). 0.002 absorbs half-float quantization only, same
-                // tolerance the reviewed Banner golden tests use; it cannot mask a wrong UV/wrong face.
-                Assert.True(MathF.Abs(s.U - uv.U) < 0.002f && MathF.Abs(s.V - uv.V) < 0.002f,
-                    $"part={part} cube={cube} poly={s.Polygon} v={s.Vertex} UV: src=({s.U},{s.V}) our=({uv.U},{uv.V})");
+                var su = QuantizeHalf(s.U);
+                var sv = QuantizeHalf(s.V);
+                Assert.True(MathF.Abs(su - uv.U) < 1e-5f && MathF.Abs(sv - uv.V) < 1e-5f,
+                    $"part={part} cube={cube} poly={s.Polygon} v={s.Vertex} UV: src=({su},{sv}) our=({uv.U},{uv.V})");
                 checkedVertices++;
             }
         }
@@ -345,8 +347,13 @@ public sealed class LivingRawReferenceSampleTests
     private static EntityRenderState MakeLivingState(float yaw) =>
         new(1, 0, 0f, 0f, 0f, yaw, 0f);
 
+    /// <summary>Quantize a full-float sample UV to the half-float value the geometry buffer stores.</summary>
+    private static float QuantizeHalf(float value) =>
+        (float)BitConverter.UInt16BitsToHalf((ushort)BitConverter.HalfToUInt16Bits((Half)value));
+
     private static DynamicGeometry BuildModelSpace(EntityModelDefinition def, EntityRenderState state, int w, int h, ItemAtlas atlas) =>
-        new EntityModelMesher().BuildModel(def, state, atlas.Get(def.TexturePath)!, w, h, modelScale: 16f);
+        // #128 render units: modelScale:1 gives px=1/16, so output matches normalized samples.
+        new EntityModelMesher().BuildModel(def, state, atlas.Get(def.TexturePath)!, w, h, modelScale: 1f);
 
     private static DynamicGeometry BuildLivingWorld(EntityModelDefinition def, EntityRenderState state, int w, int h, ItemAtlas atlas)
     {

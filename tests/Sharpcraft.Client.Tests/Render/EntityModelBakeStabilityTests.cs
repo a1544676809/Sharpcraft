@@ -49,8 +49,8 @@ public sealed class EntityModelBakeStabilityTests
             }
         }
 
-        Assert.Equal("c33accf9b7bb3e33911cdbf78e5cb7b78821b54c504457158f6a92740b6b2704", Hash(flat));
-        Assert.Equal("9cb77e638dff2b1755493c3da61aeb420282f1d2e58cbc11fbd590e740568626", Hash(tree));
+        Assert.Equal("d60f46d01a8460bb0564f052fc95186c0c08934707847d8f3572a6c274b6ff32", Hash(flat));
+        Assert.Equal("4b45a6c3f8c9d66d35b74939b4d59f8933845e1bd01b05c7b1eea8ba89c70775", Hash(tree));
     }
 
     private static void AppendPart(StringBuilder builder, EntityModelPart part)

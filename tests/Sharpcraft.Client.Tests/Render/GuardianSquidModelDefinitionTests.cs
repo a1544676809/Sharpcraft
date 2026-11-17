@@ -55,13 +55,13 @@ public sealed class GuardianSquidModelDefinitionTests
         {
             RawModelPartFactory.FromVanilla("body", 0f, 8f, 0f, -6f, -8f, -6f, 12f, 16f, 12f, 0, 0, grow: 0.02f),
             Tentacle(0, 5f, 0f, MathF.PI / 2f),
-            Tentacle(1, 3.535f, 3.535f, MathF.PI / 4f),
+            Tentacle(1, 3.5355339f, 3.5355339f, MathF.PI / 4f),
             Tentacle(2, 0f, 5f, 0f),
-            Tentacle(3, -3.535f, 3.535f, -MathF.PI / 4f),
+            Tentacle(3, -3.5355339f, 3.5355339f, -MathF.PI / 4f),
             Tentacle(4, -5f, 0f, -MathF.PI / 2f),
-            Tentacle(5, -3.535f, -3.535f, -3f * MathF.PI / 4f),
+            Tentacle(5, -3.5355339f, -3.5355339f, -3f * MathF.PI / 4f),
             Tentacle(6, 0f, -5f, MathF.PI),
-            Tentacle(7, 3.535f, -3.535f, 3f * MathF.PI / 4f)
+            Tentacle(7, 3.5355339f, -3.5355339f, 3f * MathF.PI / 4f)
         };
         AssertPartsMatch(expected, SquidModelDefinition.Definition.Parts);
         AssertPartsMatch(expected, SquidModelDefinition.GlowSquid.Parts);
