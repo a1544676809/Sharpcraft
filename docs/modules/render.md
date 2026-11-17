@@ -811,7 +811,7 @@ task-95 已把 **Illager 4 族（vindicator/evoker/pillager/illusioner）+ Villa
 - 已生成 27 个 #128 归一化 jar 样本（render-unit，1e-5）落盘 `tests/.../Repro/Data/` 作为验收真值；不放宽容差、不按样本拟合、不排除顶点。
 ### task-94 special/large 第一组（#102 / #140）
 
-初始试迁移：**Shulker/Blaze/Endermite/HappyGhast 4 族源正确并切 raw**（HappyGhast Scale=4 在 #141 解锁 layer-scale root offset 后由 task-104 迁移）。task-109 进一步修复并迁移 **5 族**：Ghast（tentacle pivot 整数除法→源浮点除法）、Guardian（spike 呼吸因子 `cos(i)*0.01`）、IronGolem/Creaking/Breeze（multi-cube head/body 映射、零面积部件显式登记），每族 jar 样本严格 1e-5 通过。**Giant 仍 legacy，归 #134**（不归本 Issue #140）：复用 Zombie 模型，hat 是单 Grow OverlayLayer（#134 humanoid hat 独立 cube 问题），样本要求独立 hat cube，超出 task-109 范围。**#140 现状：5/6 族已解决（Ghast/Guardian/IronGolem/Creaking/Breeze），Giant 转 #134**。10 个 #128 归一化 jar 样本落盘 `Repro/Data/` 作为验收真值；不放宽容差、不拟合、不排除顶点（退化面显式登记）。
+最终结果：**6/6 族源正确并切 raw，Issue #140 已解决**。Shulker/Blaze/Endermite/HappyGhast 4 族早期迁移（HappyGhast Scale=4 由 #141 解锁）。task-109 修复并迁移 **5 族**：Ghast（tentacle pivot 整数除法→源浮点除法）、Guardian（spike 呼吸因子 `cos(i)*0.01`）、IronGolem/Creaking/Breeze（multi-cube head/body 映射、零面积部件显式登记），每族 jar 样本严格 1e-5 通过。**Giant 由 task-138 迁移**：复用 raw Zombie 几何（含 #134 已解决的独立 hat cube）+ Scale=6 root offset（#141），严格 1e-5 样本 168 行通过，不再 legacy、不再归 #134/#140 blocker。10 个 #128 归一化 jar 样本落盘 `Repro/Data/` 作验收真值；不放宽容差、不拟合、不排除顶点（退化面显式登记）。
 ### task-97/98 layer-scale root offset 拆分（#102 / #141）
 
 Blaze production definition 补齐 `rawSourceFrame:true`/`baselinePx:0`（此前只在 bake 调用上有，真实 living 渲染仍走 legacy）；新增测试 `Task94MigratedProductionDefinitionsCarryRawSourceFrameFlags` 防止隔离定义误绿。

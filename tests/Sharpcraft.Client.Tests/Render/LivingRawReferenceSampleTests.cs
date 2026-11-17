@@ -92,7 +92,8 @@ public sealed class LivingRawReferenceSampleTests
         { "ghast-raw-vectors.reference.txt", GhastModelDefinition.Definition, 64, 32, "entity/ghast/ghast", 240, 0, 240, 0 },
         // task-104: HappyGhast (Scale=4) raw, enabled by the layer-scale root offset (#141).
         { "happy-ghast-raw-vectors.reference.txt", HappyGhastModelDefinition.Definition, 64, 64, "entity/ghast/happy_ghast", 240, 0, 240, 0 },
-        // giant BLOCKED (special DSL/jar geometry gap, task-94)
+        // task-138 Giant raw: reuses raw Zombie geometry + Scale=6 root offset (#141).
+        { "giant-raw-vectors.reference.txt", GiantModelDefinition.Definition, 64, 64, "entity/zombie/zombie", 168, 48, 120, 0 },
         // task-109: Guardian raw (multi-cube head; Mirror excluded via real flag).
         { "guardian-raw-vectors.reference.txt", GuardianModelDefinition.Definition, 64, 64, "entity/guardian/guardian", 528, 24, 504, 0 },
         // task-109: IronGolem raw (multi-cube head/body; Mirror excluded via real flag).
