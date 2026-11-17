@@ -95,7 +95,7 @@ public static class SalmonModelDefinition
         root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 20f, -7.2f),
             new VanillaCubeDefinition("head", 22, 0, -1f, -2f, -3f, 2f, 4f, 3f));
         root.AddOrReplaceChild("right_fin", VanillaPartPose.OffsetAndRotation(-1.5f, 21.5f, -7.2f,-0f,-0f,-MathF.PI / 4f),
-            new VanillaCubeDefinition("right_fin", 28, 0, -2f, 0f, 0f, 2f, 0f, 2f));
+            new VanillaCubeDefinition("right_fin", -4, 0, -2f, 0f, 0f, 2f, 0f, 2f));
         root.AddOrReplaceChild("left_fin", VanillaPartPose.OffsetAndRotation(1.5f, 21.5f, -7.2f,-0f,-0f,MathF.PI / 4f),
             new VanillaCubeDefinition("left_fin", 0, 0, 0f, 0f, 0f, 2f, 0f, 2f));
         return new VanillaMeshDefinition(root);

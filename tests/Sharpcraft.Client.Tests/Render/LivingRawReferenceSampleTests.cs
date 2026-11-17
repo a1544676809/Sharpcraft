@@ -55,7 +55,7 @@ public sealed class LivingRawReferenceSampleTests
         { "chicken-baby-raw-vectors.reference.txt", BabyModelDefinitions.Chicken, 16, 16, "entity/chicken/chicken_temperate_baby", 192, 0, 192, 0 },
         // task-62 aquatic/flying batch. Counts = (total, mirror, checked, degenerate) from jar probe.
         { "cod-raw-vectors.reference.txt", CodModelDefinition.Definition, 32, 32, "entity/fish/cod", 168, 0, 168, 0 },
-        { "salmon-raw-vectors.reference.txt", SalmonModelDefinition.Definition, 32, 32, "entity/fish/salmon", 192, 0, 72, 120 },
+        { "salmon-raw-vectors.reference.txt", SalmonModelDefinition.Definition, 32, 32, "entity/fish/salmon", 192, 0, 192, 0 },
         { "tropical-fish-small-raw-vectors.reference.txt", TropicalFishModelDefinition.Definition, 32, 32, "entity/fish/tropical_a", 120, 0, 120, 0 },
         { "tropical-fish-large-raw-vectors.reference.txt", TropicalFishModelDefinition.Variants["flopper"], 32, 32, "entity/fish/tropical_b", 144, 0, 144, 0 },
         { "pufferfish-small-raw-vectors.reference.txt", PufferfishModelDefinition.Definition, 32, 32, "entity/fish/pufferfish", 144, 0, 144, 0 },
@@ -236,6 +236,7 @@ public sealed class LivingRawReferenceSampleTests
             // differently by the mesh/probe path; kept as an explicit R-029/#126 blocker rather than fitted.
             var includeRawDegenerate = sampleFile.StartsWith("chicken-baby-", StringComparison.Ordinal)
                 || sampleFile.StartsWith("cod-", StringComparison.Ordinal)
+                || sampleFile.StartsWith("salmon-", StringComparison.Ordinal)
                 || sampleFile.StartsWith("tropical-fish-", StringComparison.Ordinal)
                 || sampleFile.StartsWith("pufferfish-", StringComparison.Ordinal)
                 || sampleFile.StartsWith("tadpole-", StringComparison.Ordinal)
