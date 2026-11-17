@@ -52,9 +52,9 @@ public sealed class EntityModelBakeStabilityTests
         // Change-detector only, not equivalence evidence; per-family source samples remain the
         // equivalence gate. Refreshed for the humanoid hat raw migration on the current baseline.
         // Refreshed for the humanoid hat raw migration on the b37cfdc0 baseline.
-        // Refreshed for the Ghast/Guardian/IronGolem/Creaking raw migrations (task-109).
-        Assert.Equal("f57065b5bac45ac3b674d00c4ba01cecf590a1a21c9c7d10f92d69e3383d7ef0", Hash(flat));
-        Assert.Equal("d49ad0838f727af0788c6a82b0a5cf3441c8e4db88e459fa3ff53455bd82df0a", Hash(tree));
+        // Refreshed for the 5-family special raw migration (task-109).
+        Assert.Equal("ad25baf8fe73d56c882478bb9afc44b8c57909011b4c0306dccd61b04c62a293", Hash(flat));
+        Assert.Equal("387023ba7f7256cb02003081182799d7dbb2f6538cc5f934265c8c39aa915b52", Hash(tree));
     }
 
     private static void AppendPart(StringBuilder builder, EntityModelPart part)

@@ -16,7 +16,7 @@ namespace Sharpcraft.Client.Tests.Render;
 public sealed class BreezeModelDefinitionTests
 {
     [Fact]
-    public void BreezePartsMatchLegacyFromVanillaRecords()
+    public void BreezePartsMatchSourceFrameRecords()
     {
         AssertPartsMatch(ExpectedBreezeParts(), BreezeModelDefinition.Definition.Parts);
     }
@@ -97,19 +97,19 @@ public sealed class BreezeModelDefinitionTests
 
     private static EntityModelPart[] ExpectedBreezeParts() =>
     [
-        LegacyModelPartFactory.FromVanilla("body", 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-        LegacyModelPartFactory.FromVanillaChild("rods", "body", 0f, 8f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-        LegacyModelPartFactory.FromVanillaChild("rod_1", "rods", 2.5981f, -3f, 1.5f, -1f, 0f, -3f, 2f, 8f, 2f, 0, 17,
+        RawModelPartFactory.FromVanilla("body", 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
+        RawModelPartFactory.FromVanillaChild("rods", "body", 0f, 8f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
+        RawModelPartFactory.FromVanillaChild("rod_1", "rods", 2.5981f, -3f, 1.5f, -1f, 0f, -3f, 2f, 8f, 2f, 0, 17,
             rotationX: -2.7489f, rotationY: -1.0472f, rotationZ: 3.1416f),
-        LegacyModelPartFactory.FromVanillaChild("rod_2", "rods", -2.5981f, -3f, 1.5f, -1f, 0f, -3f, 2f, 8f, 2f, 0, 17,
+        RawModelPartFactory.FromVanillaChild("rod_2", "rods", -2.5981f, -3f, 1.5f, -1f, 0f, -3f, 2f, 8f, 2f, 0, 17,
             rotationX: -2.7489f, rotationY: 1.0472f, rotationZ: 3.1416f),
-        LegacyModelPartFactory.FromVanillaChild("rod_3", "rods", 0f, -3f, -3f, -1f, 0f, -3f, 2f, 8f, 2f, 0, 17,
+        RawModelPartFactory.FromVanillaChild("rod_3", "rods", 0f, -3f, -3f, -1f, 0f, -3f, 2f, 8f, 2f, 0, 17,
             rotationX: 0.3927f),
-        LegacyModelPartFactory.FromVanillaChild("head", "body", 0f, 4f, 0f, -5f, -5f, -4.2f, 10f, 3f, 4f, 4, 24),
-        LegacyModelPartFactory.FromVanillaChild("head_cube", "head", 0f, 0f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0),
-        LegacyModelPartFactory.FromVanillaChild("eyes", "head", 0f, 0f, 0f, -5f, -5f, -4.2f, 10f, 3f, 4f, 4, 24) with { EmissiveOnly = true },
-        LegacyModelPartFactory.FromVanillaChild("eyes_cube", "eyes", 0f, 0f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0) with { EmissiveOnly = true },
-        LegacyModelPartFactory.FromVanilla("wind_body", 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
+        RawModelPartFactory.FromVanillaChild("head", "body", 0f, 4f, 0f, -5f, -5f, -4.2f, 10f, 3f, 4f, 4, 24),
+        RawModelPartFactory.FromVanillaChild("head_cube", "head", 0f, 0f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0),
+        RawModelPartFactory.FromVanillaChild("eyes", "head", 0f, 0f, 0f, -5f, -5f, -4.2f, 10f, 3f, 4f, 4, 24) with { EmissiveOnly = true },
+        RawModelPartFactory.FromVanillaChild("eyes_cube", "eyes", 0f, 0f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0) with { EmissiveOnly = true },
+        RawModelPartFactory.FromVanilla("wind_body", 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
         WindPart("wind_bottom", "wind_body", 0f, 24f, 0f, -2.5f, -7f, -2.5f, 5f, 7f, 5f, 1, 83),
         WindPart("wind_mid", "wind_bottom", 0f, -7f, 0f, -6f, -6f, -6f, 12f, 6f, 12f, 74, 28),
         WindPart("wind_mid_mid", "wind_mid", 0f, 0f, 0f, -4f, -6f, -4f, 8f, 6f, 8f, 78, 32),
@@ -119,7 +119,7 @@ public sealed class BreezeModelDefinitionTests
         WindPart("wind_top_inner", "wind_top", 0f, 0f, 0f, -2.5f, -8f, -2.5f, 5f, 8f, 5f, 105, 57)
     ];
 
-    /// <summary>Mirror of the legacy WindPart factory (same values) for the expected records.</summary>
+    /// <summary>Source-frame WindPart factory (same values) for the expected records.</summary>
     private static EntityModelPart WindPart(
         string name,
         string parent,
@@ -134,7 +134,7 @@ public sealed class BreezeModelDefinitionTests
         float depth,
         int textureX,
         int textureY) =>
-        LegacyModelPartFactory.FromVanillaChild(
+        RawModelPartFactory.FromVanillaChild(
             name, parent, pivotX, pivotY, pivotZ, minX, minY, minZ, width, height, depth, textureX, textureY) with
         {
             Kind = EntityGeometryLayerKind.Translucent,

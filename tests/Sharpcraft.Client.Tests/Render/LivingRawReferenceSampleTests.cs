@@ -83,7 +83,8 @@ public sealed class LivingRawReferenceSampleTests
         // task-94 special/large first group (total, mirror, checked, degenerate).
         { "shulker-raw-vectors.reference.txt", ShulkerModelDefinition.Definition, 64, 64, "entity/shulker/shulker", 72, 0, 72, 0 },
         { "blaze-raw-vectors.reference.txt", BlazeModelDefinition.Definition, 64, 32, "entity/blaze/blaze", 312, 0, 312, 0 },
-        // breeze BLOCKED (special DSL/jar geometry gap, task-94)
+        // task-109: Breeze raw (multi-cube head/eyes; sample covers base cutout parts).
+        { "breeze-raw-vectors.reference.txt", BreezeModelDefinition.Definition, 32, 32, "entity/breeze/breeze", 168, 0, 120, 48 },
         // task-109: Creaking raw (multi-cube head/body/legs; 384 rows incl. zero-depth plates).
         { "creaking-raw-vectors.reference.txt", CreakingModelDefinition.Definition, 64, 64, "entity/creaking/creaking", 384, 0, 288, 96 },
         { "endermite-raw-vectors.reference.txt", EndermiteModelDefinition.Definition, 64, 32, "entity/endermite/endermite", 96, 0, 96, 0 },
@@ -424,6 +425,11 @@ public sealed class LivingRawReferenceSampleTests
                 flatName = cube == 0 ? "left_leg" : "left_foot"; break;
             case "/root/right_leg" when definition.Name == "creaking":
                 flatName = cube switch { 0 => "right_leg", 1 => "right_foot", _ => "right_knee" }; break;
+            // task-109: breeze source head/eyes have 2 cubes each (head,head_cube / eyes,eyes_cube).
+            case "/body/head" when definition.Name == "breeze":
+                flatName = cube == 0 ? "head" : "head_cube"; break;
+            case "/body/head/eyes" when definition.Name == "breeze":
+                flatName = cube == 0 ? "eyes" : "eyes_cube"; break;
             case "/head/beak": flatName = "beak"; break;
             case "/head/red_thing": flatName = "red_thing"; break;
             case "/ribcage" when definition.Name.StartsWith("wither", StringComparison.Ordinal):

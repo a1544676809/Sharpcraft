@@ -25,18 +25,20 @@ public static class BreezeModelDefinition
     internal static VanillaMeshDefinition Mesh => BreezeMesh;
 
     private static readonly CompiledEntityModel CompiledModel =
-        VanillaMeshBakery.Build(BreezeMesh, 32, 32, texturePath: "entity/breeze/breeze");
+        VanillaMeshBakery.Build(BreezeMesh, 32, 32, texturePath: "entity/breeze/breeze", rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Definition = new(
         "breeze",
         32,
         32,
-        [.. VanillaMeshBake.Bake(BreezeMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms,
+        [.. VanillaMeshBake.Bake(BreezeMesh, 0, 0, rawSourceFrame: true)],
+        faceTransforms: null,
         "entity/breeze/breeze",
         1f,
         "entity/breeze/breeze_eyes",
-        additionalTexturePaths: ["entity/breeze/breeze_wind", "entity/breeze/breeze_eyes"], compiled: CompiledModel);
+        additionalTexturePaths: ["entity/breeze/breeze_wind", "entity/breeze/breeze_eyes"], compiled: CompiledModel,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildBreezeMesh()
     {
