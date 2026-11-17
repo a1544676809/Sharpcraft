@@ -44,8 +44,9 @@ public sealed class ReferenceModelFactsTests
     [Fact]
     public void AdultRabbitMatchesReferenceFacts()
     {
+        // task-143: Rabbit migrated to raw source frame; compare with raw-frame oracle (source rotation literals).
         var model = Load("AdultRabbitModel");
-        AssertPartsMatch(BuildExpectedParts(model), RabbitModelDefinition.Definition.Parts);
+        AssertPartsMatch(BuildExpectedParts(model, raw: true), RabbitModelDefinition.Definition.Parts);
     }
 
     [Fact]

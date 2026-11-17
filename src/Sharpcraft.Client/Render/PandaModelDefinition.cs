@@ -20,8 +20,10 @@ public static class PandaModelDefinition
         64,
         64,
         PandaMesh,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/panda/panda");
+        faceTransforms: null,
+        "entity/panda/panda",
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     public static readonly IReadOnlyList<string> VariantKeys = ["normal", "lazy", "worried", "playful", "brown", "weak", "aggressive"];
 
@@ -42,9 +44,11 @@ public static class PandaModelDefinition
                     64,
                     64,
                     Definition.Parts,
-                    PlayerModelDefinition.DefaultFaceTransforms,
+                    faceTransforms: null,
                     "entity/panda/panda_" + key,
-                    compiled: Definition.Compiled);
+                    compiled: Definition.Compiled,
+                    baselinePx: 0f,
+                    rawSourceFrame: true);
             }
         }
 
@@ -62,7 +66,8 @@ public static class PandaModelDefinition
             new VanillaCubeDefinition("left_ear", 52, 25, 3.5f, -8f, -1f, 5f, 4f, 1f));
         root.AddOrReplaceChild("right_ear", VanillaPartPose.Offset(0f, 11.5f, -17f),
             new VanillaCubeDefinition("right_ear", 52, 25, -8.5f, -8f, -1f, 5f, 4f, 1f));
-        root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 10f, 0f, -MathF.PI / 2f, 0f, 0f),
+        // Source PandaModel.createBodyLayer: body xRot = +PI/2 (source literal).
+        root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 10f, 0f, MathF.PI / 2f, 0f, 0f),
             new VanillaCubeDefinition("body", 0, 25, -9.5f, -13f, -6.5f, 19f, 26f, 13f));
         root.AddOrReplaceChild("right_hind_leg", VanillaPartPose.Offset(-5.5f, 15f, 9f),
             new VanillaCubeDefinition("right_hind_leg", 40, 0, -3f, 0f, -3f, 6f, 9f, 6f));
