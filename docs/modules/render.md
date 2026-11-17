@@ -805,9 +805,9 @@ task-95 已把 **Illager 4 族（vindicator/evoker/pillager/illusioner）+ Villa
 - 验收条件：DSL 扩展支持独立 overlay cube 维度/pivot/deformation + 补 layer-scale root 偏移并同步 #120 held-item frame，然后逐族严格 1e-5 通过后再切 raw。
 ### task-89 剩余 quadruped 批次：阻塞登记（#102 / #137）
 
-本批 15 族（Sheep/Wolf/Fox/Cat/Horse/Camel/Goat/Panda/PolarBear/Rabbit/Armadillo/Llama/TraderLlama/Hoglin/Ravager + baby）试迁移后**未合入 raw**，保持 legacy（行为不退化），原因见 Issue #137 / R-032：
+本批 15 族（Sheep/Wolf/Fox/Cat/Horse/Camel/Goat/Panda/PolarBear/Rabbit/Armadillo/Llama/TraderLlama/Hoglin/Ravager + baby）：**6 族已切 raw**（task-135: Sheep/PolarBear；task-137: Fox/Wolf/Cat/Horse），每族严格 1e-5 jar 样本通过（144/240/240/264/264/288 行），基于 main 的 #156 face order + #141 offset + #121 mirror；独立源 bug 修正含 Cat tail_g=-0.02、Horse head_parts +π/6、Wolf 右腿 Mirror 等。**其余 9 族**（Camel/Goat/Panda/Rabbit/Armadillo/Llama/TraderLlama/Hoglin/Ravager + baby）仍 legacy（行为不退化），见 Issue #137 / R-032：
 
-- 源 jar baked ModelPart 几何与 DSL 声明在 1e-5 下系统性不符（pivot/旋转/多 cube head 拆 flat）；horse/cat/polar-bear 另有 `MeshTransformer.scaling` root 偏移（#134 同类）未建模。
+- 剩余族源 jar 几何与 DSL 在 1e-5 下不符（自定义几何 / multi-cube head 拆 flat / layer-scale），需逐族按源 probe 修正。
 - 已生成 27 个 #128 归一化 jar 样本（render-unit，1e-5）落盘 `tests/.../Repro/Data/` 作为验收真值；不放宽容差、不按样本拟合、不排除顶点。
 ### task-94 special/large 第一组（#102 / #140）
 
