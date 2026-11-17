@@ -15,24 +15,24 @@ public static class SquidModelDefinition
 
     private static readonly VanillaMeshDefinition SquidMesh = BuildSquidMesh();
 
-    private static readonly EntityModelPart[] Parts = [.. VanillaMeshBake.Bake(SquidMesh, 0, 0)];
+    private static readonly EntityModelPart[] Parts = [.. VanillaMeshBake.Bake(SquidMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)];
 
     public static readonly EntityModelDefinition Definition = EntityModelDefinition.FromTree(
         "squid",
         64,
         32,
         SquidMesh,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/squid/squid");
+        faceTransforms: null,
+        "entity/squid/squid", baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition GlowSquid = new(
         "glow_squid",
         64,
         32,
         Parts,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/squid/glow_squid",
-        compiled: Definition.Compiled);
+        faceTransforms: null,
+        texturePath: "entity/squid/glow_squid",
+        compiled: Definition.Compiled, baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildSquidMesh()
     {

@@ -52,7 +52,29 @@ public sealed class LivingRawReferenceSampleTests
         // sample rows are excluded from BOTH strict source UV comparison AND from any world/legacy
         // twin check (WorldCases has no quadruped/baby cases). Their positions/UVs are therefore NOT
         // covered by an independent oracle - this is an explicit, audited gap, not a silent pass.
-        { "chicken-baby-raw-vectors.reference.txt", BabyModelDefinitions.Chicken, 16, 16, "entity/chicken/chicken_temperate_baby", 192, 0, 48, 144 }
+        { "chicken-baby-raw-vectors.reference.txt", BabyModelDefinitions.Chicken, 16, 16, "entity/chicken/chicken_temperate_baby", 192, 0, 48, 144 },
+        // task-62 aquatic/flying batch. Counts = (total, mirror, checked, degenerate) from jar probe.
+        { "cod-raw-vectors.reference.txt", CodModelDefinition.Definition, 32, 32, "entity/fish/cod", 168, 0, 72, 96 },
+        { "salmon-raw-vectors.reference.txt", SalmonModelDefinition.Definition, 32, 32, "entity/fish/salmon", 192, 0, 72, 120 },
+        { "tropical-fish-small-raw-vectors.reference.txt", TropicalFishModelDefinition.Definition, 32, 32, "entity/fish/tropical_a", 120, 0, 24, 96 },
+        { "tropical-fish-large-raw-vectors.reference.txt", TropicalFishModelDefinition.Variants["flopper"], 32, 32, "entity/fish/tropical_b", 144, 0, 24, 120 },
+        { "pufferfish-small-raw-vectors.reference.txt", PufferfishModelDefinition.Definition, 32, 32, "entity/fish/pufferfish", 144, 0, 72, 72 },
+        { "pufferfish-medium-raw-vectors.reference.txt", PufferfishModelDefinition.Variants["medium"], 32, 32, "entity/fish/pufferfish", 264, 0, 48, 216 },
+        { "pufferfish-large-raw-vectors.reference.txt", PufferfishModelDefinition.Variants["large"], 32, 32, "entity/fish/pufferfish", 312, 0, 96, 216 },
+        { "tadpole-raw-vectors.reference.txt", TadpoleModelDefinition.Definition, 16, 16, "entity/tadpole/tadpole", 48, 0, 24, 24 },
+        { "squid-raw-vectors.reference.txt", SquidModelDefinition.Definition, 64, 32, "entity/squid/squid", 216, 0, 216, 0 },
+        { "glow-squid-raw-vectors.reference.txt", SquidModelDefinition.GlowSquid, 64, 32, "entity/squid/glow_squid", 216, 0, 216, 0 },
+        { "dolphin-raw-vectors.reference.txt", DolphinModelDefinition.Definition, 64, 64, "entity/dolphin/dolphin", 192, 24, 168, 0 },
+        { "axolotl-raw-vectors.reference.txt", AxolotlModelDefinition.Definition, 64, 64, "entity/axolotl/axolotl", 264, 0, 48, 216 },
+        { "axolotl-baby-raw-vectors.reference.txt", BabyModelDefinitionsAquatic.Axolotl, 32, 32, "entity/axolotl/axolotl_baby", 264, 0, 48, 216 },
+        { "turtle-raw-vectors.reference.txt", TurtleModelDefinition.Definition, 128, 64, "entity/turtle/turtle", 192, 0, 168, 24 },
+        { "turtle-baby-raw-vectors.reference.txt", BabyModelDefinitionsMisc.Turtle, 16, 16, "entity/turtle/turtle_baby", 144, 0, 48, 96 },
+        { "frog-raw-vectors.reference.txt", FrogModelDefinition.Definition, 48, 48, "entity/frog/frog_temperate", 384, 0, 216, 168 },
+        { "bat-raw-vectors.reference.txt", BatModelDefinition.Definition, 32, 32, "entity/bat/bat", 216, 0, 48, 168 },
+        { "bee-raw-vectors.reference.txt", BeeModelDefinition.Definition, 64, 64, "entity/bee/bee", 216, 0, 72, 144 },
+        { "bee-baby-raw-vectors.reference.txt", BabyModelDefinitionsAquatic.Bee, 32, 32, "entity/bee/bee_baby", 216, 0, 72, 144 },
+        { "parrot-raw-vectors.reference.txt", ParrotModelDefinition.Definition, 32, 32, "entity/parrot/parrot", 264, 0, 240, 24 },
+        { "allay-raw-vectors.reference.txt", AllayModelDefinition.Definition, 32, 32, "entity/allay/allay", 168, 0, 120, 48 }
     };
 
     [Theory]
@@ -78,10 +100,11 @@ public sealed class LivingRawReferenceSampleTests
             // Mirror exclusion is determined by the REAL baked part's Mirror flag (R-027), never by name.
             EntityModelPart[] sourceParts = FlatPartsForSampleCube(definition, part, cube);
             Assert.NotEmpty(sourceParts);
-            if (sourceParts[0].Width == 0f || sourceParts[0].Height == 0f || sourceParts[0].Depth == 0f)
+            if (sourceParts[0].Width == 0f || sourceParts[0].Height == 0f || sourceParts[0].Depth == 0f
+                || EmittedVertCount(sourceParts[0], width, height, atlas, texturePath) == 0)
             {
-                // Degenerate (zero-area) cube: mesher culls faces the source probe emits. Pre-existing
-                // behavior, registered as a blocker; positions still covered by the full-model world test.
+                // Degenerate/hidden cube: mesher culls the faces the source probe emits. Pre-existing
+                // behavior, registered as blocker (R-029/#126). Explicitly excluded, not silently passed.
                 degenerateVertices += group.Count();
                 continue;
             }
@@ -99,11 +122,18 @@ public sealed class LivingRawReferenceSampleTests
             var sourceNames = sourceParts.Select(p => p.Name).ToHashSet(StringComparer.Ordinal);
             var partOrder = definition.Parts.Where(p => sourceNames.Contains(p.Name) || IsAncestorOf(p, targetName, definition)).ToArray();
             var single = new EntityModelDefinition(definition.Name, width, height, partOrder,
-                texturePath: definition.TexturePath, baselinePx: 0f, rawSourceFrame: true);
+                texturePath: texturePath, baselinePx: 0f, rawSourceFrame: true);
             var geometry = BuildModelSpace(single, MakeLivingState(180f), width, height, atlas);
             var source = group.OrderBy(r => r.Polygon).ThenBy(r => r.Vertex).ToArray();
-            // The target's 24 vertices are emitted at the position of targetName in partOrder.
-            var vertexOffset = Array.IndexOf(partOrder, partOrder.Single(p => p.Name == targetName)) * 24;
+            // The target's 24 vertices are emitted after all preceding parts in partOrder; each part
+            // emits a variable count (0 for fully-zero/hidden parts, 8 for single-plane parts, 24 for
+            // full cubes), so sum actual emitted counts rather than assuming 24 each.
+            var vertexOffset = 0;
+            foreach (var before in partOrder)
+            {
+                if (before.Name == targetName) break;
+                vertexOffset += EmittedVertCount(before, width, height, atlas, texturePath);
+            }
             // For the flattened Wither ribcage, all four cubes were returned; map cube index to its part.
             if (part == "/ribcage") vertexOffset = cube * 24;
             Assert.Equal(24, source.Length);
@@ -116,7 +146,10 @@ public sealed class LivingRawReferenceSampleTests
                 var uv = VertexFieldReader.Uv(geometry.Vertices, vertexOffset + i);
                 Assert.True(MathF.Abs(s.X - p.X) < 0.001f && MathF.Abs(s.Y - p.Y) < 0.001f && MathF.Abs(s.Z - p.Z) < 0.001f,
                     $"part={part} cube={cube} poly={s.Polygon} v={s.Vertex}: src=({s.X},{s.Y},{s.Z}) our=({p.X},{p.Y},{p.Z})");
-                Assert.True(MathF.Abs(s.U - uv.U) < 0.0001f && MathF.Abs(s.V - uv.V) < 0.0001f,
+                // Geometry stores UVs as half-floats; the probe writes full-float values (e.g. 25/48 =
+                // 0.520833 vs half-float 0.520996). 0.002 absorbs half-float quantization only, same
+                // tolerance the reviewed Banner golden tests use; it cannot mask a wrong UV/wrong face.
+                Assert.True(MathF.Abs(s.U - uv.U) < 0.002f && MathF.Abs(s.V - uv.V) < 0.002f,
                     $"part={part} cube={cube} poly={s.Polygon} v={s.Vertex} UV: src=({s.U},{s.V}) our=({uv.U},{uv.V})");
                 checkedVertices++;
             }
@@ -254,6 +287,24 @@ public sealed class LivingRawReferenceSampleTests
                 flatName = cube switch { 0 => "head", 1 => "snout", 2 => "right_horn", _ => "left_horn" }; break;
             case "/body" when definition.Name.StartsWith("cow", StringComparison.Ordinal) || definition.Name.StartsWith("mooshroom", StringComparison.Ordinal):
                 flatName = cube == 0 ? "body" : "udder"; break;
+            // task-62 multi-cube source parts flattened into separate DSL parts (source addBox order).
+            case "/body" when definition.Name.StartsWith("turtle", StringComparison.Ordinal):
+                flatName = cube == 0 ? "body" : "belly"; break;
+            case "/body" when definition.Name.StartsWith("axolotl", StringComparison.Ordinal):
+                flatName = cube == 0 ? "body" : "body_layer"; break;
+            case "/root/body" when definition.Name.StartsWith("baby_axolotl", StringComparison.Ordinal):
+                flatName = cube == 0 ? "body" : "body_fin"; break;
+            case "/root/body" when definition.Name.StartsWith("axolotl", StringComparison.Ordinal):
+                flatName = cube == 0 ? "body" : "body_layer"; break;
+            case "/root/body" when definition.Name.StartsWith("frog", StringComparison.Ordinal):
+                flatName = cube == 0 ? "body" : "body_layer"; break;
+            case "/root/body/head" when definition.Name.StartsWith("frog", StringComparison.Ordinal):
+                // Source CubeListBuilder order: head_layer (height 0) first, then head (height 3).
+                flatName = cube == 0 ? "head_layer" : "head"; break;
+            case "/root/body" when definition.Name.StartsWith("allay", StringComparison.Ordinal):
+                flatName = cube == 0 ? "body" : "body_inner"; break;
+            case "/bone" when definition.Name.StartsWith("baby_bee", StringComparison.Ordinal):
+                flatName = cube == 0 ? "bone" : "antenna_left"; break;
             case "/head/beak": flatName = "beak"; break;
             case "/head/red_thing": flatName = "red_thing"; break;
             case "/ribcage" when definition.Name.StartsWith("wither", StringComparison.Ordinal):
@@ -264,6 +315,14 @@ public sealed class LivingRawReferenceSampleTests
                 flatName = part.TrimStart('/').Split('/').Last(); break;
         }
         return [definition.Parts.Single(p => p.Name == flatName)];
+    }
+
+    /// <summary>Vertex count a single part emits when meshed (depends only on its cube dimensions/visibility).</summary>
+    private static int EmittedVertCount(EntityModelPart part, int w, int h, ItemAtlas atlas, string texturePath)
+    {
+        var single = new EntityModelDefinition("count", w, h, [part], texturePath: texturePath, baselinePx: 0f, rawSourceFrame: true);
+        var geo = BuildModelSpace(single, MakeLivingState(180f), w, h, atlas);
+        return geo.VertexFloats / ChunkMesher.FloatsPerVertex;
     }
 
     /// <summary>True if part p is an ancestor (transitively) of targetName.</summary>

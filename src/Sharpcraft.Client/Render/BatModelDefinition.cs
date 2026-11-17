@@ -21,8 +21,8 @@ public static class BatModelDefinition
         32,
         32,
         BatMesh,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/bat/bat");
+        faceTransforms: null,
+        "entity/bat/bat", baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildBatMesh()
     {

@@ -74,16 +74,16 @@ public sealed class BabyModelDefinitionsMiscTests
     }
 
     [Fact]
-    public void BabyTurtlePartsMatchLegacyRecords()
+    public void BabyTurtlePartsMatchSourceFrameRecords()
     {
         var expected = new[]
         {
-            LegacyModelPartFactory.FromVanilla("body", 0f, 22.9f, 1f, -2f, -1f, -2f, 4f, 2f, 4f, 0, 0),
-            LegacyModelPartFactory.FromVanilla("head", 0f, 22.9f, -1f, -1.5f, -2f, -3f, 3f, 3f, 3f, 0, 6),
-            LegacyModelPartFactory.FromVanilla("right_hind_leg", -2f, 23.9f, 2.5f, -2f, 0f, -0.5f, 2f, 0f, 1f, -1, 0),
-            LegacyModelPartFactory.FromVanilla("left_hind_leg", 2f, 23.9f, 2.5f, 0f, 0f, -0.5f, 2f, 0f, 1f, -1, 1),
-            LegacyModelPartFactory.FromVanilla("right_front_leg", -2f, 23.9f, -0.5f, -2f, 0f, -0.5f, 2f, 0f, 1f, 8, 6),
-            LegacyModelPartFactory.FromVanilla("left_front_leg", 2f, 23.9f, -0.5f, 0f, 0f, -0.5f, 2f, 0f, 1f, 8, 7)
+            RawModelPartFactory.FromVanilla("body", 0f, 22.9f, 1f, -2f, -1f, -2f, 4f, 2f, 4f, 0, 0),
+            RawModelPartFactory.FromVanilla("head", 0f, 22.9f, -1f, -1.5f, -2f, -3f, 3f, 3f, 3f, 0, 6),
+            RawModelPartFactory.FromVanilla("right_hind_leg", -2f, 23.9f, 2.5f, -2f, 0f, -0.5f, 2f, 0f, 1f, -1, 0),
+            RawModelPartFactory.FromVanilla("left_hind_leg", 2f, 23.9f, 2.5f, 0f, 0f, -0.5f, 2f, 0f, 1f, -1, 1),
+            RawModelPartFactory.FromVanilla("right_front_leg", -2f, 23.9f, -0.5f, -2f, 0f, -0.5f, 2f, 0f, 1f, 8, 6),
+            RawModelPartFactory.FromVanilla("left_front_leg", 2f, 23.9f, -0.5f, 0f, 0f, -0.5f, 2f, 0f, 1f, 8, 7)
         };
         AssertPartsMatch(expected, BabyModelDefinitionsMisc.Turtle.Parts);
     }

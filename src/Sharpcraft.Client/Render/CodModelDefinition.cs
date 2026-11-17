@@ -16,16 +16,16 @@ public static class CodModelDefinition
     private static readonly VanillaMeshDefinition CodMesh = BuildCodMesh();
 
     private static readonly CompiledEntityModel CodCompiled =
-        VanillaMeshBakery.Build(CodMesh, 32, 32);
+        VanillaMeshBakery.Build(CodMesh, 32, 32, modelHeight: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Definition = new(
         "cod",
         32,
         32,
-        [.. VanillaMeshBake.Bake(CodMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/fish/cod",
-        compiled: CodCompiled);
+        [.. VanillaMeshBake.Bake(CodMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
+        faceTransforms: null,
+        texturePath: "entity/fish/cod",
+        compiled: CodCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildCodMesh()
     {
@@ -36,9 +36,9 @@ public static class CodModelDefinition
             new VanillaCubeDefinition("head", 11, 0, -1f, -2f, -3f, 2f, 4f, 3f));
         root.AddOrReplaceChild("nose", VanillaPartPose.Offset(0f, 22f, -3f),
             new VanillaCubeDefinition("nose", 0, 0, -1f, -2f, -1f, 2f, 3f, 1f));
-        root.AddOrReplaceChild("right_fin", VanillaPartPose.OffsetAndRotation(-1f, 23f, 0f, 0f, 0f, MathF.PI / 4f),
+        root.AddOrReplaceChild("right_fin", VanillaPartPose.OffsetAndRotation(-1f, 23f, 0f, 0f, 0f, -MathF.PI / 4f),
             new VanillaCubeDefinition("right_fin", 22, 1, -2f, 0f, -1f, 2f, 0f, 2f));
-        root.AddOrReplaceChild("left_fin", VanillaPartPose.OffsetAndRotation(1f, 23f, 0f, 0f, 0f, -MathF.PI / 4f),
+        root.AddOrReplaceChild("left_fin", VanillaPartPose.OffsetAndRotation(1f, 23f, 0f, 0f, 0f, MathF.PI / 4f),
             new VanillaCubeDefinition("left_fin", 22, 4, 0f, 0f, -1f, 2f, 0f, 2f));
         root.AddOrReplaceChild("tail_fin", VanillaPartPose.Offset(0f, 22f, 7f),
             new VanillaCubeDefinition("tail_fin", 22, 3, 0f, -2f, 0f, 0f, 4f, 4f));

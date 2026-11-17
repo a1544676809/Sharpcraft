@@ -19,15 +19,15 @@ public static class FrogModelDefinition
     /// <summary>Declarative DSL tree for the nested frog parts (T-677).</summary>
     private static readonly VanillaMeshDefinition FrogMesh = BuildFrogMesh();
 
-    private static readonly EntityModelPart[] Parts = [.. VanillaMeshBake.Bake(FrogMesh, 0, 0)];
+    private static readonly EntityModelPart[] Parts = [.. VanillaMeshBake.Bake(FrogMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)];
 
     public static readonly EntityModelDefinition Definition = EntityModelDefinition.FromTree(
         "frog",
         48,
         48,
         FrogMesh,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/frog/frog_temperate");
+        faceTransforms: null,
+        "entity/frog/frog_temperate", baselinePx: 0f, rawSourceFrame: true);
 
     /// <summary>Registry entry names of the frog variants, in vanilla bootstrap order.</summary>
     public static readonly IReadOnlyList<string> VariantKeys = ["temperate", "warm", "cold"];
@@ -53,7 +53,7 @@ public static class FrogModelDefinition
                 48,
                 48,
                 Parts,
-                PlayerModelDefinition.DefaultFaceTransforms,
+                faceTransforms: null,
                 "entity/frog/frog_" + key,
                 compiled: Definition.Compiled);
         }

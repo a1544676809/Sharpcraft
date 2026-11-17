@@ -773,3 +773,12 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **docs-only 口径**：以上四个 `SIM-ENTITY-RAW-*` 条目是"raw 尚未覆盖的路径"的文档登记，不是代码中的 `[Simplification]` 特性：它们描述的是**未实现的 raw 分支**，没有对应的生产代码可用特性标注；其可审计性由 `docs/risks.md` R-026/R-027/R-028/R-029 + `check-simplifications.ps1` 的 `simplification:` marker + 本 Issue #102 的 comment 登记共同提供。这与 active code simplification（有 `[Simplification]` 标记、`active=25` 计数）口径不同，特此说明。独立审计任务统一挂在 task-41 / Issue #102。
 - **baby 变体 N/A**：Creeper（typeId 32）/ Spider（127）/ WitherBoss（149）在原版没有独立的 baby 模型定义（baby 仅存在于猪/牛/鸡等哺乳类族），因此这三族的 reference sample 只有 adult bind pose，baby 覆盖不适用（N/A）。`LivingRawReferenceSampleTests.BabyVariantsAreNotApplicableToTheseFamilies` 显式核查 resolver 无 `baby_` 模型。哺乳类的 baby 覆盖在其各自迁移批次处理。
 - **Wither ribcage flatten 限制**：源 `WitherBossModel` 的 `ribcage` 是**一个 ModelPart 含四个 cube**（body + 三条 rib），本仓 DSL 将其拆为 `ribcage`/`rib_1..3` 独立节点。按 part 隔离的 model-space 源样本比对无法重建父 part 的 bind-pose 旋转，故 `/ribcage` 的 cube>0 组在该比对中排除；这些 cube 由 `RawModelFinalWorldMatchesLegacyTwin`（真实全模型 final world 顶点逐点）覆盖，不属于静默跳过。此限制并入 R-027 的同类"结构差异"审计。
+
+### task-62 水生/飞行实体族 raw 迁移（#102）
+
+将 14 族（Cod/Salmon/TropicalFish/Pufferfish/Tadpole/Squid/Dolphin/Axolotl/Turtle/Frog/Bat/Bee/Parrot/Allay，含 warm/cold/baby 变体）切到 `rawSourceFrame:true`；依赖 main 的 #128（`PartWorldMatrix` raw 逐层传播 / NodeFrame T-R 修复，PR #130）。
+
+- **原版基准样本（jar e877b6a0，RawModelProbe）**：21 个样本落盘 `tests/.../Repro/Data/`（含 tropical-fish small/large、pufferfish small/medium/large、axolotl/turtle/bee baby、glow-squid 等变体）。`LivingRawReferenceSampleTests.Families` 以硬编码 `(total, mirror, checked, degenerate)` 常量独立断言，配方 `total = mirror + degenerate + checked`，非 sample 自洽；源顶点按 `part|cube|polygon|vertex` 键严格比位置+UV（UV half-float 容差 0.002，与 Banner 口径一致）。
+- **旋转字面值**：改为源原版字面值（如 Turtle body `+π/2`、Parrot body `+0.4937`、Cod 鳍 `-π/4`、Dolphin `+π/3`）；源 literal 与迁移前 legacy DSL 的共轭关系逐族核对，非一刀切取反（Parrot feather 等保持原值）。
+- **多 cube 拆flat 映射**：源一个 ModelPart 含多 cube、DSL 拆为独立 part 的（Turtle body+belly、frog body/head+layer、axolotl body+body_fin/body_layer、bee-baby bone+antenna_left、allay body+body_inner 等）在 `FlatPartsForSampleCube` 按源 `addBox` 顺序显式映射；源文件 cube 顺序已逐族核对。
+- **blocker**：零面积部件（鱼鳍、蝙蝠翼、蜂脚、Turtle egg_belly 等）的退化面按 R-029 / Issue #126 显式登记——这些顶点未纳入严格 UV 比较，位置也未被独立 oracle 覆盖（显式缺口）；mirror 部件按真实 `Mirror` 标记排除（R-027 / #121）。squid 触手等无退化部件的族全顶点严格通过。

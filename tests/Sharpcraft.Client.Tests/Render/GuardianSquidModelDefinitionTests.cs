@@ -49,11 +49,11 @@ public sealed class GuardianSquidModelDefinitionTests
     }
 
     [Fact]
-    public void SquidPartsMatchLegacyRecords()
+    public void SquidPartsMatchSourceFrameRecords()
     {
         var expected = new[]
         {
-            LegacyModelPartFactory.FromVanilla("body", 0f, 8f, 0f, -6f, -8f, -6f, 12f, 16f, 12f, 0, 0, grow: 0.02f),
+            RawModelPartFactory.FromVanilla("body", 0f, 8f, 0f, -6f, -8f, -6f, 12f, 16f, 12f, 0, 0, grow: 0.02f),
             Tentacle(0, 5f, 0f, MathF.PI / 2f),
             Tentacle(1, 3.535f, 3.535f, MathF.PI / 4f),
             Tentacle(2, 0f, 5f, 0f),
@@ -78,7 +78,7 @@ public sealed class GuardianSquidModelDefinitionTests
     }
 
     private static EntityModelPart Tentacle(int index, float x, float z, float yRot) =>
-        LegacyModelPartFactory.FromVanilla("tentacle" + index, x, 15f, z, -1f, 0f, -1f, 2f, 18f, 2f, 48, 0, rotationY: yRot);
+        RawModelPartFactory.FromVanilla("tentacle" + index, x, 15f, z, -1f, 0f, -1f, 2f, 18f, 2f, 48, 0, rotationY: yRot);
 
     private static void AssertNames(IReadOnlyList<EntityModelPart> parts, string[] names)
     {

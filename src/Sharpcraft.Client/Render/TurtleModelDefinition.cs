@@ -15,14 +15,14 @@ public static class TurtleModelDefinition
     private static readonly VanillaMeshDefinition TurtleMesh = BuildTurtleMesh();
 
     private static readonly CompiledEntityModel TurtleCompiled =
-        VanillaMeshBakery.Build(TurtleMesh, 128, 64);
+        VanillaMeshBakery.Build(TurtleMesh, 128, 64, modelHeight: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Definition = new(
         "turtle",
         128,
         64,
-        [.. VanillaMeshBake.Bake(TurtleMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms,
+        [.. VanillaMeshBake.Bake(TurtleMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
+        faceTransforms: null,
         "entity/turtle/turtle",
         compiled: TurtleCompiled);
 
@@ -31,11 +31,11 @@ public static class TurtleModelDefinition
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
         root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 19f, -10f),
             new VanillaCubeDefinition("head", 3, 0, -3f, -1f, -3f, 6f, 5f, 6f));
-        root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 11f, -10f, -MathF.PI / 2f, 0f, 0f),
+        root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 11f, -10f,MathF.PI / 2f,-0f,-0f),
             new VanillaCubeDefinition("body", 7, 37, -9.5f, 3f, -10f, 19f, 20f, 6f));
-        root.AddOrReplaceChild("belly", VanillaPartPose.OffsetAndRotation(0f, 11f, -10f, -MathF.PI / 2f, 0f, 0f),
+        root.AddOrReplaceChild("belly", VanillaPartPose.OffsetAndRotation(0f, 11f, -10f,MathF.PI / 2f,-0f,-0f),
             new VanillaCubeDefinition("belly", 31, 1, -5.5f, 3f, -13f, 11f, 18f, 3f));
-        root.AddOrReplaceChild("egg_belly", VanillaPartPose.OffsetAndRotation(0f, 11f, -10f, -MathF.PI / 2f, 0f, 0f),
+        root.AddOrReplaceChild("egg_belly", VanillaPartPose.OffsetAndRotation(0f, 11f, -10f,MathF.PI / 2f,-0f,-0f),
             new VanillaCubeDefinition("egg_belly", 70, 33, -4.5f, 3f, -14f, 9f, 18f, 1f));
         root.AddOrReplaceChild("right_hind_leg", VanillaPartPose.Offset(-3.5f, 22f, 11f),
             new VanillaCubeDefinition("right_hind_leg", 1, 23, -2f, 0f, 0f, 4f, 1f, 10f));

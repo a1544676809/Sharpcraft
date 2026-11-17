@@ -27,13 +27,13 @@ public sealed class SheepRabbitFrogTadpoleModelDefinitionTests
     }
 
     [Fact]
-    public void FrogPartsMatchLegacyFromVanillaRecords()
+    public void FrogPartsMatchSourceFrameRecords()
     {
         AssertPartsMatch(ExpectedFrogParts(), FrogModelDefinition.Definition.Parts);
     }
 
     [Fact]
-    public void TadpolePartsMatchLegacyFromVanillaRecords()
+    public void TadpolePartsMatchSourceFrameRecords()
     {
         AssertPartsMatch(ExpectedTadpoleParts(), TadpoleModelDefinition.Definition.Parts);
     }
@@ -152,31 +152,31 @@ public sealed class SheepRabbitFrogTadpoleModelDefinitionTests
 
     private static EntityModelPart[] ExpectedFrogParts() =>
     [
-        LegacyModelPartFactory.FromVanilla("root", 0f, 24f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-        LegacyModelPartFactory.FromVanillaChild("body", "root", 0f, -2f, 4f, -3.5f, -2f, -8f, 7f, 3f, 9f, 3, 1),
-        LegacyModelPartFactory.FromVanillaChild("body_layer", "body", 0f, 0f, 0f, -3.5f, -1f, -8f, 7f, 0f, 9f, 23, 22),
-        LegacyModelPartFactory.FromVanillaChild("head", "body", 0f, -2f, -1f, -3.5f, -2f, -7f, 7f, 3f, 9f, 0, 13),
-        LegacyModelPartFactory.FromVanillaChild("head_layer", "head", 0f, 0f, 0f, -3.5f, -1f, -7f, 7f, 0f, 9f, 23, 13),
-        LegacyModelPartFactory.FromVanillaChild("eyes", "head", -0.5f, 0f, 2f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-        LegacyModelPartFactory.FromVanillaChild("right_eye", "eyes", -1.5f, -3f, -6.5f, -1.5f, -1f, -1.5f, 3f, 2f, 3f, 0, 0),
-        LegacyModelPartFactory.FromVanillaChild("left_eye", "eyes", 2.5f, -3f, -6.5f, -1.5f, -1f, -1.5f, 3f, 2f, 3f, 0, 5),
-        LegacyModelPartFactory.FromVanillaChild("croaking_body", "body", 0f, -1f, -5f, -3.5f, -0.1f, -2.9f, 7f, 2f, 3f, 26, 5,
+        RawModelPartFactory.FromVanilla("root", 0f, 24f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
+        RawModelPartFactory.FromVanillaChild("body", "root", 0f, -2f, 4f, -3.5f, -2f, -8f, 7f, 3f, 9f, 3, 1),
+        RawModelPartFactory.FromVanillaChild("body_layer", "body", 0f, 0f, 0f, -3.5f, -1f, -8f, 7f, 0f, 9f, 23, 22),
+        RawModelPartFactory.FromVanillaChild("head", "body", 0f, -2f, -1f, -3.5f, -2f, -7f, 7f, 3f, 9f, 0, 13),
+        RawModelPartFactory.FromVanillaChild("head_layer", "head", 0f, 0f, 0f, -3.5f, -1f, -7f, 7f, 0f, 9f, 23, 13),
+        RawModelPartFactory.FromVanillaChild("eyes", "head", -0.5f, 0f, 2f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
+        RawModelPartFactory.FromVanillaChild("right_eye", "eyes", -1.5f, -3f, -6.5f, -1.5f, -1f, -1.5f, 3f, 2f, 3f, 0, 0),
+        RawModelPartFactory.FromVanillaChild("left_eye", "eyes", 2.5f, -3f, -6.5f, -1.5f, -1f, -1.5f, 3f, 2f, 3f, 0, 5),
+        RawModelPartFactory.FromVanillaChild("croaking_body", "body", 0f, -1f, -5f, -3.5f, -0.1f, -2.9f, 7f, 2f, 3f, 26, 5,
             grow: -0.1f),
-        LegacyModelPartFactory.FromVanillaChild("tongue", "body", 0f, -1.01f, 1f, -2f, 0f, -7.1f, 4f, 0f, 7f, 17, 13),
-        LegacyModelPartFactory.FromVanillaChild("left_arm", "body", 4f, -1f, -6.5f, -1f, 0f, -1f, 2f, 3f, 3f, 0, 32),
-        LegacyModelPartFactory.FromVanillaChild("left_hand", "left_arm", 0f, 3f, -1f, -4f, 0.01f, -4f, 8f, 0f, 8f, 18, 40),
-        LegacyModelPartFactory.FromVanillaChild("right_arm", "body", -4f, -1f, -6.5f, -1f, 0f, -1f, 2f, 3f, 3f, 0, 38),
-        LegacyModelPartFactory.FromVanillaChild("right_hand", "right_arm", 0f, 3f, 0f, -4f, 0.01f, -5f, 8f, 0f, 8f, 2, 40),
-        LegacyModelPartFactory.FromVanillaChild("left_leg", "root", 3.5f, -3f, 4f, -1f, 0f, -2f, 3f, 3f, 4f, 14, 25),
-        LegacyModelPartFactory.FromVanillaChild("left_foot", "left_leg", 2f, 3f, 0f, -4f, 0.01f, -4f, 8f, 0f, 8f, 2, 32),
-        LegacyModelPartFactory.FromVanillaChild("right_leg", "root", -3.5f, -3f, 4f, -2f, 0f, -2f, 3f, 3f, 4f, 0, 25),
-        LegacyModelPartFactory.FromVanillaChild("right_foot", "right_leg", -2f, 3f, 0f, -4f, 0.01f, -4f, 8f, 0f, 8f, 18, 32)
+        RawModelPartFactory.FromVanillaChild("tongue", "body", 0f, -1.01f, 1f, -2f, 0f, -7.1f, 4f, 0f, 7f, 17, 13),
+        RawModelPartFactory.FromVanillaChild("left_arm", "body", 4f, -1f, -6.5f, -1f, 0f, -1f, 2f, 3f, 3f, 0, 32),
+        RawModelPartFactory.FromVanillaChild("left_hand", "left_arm", 0f, 3f, -1f, -4f, 0.01f, -4f, 8f, 0f, 8f, 18, 40),
+        RawModelPartFactory.FromVanillaChild("right_arm", "body", -4f, -1f, -6.5f, -1f, 0f, -1f, 2f, 3f, 3f, 0, 38),
+        RawModelPartFactory.FromVanillaChild("right_hand", "right_arm", 0f, 3f, 0f, -4f, 0.01f, -5f, 8f, 0f, 8f, 2, 40),
+        RawModelPartFactory.FromVanillaChild("left_leg", "root", 3.5f, -3f, 4f, -1f, 0f, -2f, 3f, 3f, 4f, 14, 25),
+        RawModelPartFactory.FromVanillaChild("left_foot", "left_leg", 2f, 3f, 0f, -4f, 0.01f, -4f, 8f, 0f, 8f, 2, 32),
+        RawModelPartFactory.FromVanillaChild("right_leg", "root", -3.5f, -3f, 4f, -2f, 0f, -2f, 3f, 3f, 4f, 0, 25),
+        RawModelPartFactory.FromVanillaChild("right_foot", "right_leg", -2f, 3f, 0f, -4f, 0.01f, -4f, 8f, 0f, 8f, 18, 32)
     ];
 
     private static EntityModelPart[] ExpectedTadpoleParts() =>
     [
-        LegacyModelPartFactory.FromVanilla("body", 0f, 22f, -3f, -1.5f, -1f, 0f, 3f, 2f, 3f, 0, 0),
-        LegacyModelPartFactory.FromVanilla("tail", 0f, 22f, 0f, 0f, -1f, 0f, 0f, 2f, 7f, 0, 0)
+        RawModelPartFactory.FromVanilla("body", 0f, 22f, -3f, -1.5f, -1f, 0f, 3f, 2f, 3f, 0, 0),
+        RawModelPartFactory.FromVanilla("tail", 0f, 22f, 0f, 0f, -1f, 0f, 0f, 2f, 7f, 0, 0)
     ];
 
     private static void AssertNamesAndParents(IReadOnlyList<EntityModelPart> parts, string[] names, string?[] parents)

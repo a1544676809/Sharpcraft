@@ -46,21 +46,21 @@ public sealed class ArmadilloAxolotlSnifferWardenModelDefinitionTests
     }
 
     [Fact]
-    public void AxolotlPartsMatchLegacyRecords()
+    public void AxolotlPartsMatchSourceFrameRecords()
     {
         var expected = new[]
         {
-            LegacyModelPartFactory.FromVanilla("body", 0f, 19.5f, 5f, -4f, -2f, -9f, 8f, 4f, 10f, 0, 11),
-            LegacyModelPartFactory.FromVanillaChild("body_layer", "body", 0f, 0f, 0f, 0f, -3f, -8f, 0f, 5f, 9f, 2, 17),
-            LegacyModelPartFactory.FromVanillaChild("head", "body", 0f, 0f, -9f, -4f, -3f, -5f, 8f, 5f, 5f, 0, 1, grow: 0.001f),
-            LegacyModelPartFactory.FromVanillaChild("top_gills", "head", 0f, -3f, -1f, -4f, -3f, 0f, 8f, 3f, 0f, 3, 37, grow: 0.001f),
-            LegacyModelPartFactory.FromVanillaChild("left_gills", "head", -4f, 0f, -1f, -3f, -5f, 0f, 3f, 7f, 0f, 0, 40, grow: 0.001f),
-            LegacyModelPartFactory.FromVanillaChild("right_gills", "head", 4f, 0f, -1f, 0f, -5f, 0f, 3f, 7f, 0f, 11, 40, grow: 0.001f),
-            LegacyModelPartFactory.FromVanillaChild("right_hind_leg", "body", -3.5f, 1f, -1f, -2f, 0f, 0f, 3f, 5f, 0f, 2, 13, grow: 0.001f),
-            LegacyModelPartFactory.FromVanillaChild("left_hind_leg", "body", 3.5f, 1f, -1f, -1f, 0f, 0f, 3f, 5f, 0f, 2, 13, grow: 0.001f),
-            LegacyModelPartFactory.FromVanillaChild("right_front_leg", "body", -3.5f, 1f, -8f, -2f, 0f, 0f, 3f, 5f, 0f, 2, 13, grow: 0.001f),
-            LegacyModelPartFactory.FromVanillaChild("left_front_leg", "body", 3.5f, 1f, -8f, -1f, 0f, 0f, 3f, 5f, 0f, 2, 13, grow: 0.001f),
-            LegacyModelPartFactory.FromVanillaChild("tail", "body", 0f, 0f, 1f, 0f, -3f, 0f, 0f, 5f, 12f, 2, 19)
+            RawModelPartFactory.FromVanilla("body", 0f, 19.5f, 5f, -4f, -2f, -9f, 8f, 4f, 10f, 0, 11),
+            RawModelPartFactory.FromVanillaChild("body_layer", "body", 0f, 0f, 0f, 0f, -3f, -8f, 0f, 5f, 9f, 2, 17),
+            RawModelPartFactory.FromVanillaChild("head", "body", 0f, 0f, -9f, -4f, -3f, -5f, 8f, 5f, 5f, 0, 1, grow: 0.001f),
+            RawModelPartFactory.FromVanillaChild("top_gills", "head", 0f, -3f, -1f, -4f, -3f, 0f, 8f, 3f, 0f, 3, 37, grow: 0.001f),
+            RawModelPartFactory.FromVanillaChild("left_gills", "head", -4f, 0f, -1f, -3f, -5f, 0f, 3f, 7f, 0f, 0, 40, grow: 0.001f),
+            RawModelPartFactory.FromVanillaChild("right_gills", "head", 4f, 0f, -1f, 0f, -5f, 0f, 3f, 7f, 0f, 11, 40, grow: 0.001f),
+            RawModelPartFactory.FromVanillaChild("right_hind_leg", "body", -3.5f, 1f, -1f, -2f, 0f, 0f, 3f, 5f, 0f, 2, 13, grow: 0.001f),
+            RawModelPartFactory.FromVanillaChild("left_hind_leg", "body", 3.5f, 1f, -1f, -1f, 0f, 0f, 3f, 5f, 0f, 2, 13, grow: 0.001f),
+            RawModelPartFactory.FromVanillaChild("right_front_leg", "body", -3.5f, 1f, -8f, -2f, 0f, 0f, 3f, 5f, 0f, 2, 13, grow: 0.001f),
+            RawModelPartFactory.FromVanillaChild("left_front_leg", "body", 3.5f, 1f, -8f, -1f, 0f, 0f, 3f, 5f, 0f, 2, 13, grow: 0.001f),
+            RawModelPartFactory.FromVanillaChild("tail", "body", 0f, 0f, 1f, 0f, -3f, 0f, 0f, 5f, 12f, 2, 19)
         };
         AssertPartsMatch(expected, AxolotlModelDefinition.Definition.Parts);
         foreach (var key in AxolotlModelDefinition.VariantKeys)

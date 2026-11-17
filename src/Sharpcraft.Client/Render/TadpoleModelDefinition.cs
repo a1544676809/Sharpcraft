@@ -20,8 +20,8 @@ public static class TadpoleModelDefinition
         16,
         16,
         TadpoleMesh,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/tadpole/tadpole");
+        faceTransforms: null,
+        "entity/tadpole/tadpole", baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildTadpoleMesh()
     {
