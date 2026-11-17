@@ -36,14 +36,7 @@ public sealed class RawNonUnitScaleTests
         Assert.Equal(factor, node.ScaleY, 6);
         Assert.Equal(factor, node.ScaleZ, 6);
 
-        var atlas = ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
-        {
-            ["probe/raw_scaled"] = new(64, 64, new byte[64 * 64 * 4])
-        });
-        var state = new EntityRenderState(1, 0, 0f, 0f, 0f, 180f, 0f);
-        var geometry = new EntityModelMesher().BuildModel(
-            definition, state, atlas.Get("probe/raw_scaled")!, 64, 64, modelScale: 1f);
-
+        var geometry = BuildModelSpace(definition, "probe/raw_scaled");
         Assert.Equal(24, geometry.VertexFloats / ChunkMesher.FloatsPerVertex);
         var expectedCorners = new List<Vector3>();
         foreach (var x in new[] { -2f, 2f })
@@ -52,8 +45,79 @@ public sealed class RawNonUnitScaleTests
         {
             expectedCorners.Add((new Vector3(pose.X, pose.Y, pose.Z) + new Vector3(x, y, z) * factor) / 16f);
         }
+        AssertVerticesMatch(geometry, expectedCorners);
+    }
 
-        for (var i = 0; i < 24; i++)
+    [Fact]
+    public void RawScaledParentChildAppliesTranslateRotateScaleOrder()
+    {
+        const float factor = 0.5f;
+        const float rx = 0.35f;
+        const float ry = -0.45f;
+        const float rz = 0.25f;
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        var parentPose = VanillaPartPose.OffsetAndRotation(1f, 2f, 3f, rx, ry, rz).Scaled(factor);
+        var parent = root.AddOrReplaceChild("parent", parentPose,
+            new VanillaCubeDefinition("parent", 0, 0, -2f, -2f, -2f, 4f, 4f, 4f));
+        var childPose = VanillaPartPose.Offset(2f, 0f, 0f);
+        parent.AddOrReplaceChild("child", childPose,
+            new VanillaCubeDefinition("child", 16, 16, -1f, -1f, -1f, 2f, 2f, 2f));
+
+        var definition = EntityModelDefinition.FromTree(
+            "raw_scaled_parent_child", 64, 64, new VanillaMeshDefinition(root),
+            texturePath: "probe/raw_scaled_parent_child", baselinePx: 0f, rawSourceFrame: true);
+        Assert.Equal(factor, definition.Compiled!.Find("parent")!.ScaleX, 6);
+        Assert.Equal(1f, definition.Compiled.Find("child")!.ScaleX, 6);
+
+        var geometry = BuildModelSpace(definition, "probe/raw_scaled_parent_child");
+        Assert.Equal(48, geometry.VertexFloats / ChunkMesher.FloatsPerVertex);
+
+        var rotation = Matrix4x4.CreateRotationX(rx) * Matrix4x4.CreateRotationY(ry) * Matrix4x4.CreateRotationZ(rz);
+        var parentPivot = new Vector3(parentPose.X, parentPose.Y, parentPose.Z);
+        var expectedCorners = new List<Vector3>();
+        foreach (var x in new[] { -2f, 2f })
+        foreach (var y in new[] { -2f, 2f })
+        foreach (var z in new[] { -2f, 2f })
+        {
+            expectedCorners.Add((parentPivot + Vector3.Transform(new Vector3(x, y, z) * factor, rotation)) / 16f);
+        }
+        var childPivot = new Vector3(childPose.X, childPose.Y, childPose.Z);
+        foreach (var x in new[] { -1f, 1f })
+        foreach (var y in new[] { -1f, 1f })
+        foreach (var z in new[] { -1f, 1f })
+        {
+            expectedCorners.Add((parentPivot
+                + Vector3.Transform((childPivot + new Vector3(x, y, z)) * factor, rotation)) / 16f);
+        }
+        AssertVerticesMatch(geometry, expectedCorners);
+
+        // Parent/child frame oracle: the child part origin is T(parent) + R(parent)*(childPivot*factor).
+        var childFrame = EntityModelMesher.PartWorldMatrix(definition, State(180f), "child");
+        var childOrigin = Vector3.Transform(Vector3.Zero, childFrame);
+        var expectedChildOrigin = (parentPivot + Vector3.Transform(childPivot * factor, rotation))
+            * EntityPlaceholderMesher.ModelScale / 16f;
+        Assert.True(
+            MathF.Abs(childOrigin.X - expectedChildOrigin.X) < 1e-5f
+            && MathF.Abs(childOrigin.Y - expectedChildOrigin.Y) < 1e-5f
+            && MathF.Abs(childOrigin.Z - expectedChildOrigin.Z) < 1e-5f,
+            $"child frame origin actual=({childOrigin.X},{childOrigin.Y},{childOrigin.Z}) expected=({expectedChildOrigin.X},{expectedChildOrigin.Y},{expectedChildOrigin.Z})");
+    }
+
+    private static DynamicGeometry BuildModelSpace(EntityModelDefinition definition, string texturePath)
+    {
+        var atlas = ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
+        {
+            [texturePath] = new(64, 64, new byte[64 * 64 * 4])
+        });
+        return new EntityModelMesher().BuildModel(
+            definition, State(180f), atlas.Get(texturePath)!, 64, 64, modelScale: 1f);
+    }
+
+    private static EntityRenderState State(float yaw) => new(1, 0, 0f, 0f, 0f, yaw, 0f);
+
+    private static void AssertVerticesMatch(DynamicGeometry geometry, List<Vector3> expectedCorners)
+    {
+        for (var i = 0; i < geometry.VertexFloats / ChunkMesher.FloatsPerVertex; i++)
         {
             var actual = VertexFieldReader.Position(geometry.Vertices, i);
             Assert.True(expectedCorners.Any(expected =>
