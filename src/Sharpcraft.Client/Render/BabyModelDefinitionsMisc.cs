@@ -8,30 +8,30 @@ namespace Sharpcraft.Client.Render;
 public static class BabyModelDefinitionsMisc
 {
     private static readonly VanillaMeshDefinition GoatMesh = BuildGoatMesh();
-    private static readonly EntityModelPart[] GoatParts = [.. VanillaMeshBake.Bake(GoatMesh, 0, 0)];
+    private static readonly EntityModelPart[] GoatParts = [.. VanillaMeshBake.Bake(GoatMesh, 0, 0, rawSourceFrame: true)];
     private static readonly VanillaMeshDefinition PandaMesh = BuildPandaMesh();
-    private static readonly EntityModelPart[] PandaParts = [.. VanillaMeshBake.Bake(PandaMesh, 0, 0)];
+    private static readonly EntityModelPart[] PandaParts = [.. VanillaMeshBake.Bake(PandaMesh, 0, 0, rawSourceFrame: true)];
     private static readonly VanillaMeshDefinition PolarBearMesh = BuildPolarBearMesh();
-    private static readonly EntityModelPart[] PolarBearParts = [.. VanillaMeshBake.Bake(PolarBearMesh, 0, 0)];
+    private static readonly EntityModelPart[] PolarBearParts = [.. VanillaMeshBake.Bake(PolarBearMesh, 0, 0, rawSourceFrame: true)];
     private static readonly VanillaMeshDefinition TurtleMesh = BuildTurtleMesh();
     private static readonly EntityModelPart[] TurtleParts = [.. VanillaMeshBake.Bake(TurtleMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)];
 
-    private static readonly CompiledEntityModel GoatCompiled = VanillaMeshBakery.Build(GoatMesh, 64, 64);
-    private static readonly CompiledEntityModel PandaCompiled = VanillaMeshBakery.Build(PandaMesh, 64, 64);
-    private static readonly CompiledEntityModel PolarBearCompiled = VanillaMeshBakery.Build(PolarBearMesh, 64, 64);
+    private static readonly CompiledEntityModel GoatCompiled = VanillaMeshBakery.Build(GoatMesh, 64, 64, rawSourceFrame: true);
+    private static readonly CompiledEntityModel PandaCompiled = VanillaMeshBakery.Build(PandaMesh, 64, 64, rawSourceFrame: true);
+    private static readonly CompiledEntityModel PolarBearCompiled = VanillaMeshBakery.Build(PolarBearMesh, 64, 64, rawSourceFrame: true);
     private static readonly CompiledEntityModel TurtleCompiled = VanillaMeshBakery.Build(TurtleMesh, 16, 16, modelHeight: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Goat = new(
-        "baby_goat", 64, 64, GoatParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/goat/goat_baby",
-        compiled: GoatCompiled);
+        "baby_goat", 64, 64, GoatParts, faceTransforms: null, "entity/goat/goat_baby",
+        compiled: GoatCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Panda = new(
-        "baby_panda", 64, 64, PandaParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/panda/panda_baby",
-        compiled: PandaCompiled);
+        "baby_panda", 64, 64, PandaParts, faceTransforms: null, "entity/panda/panda_baby",
+        compiled: PandaCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition PolarBear = new(
-        "baby_polar_bear", 64, 64, PolarBearParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/bear/polarbear_baby",
-        compiled: PolarBearCompiled);
+        "baby_polar_bear", 64, 64, PolarBearParts, faceTransforms: null, "entity/bear/polarbear_baby",
+        compiled: PolarBearCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Turtle = new(
         "baby_turtle", 16, 16, TurtleParts, faceTransforms: null, texturePath: "entity/turtle/turtle_baby",
@@ -87,14 +87,16 @@ public static class BabyModelDefinitionsMisc
             new VanillaCubeDefinition("body", 0, 10, -3f, -2.3f, -4.5f, 6f, 5f, 9f));
         body.AddOrReplaceChild("body_lower", VanillaPartPose.Zero,
             new VanillaCubeDefinition("body_lower", 0, 24, -2.5f, -2.2f, -4f, 5f, 4f, 8f));
-        var head = root.AddOrReplaceChild("head", VanillaPartPose.OffsetAndRotation(0f, 15.5f, -3f, -0.4363f, 0f, 0f),
+        // Source BabyGoatModel.createBodyLayer: head xRot = +0.4363F (source literal).
+        var head = root.AddOrReplaceChild("head", VanillaPartPose.OffsetAndRotation(0f, 15.5f, -3f, 0.4363f, 0f, 0f),
             new VanillaCubeDefinition("head", 0, 0, -2f, -3.8126f, -5.1548f, 4f, 4f, 6f));
+        // Source BabyGoatModel: right_horn/left_horn/right_ear carry CubeListBuilder.mirror().
         head.AddOrReplaceChild("right_horn", VanillaPartPose.OffsetAndRotation(-1.5f, -1.5f, -1f, -0.3927f, 0f, 0f),
-            new VanillaCubeDefinition("right_horn", 24, 0, 0f, -4.5f, 0f, 1f, 2f, 1f));
+            new VanillaCubeDefinition("right_horn", 24, 0, 0f, -4.5f, 0f, 1f, 2f, 1f, Mirror: true));
         head.AddOrReplaceChild("left_horn", VanillaPartPose.OffsetAndRotation(-1.5f, -1.5f, -1f, -0.3927f, 0f, 0f),
-            new VanillaCubeDefinition("left_horn", 24, 0, 2f, -4.5f, 0f, 1f, 2f, 1f));
+            new VanillaCubeDefinition("left_horn", 24, 0, 2f, -4.5f, 0f, 1f, 2f, 1f, Mirror: true));
         head.AddOrReplaceChild("right_ear", VanillaPartPose.OffsetAndRotation(-1.7f, -2.3126f, 0.1452f, 0f, -0.5236f, 0f),
-            new VanillaCubeDefinition("right_ear", 0, 12, -2f, -0.5f, -0.5f, 2f, 1f, 1f));
+            new VanillaCubeDefinition("right_ear", 0, 12, -2f, -0.5f, -0.5f, 2f, 1f, 1f, Mirror: true));
         head.AddOrReplaceChild("left_ear", VanillaPartPose.OffsetAndRotation(1.7f, -2.3126f, 0.1452f, 0f, 0.5236f, 0f),
             new VanillaCubeDefinition("left_ear", 0, 12, 0f, -0.5f, -0.5f, 2f, 1f, 1f));
         head.AddOrReplaceChild("head_main", VanillaPartPose.Offset(0f, -1.3126f, -1.1548f),

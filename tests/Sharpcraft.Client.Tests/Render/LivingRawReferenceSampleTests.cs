@@ -129,6 +129,10 @@ public sealed class LivingRawReferenceSampleTests
         { "enderman-raw-vectors.reference.txt", HumanoidMobModelDefinition.Enderman, 64, 32, "entity/enderman/enderman", 168, 48, 120, 0 },
         { "zombie-raw-vectors.reference.txt", HumanoidMobModelDefinition.Zombie, 64, 64, "entity/zombie/zombie", 168, 48, 120, 0 },
         // task-108 humanoid batch (total, mirror, checked, degenerate).
+        // task-198: baby Misc 3 raw (distinct Baby*Model geometry).
+        { "baby-goat-raw-vectors.reference.txt", BabyModelDefinitionsMisc.Goat, 64, 64, "entity/goat/goat_baby", 288, 72, 216, 0 },
+        { "baby-panda-raw-vectors.reference.txt", BabyModelDefinitionsMisc.Panda, 64, 64, "entity/panda/panda_baby", 216, 0, 216, 0 },
+        { "baby-polar-bear-raw-vectors.reference.txt", BabyModelDefinitionsMisc.PolarBear, 64, 64, "entity/bear/polarbear_baby", 216, 0, 216, 0 },
         // task-189: baby Odd 3 raw (distinct Baby*Model geometry).
         { "baby-husk-raw-vectors.reference.txt", BabyModelDefinitionsOdd.Husk, 64, 64, "entity/zombie/husk_baby", 168, 0, 168, 0 },
         { "baby-sniffer-raw-vectors.reference.txt", BabyModelDefinitionsOdd.Snifflet, 128, 128, "entity/sniffer/snifflet", 360, 0, 312, 48 },
@@ -588,6 +592,15 @@ public sealed class LivingRawReferenceSampleTests
                 flatName = cube == 0 ? "head" : "nose"; break;
             case "/body" when definition.Name == "zombie_villager":
                 flatName = cube == 0 ? "body" : "body_outer"; break;
+            // task-198: baby_goat /body has 2 cubes (body,body_lower); /head/HeadMain -> head_main.
+            case "/body" when definition.Name == "baby_goat":
+                flatName = cube == 0 ? "body" : "body_lower"; break;
+            case "/head/HeadMain" when definition.Name == "baby_goat":
+                flatName = "head_main"; break;
+            case "/head" when definition.Name == "baby_panda":
+                flatName = cube switch { 0 => "head", 1 => "mouth", 2 => "right_ear", _ => "left_ear" }; break;
+            case "/head" when definition.Name == "baby_polar_bear":
+                flatName = cube switch { 0 => "head", 1 => "snout", 2 => "right_ear", _ => "left_ear" }; break;
             // task-189: baby_sniffer source /bone/body has 3 cubes (body,body_outer,body_bottom); /head 2 (head,head_flat).
             case "/bone/body" when definition.Name == "baby_sniffer":
                 flatName = cube switch { 0 => "body", 1 => "body_main", _ => "body_flat" }; break;
