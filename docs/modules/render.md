@@ -839,6 +839,16 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **验收**：`glint-texture-transform.reference.txt` 固定 millis {55000, 110000, 137500, -55000} × item/entity/armor 的 UV 样本；`GlintTextureTransformTests` production zombie armor glint `BuildLayers` 顶点 UV strict，helper 覆盖三分类与负 millis。
 - **限制/blocker**：task-270 当时只有 **armor glint production 层**（`glint_HumanoidArmor_*`）；item glint 已由 task-271 接入 held item production。entity glint 仍只有 scale 0.5 helper + 源样本，**没有 entity glint production 层可接线**，不能声称 glint 全部完成。
 
+### task-274 thrown trident 实体与 glint
+
+- **registry**：Java probe `BuiltInRegistries.ENTITY_TYPE.getId(EntityTypes.TRIDENT)` = **139**（不是猜的字段顺序）。
+- **模型**：`ThrownTridentModelDefinition` 复用源 `TridentModel` raw 32×32（`SpecialItemModelDefinition.Trident`，120 顶点/24 cube/96 面）；base cutout + `trident_glint` 层。
+- **变换**：`EntityModelTransform.ThrownTrident` 按源 `ThrownTridentRenderer`：`rotateY(yRot-90)`、`rotateZ(xRot+90)`，不做 living-entity raw flip；实体位置 `(X,Y,Z)`，模型像素按 production `ModelScale`。
+- **glint**：`trident_glint` 与 base 共用同一几何，纹理 `misc/enchanted_glint_item`，`VisibleWhen=state.IsFoil`，`GlintScale=EntityScale(0.5)`，复用 `GlintTextureTransform`/`GlintClock`；固定 millis=55000 production 测试。
+- **foil 状态**：ThrownTrident accessor 12（Entity 0-7 + AbstractArrow 8-10 + Loyalty 11），Boolean serializer 8 → `EntityRenderState.IsFoil`；非 foil 无 glint。
+- **验收**：`ThrownTridentTests` 验证 type id 139、metadata、base 位置/UV half 对应 `special-trident-raw-vectors`、glint UV 经 0.5 matrix 且位置与 base 一致、非 foil 无 glint。
+- **blocker**：仅渲染状态/模型/glint；thrown trident 的飞行/回旋/命中模拟不在本任务（无实体物理路径）。
+
 ### task-273 state matrix 覆盖基线
 
 - **工具**：`tools/Sharpcraft.Equivalence.Audit --suite statematrix`，输出 type/state/layer/sample/status TSV 与三态/每层 counts。

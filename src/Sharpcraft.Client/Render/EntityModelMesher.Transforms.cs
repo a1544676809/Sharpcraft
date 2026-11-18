@@ -109,9 +109,11 @@ public sealed partial class EntityModelMesher
             var px = (1f / 16f) * modelScale * model.Scale;
             // Only the living-entity raw path (no block-entity transform factory) receives the source
             // frame pose conjugation; block entities keep their authored source pose literals.
-            var rawPoseConjugation = model.RawSourceFrame && entityTransformFactory is null;
+            var thrownTrident = entity.TypeId == Sharpcraft.Client.Render.ThrownTridentModelDefinition.EntityTypeId;
+            var rawPoseConjugation = model.RawSourceFrame && entityTransformFactory is null && !thrownTrident;
             var feet = Vector3.Zero;
-            var entityTransform = entityTransformFactory?.Invoke(entity) ?? EntityModelTransform.From(entity);
+            var entityTransform = entityTransformFactory?.Invoke(entity)
+                ?? (thrownTrident ? EntityModelTransform.ThrownTrident(entity) : EntityModelTransform.From(entity));
             // Raw source-frame models are stored in the reference's y-down pixel frame. The legacy bake
             // folded the model-height reflection into geometry; for raw models the entity transform owns
             // that reflection (reference LivingEntityRenderer: scale(-1,-1,1) then translate(0,-1.501,0)).
@@ -147,7 +149,10 @@ public sealed partial class EntityModelMesher
                     {
                         Translation = entityTransform.Translation - new Vector3(0f, modelSpaceOffset * entityScaleY, 0f)
                     };
-                    entityTransform = entityTransform.ForRawSourceFrame(model.SourceFrameBaselinePx / 16f * modelScale);
+                    if (!thrownTrident)
+                    {
+                        entityTransform = entityTransform.ForRawSourceFrame(model.SourceFrameBaselinePx / 16f * modelScale);
+                    }
                 }
             }
             var sprite = skin;

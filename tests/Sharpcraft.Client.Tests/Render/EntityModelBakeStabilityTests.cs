@@ -65,8 +65,9 @@ public sealed class EntityModelBakeStabilityTests
         // Refreshed for the task-203 dragon skull raw migration.
         // Refreshed for the Parched entity raw body/outer migration (task-257).
         // Refreshed for the ArmorStand entity/body/pose migration (task-259).
-        Assert.Equal("374a4b79e53b8a3469cc58abf5bfb222c93cb9617b3f8519b0864a66a4534867", Hash(flat));
-        Assert.Equal("d962cf837444efe2595e65a3f2a834511768bb74b854c4fa34064dfd0f210d94", Hash(tree));
+        // Refreshed for the thrown-trident entity model (task-274).
+        Assert.Equal("2960f1b2f62efcfa848cee179a1aa5bd63724864269a2c85158a3200b66a9afd", Hash(flat));
+        Assert.Equal("e89ddcb01983a3aea08b87808a23eff6237010df9647af7b0b2729ecdc755bac", Hash(tree));
     }
 
     private static void AppendPart(StringBuilder builder, EntityModelPart part)
