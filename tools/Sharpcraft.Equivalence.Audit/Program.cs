@@ -8,6 +8,7 @@ using Sharpcraft.Client.Render;
 using Sharpcraft.Common.Entities;
 using Sharpcraft.Common.Registries;
 using Sharpcraft.Common.World;
+using Sharpcraft.Equivalence.Audit;
 
 var suite = "all";
 string? outPath = null;
@@ -20,7 +21,7 @@ for (var i = 0; i < args.Length; i++)
 
 if (string.IsNullOrEmpty(outPath))
 {
-    Console.Error.WriteLine("usage: Sharpcraft.Equivalence.Audit [--suite all|state|entity|vis|physics] --out <output.tsv>");
+    Console.Error.WriteLine("usage: Sharpcraft.Equivalence.Audit [--suite all|state|entity|vis|physics|statematrix] --out <output.tsv>");
     return 2;
 }
 
@@ -34,6 +35,7 @@ if (suite is "all" or "state") { written += EmitStateCases(writer); }
 if (suite is "all" or "entity") { written += EmitEntityCases(writer); }
 if (suite is "all" or "vis") { written += EmitVisibilityCases(writer); }
 if (suite is "all" or "physics") { written += EmitPhysicsCases(writer); }
+if (suite is "all" or "statematrix") { written += EmitStateMatrix(writer); }
 
 Console.WriteLine($"wrote {written} equivalence cases (suite={suite})");
 return 0;
@@ -112,6 +114,23 @@ static int EmitPhysicsCases(StreamWriter writer)
     _ = writer;
     return 0;
 }
+static int EmitStateMatrix(StreamWriter writer)
+{
+    var rows = StateMatrixBaseline.Build(StateMatrixBaseline.FindRepositoryRoot());
+    var count = StateMatrixBaseline.Write(writer, rows);
+    foreach (var group in rows.GroupBy(row => row.Status).OrderBy(group => group.Key, StringComparer.Ordinal))
+    {
+        Console.WriteLine($"statematrix {group.Key}={group.Count()}");
+    }
+
+    foreach (var group in rows.GroupBy(row => row.LayerClass).OrderBy(group => group.Key, StringComparer.Ordinal))
+    {
+        Console.WriteLine($"statematrix layer_{group.Key}={group.Count()}");
+    }
+
+    return count;
+}
+
 static (float MinX, float MinY, float MinZ, float MaxX, float MaxY, float MaxZ) ComputeBounds(float[] vertices, int vertexCount)
 {
     var minX = float.PositiveInfinity; var minY = float.PositiveInfinity; var minZ = float.PositiveInfinity;

@@ -30,6 +30,7 @@
     <ProjectReference Include="..\..\src\Sharpcraft.Modding\Sharpcraft.Modding.csproj" />
     <ProjectReference Include="..\..\tools\Sharpcraft.Docs.Indexer\Sharpcraft.Docs.Indexer.csproj" />
     <ProjectReference Include="..\..\tools\Sharpcraft.ClassMap\Sharpcraft.ClassMap.csproj" />
+    <ProjectReference Include="..\..\tools\Sharpcraft.Equivalence.Audit\Sharpcraft.Equivalence.Audit.csproj" />
   </ItemGroup>
 
 </Project>
