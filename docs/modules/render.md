@@ -818,6 +818,12 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 - **源公式**：HUSK_ARMOR 是共享 humanoid armor 经 MeshTransformer.scaling(1.0625)：root PartPose 缩放 1.0625 并平移 24.016*(1-1.0625) px；立方体/UV 不变。HuskArmorModelDefinition 将源公式静态烘焙为 pivot/cube 坐标缩放 + 根 yOffset（UV 维度保留原值），不依赖 non-unit node scale 路径。
 - **验收**：Husk 四 slot keyed 样本 48/72/72/48，位置 1e-5 + UV half；production resolver Husk raw layer（scale 1，baseline 0）；Drowned/Bogged 等已由 task-247 切 raw，Parched 已由 task-257 接入；adult/baby/piglin/材质层零回归；full 3,657+、三门禁。
+### task-261 trim/glint/crackiness 跟随 raw armor 几何
+
+- **审计**：`rawArmor` 已为 raw 时，trim/glint 仍用 `equipmentTree`（legacy 24px compiled）且 `baselinePx:24/rawSourceFrame:false`；wolf crackiness 仍用 `EquipmentModelTrees` 的 legacy wolf armor tree。结果材质层与 armor 层几何/基线不一致。
+- **修复**：material layers 的 compiled 改为 `rawArmor.Compiled`（glint 仅套 `WithEmissiveTexture`），scale 用 `rawArmor.Scale`，`baselinePx:0/rawSourceFrame:true/sourceFrameBaselinePx:0`；wolf crackiness 用 `WolfArmorModelDefinition.Definition.Compiled`。材质/纹理/染色/可见性选择器全部保留；非 raw armor 仍走原 `equipmentTree` + 24px 分支。
+- **验收**：Player helmet/leggings 的 trim/glint 与 armor 层逐点位置/数量 strict 1e-5；Wolf crackiness 与 `equipment_WolfBody_6` 逐点一致；legacy Stray 仍 baseline24/raw false；full 3,718+、三门禁。
+
 ### task-259 ArmorStand 实体 + 姿态 + armor
 
 - **type id**：`BuiltInRegistries.ENTITY_TYPE` 的 `minecraft:armor_stand` 注册 id = **5**（总 161 项；Java registry probe）。

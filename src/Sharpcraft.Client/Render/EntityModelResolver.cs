@@ -390,6 +390,10 @@ public static partial class EntityModelResolver
                     EquipmentAssetKind.HumanoidLeggings => EquipmentLayerType.HumanoidLeggings,
                     _ => (EquipmentLayerType?)null
                 };
+                var rawMaterial = rawArmor is not null;
+                var materialCompiled = rawArmor?.Compiled ?? equipmentTree;
+                var materialScale = rawArmor?.Scale ?? definition.Scale;
+                var materialBaseline = rawMaterial ? 0f : 24f;
                 if (trimLayerType is { } trimType)
                 {
                     Func<EntityRenderState, string?> trimSelector = state => ResolveTrimTexture(state, trimType, slot);
@@ -401,12 +405,12 @@ public static partial class EntityModelResolver
                         [],
                         PlayerModelDefinition.DefaultFaceTransforms,
                         texturePath: null,
-                        definition.Scale,
+                        materialScale,
                         textureSelector: trimSelector,
-                        compiled: equipmentTree,
-                        baselinePx: 24f,
-                        rawSourceFrame: false,
-                        sourceFrameBaselinePx: 24f);
+                        compiled: materialCompiled,
+                        baselinePx: materialBaseline,
+                        rawSourceFrame: rawMaterial,
+                        sourceFrameBaselinePx: materialBaseline);
                     customLayers.Add(new EntityRenderLayerDefinition(
                         trimName,
                         EntityGeometryLayerKind.Elytra,
@@ -426,14 +430,14 @@ public static partial class EntityModelResolver
                     [],
                     PlayerModelDefinition.DefaultFaceTransforms,
                     glintTexture,
-                    definition.Scale,
+                    materialScale,
                     emissiveTexturePath: glintTexture,
                     textureSelector: state => ResolveEquipmentFoil(state, slot) ? glintTexture : null,
                     additionalTexturePaths: [glintTexture],
-                    compiled: EntityModelLayerHelpers.WithEmissiveTexture(equipmentTree, glintTexture),
-                    baselinePx: 24f,
-                    rawSourceFrame: false,
-                    sourceFrameBaselinePx: 24f);
+                    compiled: EntityModelLayerHelpers.WithEmissiveTexture(materialCompiled, glintTexture),
+                    baselinePx: materialBaseline,
+                    rawSourceFrame: rawMaterial,
+                    sourceFrameBaselinePx: materialBaseline);
                 customLayers.Add(new EntityRenderLayerDefinition(
                     "glint_" + effectiveKind + "_" + slot,
                     EntityGeometryLayerKind.Glint,
@@ -461,7 +465,7 @@ public static partial class EntityModelResolver
                     [],
                     PlayerModelDefinition.DefaultFaceTransforms,
                     "entity/wolf/wolf_armor_crackiness_low",
-                    definition.Scale,
+                    WolfArmorModelDefinition.Definition.Scale,
                     textureSelector: crackSelector,
                     additionalTexturePaths:
                     [
@@ -469,10 +473,10 @@ public static partial class EntityModelResolver
                         "entity/wolf/wolf_armor_crackiness_medium",
                         "entity/wolf/wolf_armor_crackiness_high"
                     ],
-                    compiled: wolfArmor,
-                    baselinePx: 24f,
-                    rawSourceFrame: false,
-                    sourceFrameBaselinePx: 24f);
+                    compiled: WolfArmorModelDefinition.Definition.Compiled,
+                    baselinePx: 0f,
+                    rawSourceFrame: true,
+                    sourceFrameBaselinePx: 0f);
                 customLayers.Add(new EntityRenderLayerDefinition(
                     "crackiness",
                     EntityGeometryLayerKind.Elytra,
