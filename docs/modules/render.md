@@ -846,7 +846,8 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **实现**：`AddSpecialHandLayers` 为 trident/shield 的 left/right special 层各追加 companion `held_special_*_glint`，复用同一 `EntityModelDefinition` 几何，`VisibleWhen` 取对应手 `MainHandGlint/OffHandGlint`，`GlintScale=EntityScale`，纹理 selector 为 glint 纹理；`ResolveHeldItemSpecialGlintTexture` 预置 atlas sprite；不复制几何/不烘焙。
 - **验收**：`ItemGlintTests.SpecialFoilTridentAndShieldGetEntityScaleGlint` 固定 millis=55000，production `EntityModelMesher.BuildLayers` 的 trident right / shield left glint 层 UV = base UV 经 scale 0.5 矩阵，位置与 base 完全一致；非 foil 无 glint；item scale 8.0 路径不混用。
 - **未改**：normal item glint / armor / entity glint 路径；EnergySwirl。
-- **限制/blocker**：thrown trident 实体当前不存在，无该生产路径；其它 special held item（banner/skull/chest/shulker 等）glint companion 未实现，后续任务见 `R-037`。
+- **实体缺失 blocker**：thrown trident 实体当前不存在，Sharpcraft 无该生产路径；这是实体缺失，不是 glint 缺口。
+- **源核对结论**：只有 `TridentSpecialRenderer` / `ShieldSpecialRenderer` 调用 glint；其余 11 个 `SpecialModelRenderer` 虽接收 `hasFoil` 但 submit 零 glint 调用，因此 banner/skull/chest/shulker 等没有 glint 是**源正确行为**，不是缺口，原“special glint 未接入”blocker 关闭。
 
 
 - **foil 依据**：`ItemComponentInfo.GlintOverride ?? ItemComponentInfo.HasEnchantments`（`ItemStack.hasFoil()` 同序；override=false 压过 enchantment）；`EntityTracker.Interpolate` 填 `EntityRenderState.MainHandGlint/OffHandGlint`，不按 item id 猜。
@@ -854,7 +855,7 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **atlas**：`ResolveTextures` 为 foil hand 追加 glint 纹理，glint layer 使用 item atlas、`EntityGeometryLayerKind.Glint`。
 - **验收**：`ItemGlintTests` 固定 millis=55000 的 production `ItemInHandMesher.Build` glint UV = base UV 经 item scale 源矩阵且位置与 base 相同；非 foil 无 glint layer；tracker foil 由 enchantment/override 驱动。
 - **未改**：entity/armor glint 路径、EnergySwirl、其它材质。
-- **special foil 后续**：trident/shield 的 held special foil glint 已由 task-272 接入（`held_special_*_glint`，entity scale 0.5）；其它 special held item（banner/skull/chest/shulker 等）仍无 glint companion，见 `R-037`。
+- **special foil 后续**：trident/shield 的 held special foil glint 已由 task-272 接入（`held_special_*_glint`，entity scale 0.5）；其余 11 个 SpecialModelRenderer 源不提交 glint，故 banner/skull/chest/shulker 无 glint 为正确行为。
 
 ### task-261 trim/glint/crackiness 跟随 raw armor 几何
 
