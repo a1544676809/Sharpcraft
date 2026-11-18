@@ -25,6 +25,7 @@ namespace Sharpcraft.Client.World;
 /// <param name="AngerAccessorIndex">Accessor carrying the anger end time as a long, or -1.</param>
 /// <param name="ColdMask">Flag bit that means "cold" (Strider suffocating boolean at 19).</param>
 /// <param name="ChargingMask">Flag bit that means charging (Vex flag bit 0).</param>
+/// <param name="PoweredAccessorIndex">Boolean accessor carrying creeper powered state (Creeper DATA_IS_POWERED), or -1.</param>
 /// <param name="ShellHideStates">True when the integer value is an Armadillo state whose ROLLING/SCARED/UNROLLING phase hides the body in the shell.</param>
 public readonly record struct EntityVariantSpec(
     int AccessorIndex,
@@ -42,7 +43,8 @@ public readonly record struct EntityVariantSpec(
     bool ShellHideStates = false,
     Func<int, string>? KeySelector = null,
     int CollarAccessorIndex = -1,
-    int MarkingsShift = -1);
+    int MarkingsShift = -1,
+    int PoweredAccessorIndex = -1);
 
 /// <summary>
 /// Answering "which synced-data field is the variant" for the entity types this client renders with variants.
@@ -96,6 +98,11 @@ public static class EntityVariantSpecs
 
         // Strider: boost time (18), then the boolean "suffocating" value at 19 (cold texture).
         [132] = new(-1, null, ["default"], "default", FlagsAccessorIndex: 19, ColdMask: 1),
+
+        // Creeper: Entity 0-7, LivingEntity 8-14, Mob flags 15, then Creeper DATA_SWELL_DIR 16,
+        // DATA_IS_POWERED 17 (Boolean serializer 8), DATA_IS_IGNITED 18.
+        // ref://mc-26.3-analysis/src/net/minecraft/world/entity/monster/Creeper.java
+        [32] = new(-1, null, ["default"], "default", PoweredAccessorIndex: 17),
 
         // Vex: byte flags at 16 (no AgeableMob in the chain), charging bit 0.
         [142] = new(-1, null, ["default"], "default", FlagsAccessorIndex: 16, ChargingMask: 1),
