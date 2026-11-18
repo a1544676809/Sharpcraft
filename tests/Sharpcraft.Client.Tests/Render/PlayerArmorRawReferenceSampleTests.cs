@@ -18,6 +18,14 @@ public sealed class PlayerArmorRawReferenceSampleTests
     [InlineData("player-armor-chestplate-raw-vectors.reference.txt", "chestplate")]
     [InlineData("player-armor-leggings-raw-vectors.reference.txt", "leggings")]
     [InlineData("player-armor-boots-raw-vectors.reference.txt", "boots")]
+    [InlineData("zombie-armor-helmet-raw-vectors.reference.txt", "helmet")]
+    [InlineData("zombie-armor-chestplate-raw-vectors.reference.txt", "chestplate")]
+    [InlineData("zombie-armor-leggings-raw-vectors.reference.txt", "leggings")]
+    [InlineData("zombie-armor-boots-raw-vectors.reference.txt", "boots")]
+    [InlineData("skeleton-armor-helmet-raw-vectors.reference.txt", "helmet")]
+    [InlineData("skeleton-armor-chestplate-raw-vectors.reference.txt", "chestplate")]
+    [InlineData("skeleton-armor-leggings-raw-vectors.reference.txt", "leggings")]
+    [InlineData("skeleton-armor-boots-raw-vectors.reference.txt", "boots")]
     public void AdultPlayerArmorRawGeometryMatchesSource(string sampleFile, string slot)
     {
         var rows = Load(sampleFile);
@@ -78,12 +86,27 @@ public sealed class PlayerArmorRawReferenceSampleTests
             Assert.Equal(vertices, layer.Model.Compiled!.Cubes.Sum(cube => 24));
         }
 
-        // Legacy humanoid armor (Zombie) must not pick up the player raw branch.
-        var zombie = EntityModelResolver.Resolve(Sharpcraft.Client.Render.HumanoidMobModelDefinition.ZombieEntityTypeId);
-        var zombieArmor = zombie.RenderLayers!.First(layer => layer.Name == "equipment_HumanoidArmor_5").Model!;
-        Assert.False(zombieArmor.RawSourceFrame);
-        Assert.Equal(24f, zombieArmor.BaselinePx);
-        Assert.NotNull(zombieArmor.FaceTransforms);
+        // Adult Zombie/Skeleton share the same source humanoid armor meshes, so they reuse the raw
+        // definitions without a per-mob copy.
+        foreach (var typeId in new[]
+                 {
+                     Sharpcraft.Client.Render.HumanoidMobModelDefinition.ZombieEntityTypeId,
+                     Sharpcraft.Client.Render.HumanoidMobModelDefinition.SkeletonEntityTypeId
+                 })
+        {
+            var humanoid = EntityModelResolver.Resolve(typeId);
+            var armor = humanoid.RenderLayers!.First(layer => layer.Name == "equipment_HumanoidArmor_5").Model!;
+            Assert.True(armor.RawSourceFrame);
+            Assert.Equal(0f, armor.BaselinePx);
+            Assert.Equal(48, armor.Compiled!.Cubes.Sum(cube => 24));
+        }
+
+        // Husk armor uses a scaled source mesh and must stay on the legacy 24 px layer.
+        var husk = EntityModelResolver.Resolve(Sharpcraft.Client.Render.HumanoidMobModelDefinition.HuskEntityTypeId);
+        var huskArmor = husk.RenderLayers!.First(layer => layer.Name == "equipment_HumanoidArmor_5").Model!;
+        Assert.False(huskArmor.RawSourceFrame);
+        Assert.Equal(24f, huskArmor.BaselinePx);
+        Assert.NotNull(huskArmor.FaceTransforms);
     }
 
     private static Row[] Load(string sampleFile)
