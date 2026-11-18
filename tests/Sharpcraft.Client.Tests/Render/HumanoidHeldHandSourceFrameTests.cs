@@ -28,21 +28,12 @@ public sealed class HumanoidHeldHandSourceFrameTests
 
         var definition = EntityModelResolver.Resolve(EntityPlaceholderMesher.PlayerEntityTypeId);
         var checkedStates = 0;
-        var skippedAttackStates = 0;
         foreach (var (state, expected) in matrices)
         {
             var parts = state.Split('_');
             var left = parts[0] == "LEFT";
             var motion = parts[1];
             var baby = parts[2] == "baby";
-            if (motion == "attack")
-            {
-                // Blocker: the jar attack sample includes the THROW_TRIDENT setupAnim attack pass, which this
-                // source-frame adapter deliberately does not re-run; attack matrices are tracked in R-026.
-                skippedAttackStates++;
-                continue;
-            }
-
             checkedStates++;
             var frame = default(EntityAnimationFrame) with
             {
@@ -66,12 +57,16 @@ public sealed class HumanoidHeldHandSourceFrameTests
 
             var source = HumanoidHeldHandFrame.Source(
                 definition, left ? "left_arm" : "right_arm", pose, offhand: left, baby);
+            if (motion == "attack")
+            {
+                // Sample attack matrix is STAB * Source (row order), per trace.
+                source = SpearAnimations.ThirdPersonAttackItemMatrix(0.15f, 0f) * source;
+            }
 
             AssertMatrix(expected, source, state);
         }
 
-        Assert.Equal(8, checkedStates);
-        Assert.Equal(4, skippedAttackStates);
+        Assert.Equal(12, checkedStates);
     }
 
     private static HumanoidArmPose PoseFor(string motion) => motion switch
