@@ -129,6 +129,13 @@ public sealed class LivingRawReferenceSampleTests
         { "enderman-raw-vectors.reference.txt", HumanoidMobModelDefinition.Enderman, 64, 32, "entity/enderman/enderman", 168, 48, 120, 0 },
         { "zombie-raw-vectors.reference.txt", HumanoidMobModelDefinition.Zombie, 64, 64, "entity/zombie/zombie", 168, 48, 120, 0 },
         // task-108 humanoid batch (total, mirror, checked, degenerate).
+        // task-202: special item models raw (keyed jar samples).
+        { "special-trident-raw-vectors.reference.txt", SpecialItemModelDefinition.Trident, 32, 32, "entity/trident/trident", 120, 24, 96, 0 },
+        { "special-shield-raw-vectors.reference.txt", SpecialItemModelDefinition.Shield, 64, 64, "entity/shield/shield_base_nopattern", 48, 0, 48, 0 },
+        { "special-banner-standing-raw-vectors.reference.txt", SpecialItemModelDefinition.BannerStanding, 64, 64, "entity/banner_base", 48, 0, 48, 0 },
+        { "special-banner-wall-raw-vectors.reference.txt", SpecialItemModelDefinition.BannerWall, 64, 64, "entity/banner_base", 24, 0, 24, 0 },
+        { "special-banner-flag-standing-raw-vectors.reference.txt", SpecialItemModelDefinition.BannerFlagStanding, 64, 64, "entity/banner_base", 24, 0, 24, 0 },
+        { "special-banner-flag-wall-raw-vectors.reference.txt", SpecialItemModelDefinition.BannerFlagWall, 64, 64, "entity/banner_base", 24, 0, 24, 0 },
         // task-198: baby Misc 3 raw (distinct Baby*Model geometry).
         { "baby-goat-raw-vectors.reference.txt", BabyModelDefinitionsMisc.Goat, 64, 64, "entity/goat/goat_baby", 288, 72, 216, 0 },
         { "baby-panda-raw-vectors.reference.txt", BabyModelDefinitionsMisc.Panda, 64, 64, "entity/panda/panda_baby", 216, 0, 216, 0 },

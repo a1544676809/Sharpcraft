@@ -107,26 +107,26 @@ public static class SpecialItemModelDefinition
     }
     public static readonly EntityModelDefinition BannerStanding = EntityModelDefinition.FromTree(
         "special_banner_standing", 64, 64, BuildBannerMesh(standing: true),
-        PlayerModelDefinition.DefaultFaceTransforms, BannerTexture, 1f,
-        additionalTexturePaths: [BannerTexture]);
+        faceTransforms: null, BannerTexture, 1f,
+        additionalTexturePaths: [BannerTexture], baselinePx: 0f, rawSourceFrame: true);
 
     /// <summary>Wall banner: bar only, positioned for the wall attachment.</summary>
     public static readonly EntityModelDefinition BannerWall = EntityModelDefinition.FromTree(
         "special_banner_wall", 64, 64, BuildBannerMesh(standing: false),
-        PlayerModelDefinition.DefaultFaceTransforms, BannerTexture, 1f,
-        additionalTexturePaths: [BannerTexture]);
+        faceTransforms: null, BannerTexture, 1f,
+        additionalTexturePaths: [BannerTexture], baselinePx: 0f, rawSourceFrame: true);
 
     /// <summary>Standing banner flag plane (reference <c>BannerFlagModel.createFlagLayer(true)</c>).</summary>
     public static readonly EntityModelDefinition BannerFlagStanding = EntityModelDefinition.FromTree(
         "special_banner_flag_standing", 64, 64, BuildBannerFlagMesh(standing: true),
-        PlayerModelDefinition.DefaultFaceTransforms, BannerTexture, 1f,
-        additionalTexturePaths: [BannerTexture]);
+        faceTransforms: null, BannerTexture, 1f,
+        additionalTexturePaths: [BannerTexture], baselinePx: 0f, rawSourceFrame: true);
 
     /// <summary>Wall banner flag plane.</summary>
     public static readonly EntityModelDefinition BannerFlagWall = EntityModelDefinition.FromTree(
         "special_banner_flag_wall", 64, 64, BuildBannerFlagMesh(standing: false),
-        PlayerModelDefinition.DefaultFaceTransforms, BannerTexture, 1f,
-        additionalTexturePaths: [BannerTexture]);
+        faceTransforms: null, BannerTexture, 1f,
+        additionalTexturePaths: [BannerTexture], baselinePx: 0f, rawSourceFrame: true);
 
     /// <summary>Decorated pot base: neck, top and bottom planes (reference <c>DecoratedPotRenderer.createBaseLayer</c>).</summary>
     public static readonly EntityModelDefinition DecoratedPot = EntityModelDefinition.FromTree(
@@ -212,10 +212,12 @@ public static class SpecialItemModelDefinition
         32,
         32,
         BuildTridentMesh(),
-        PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         TridentTexture,
         1f,
-        additionalTexturePaths: [TridentTexture]);
+        additionalTexturePaths: [TridentTexture],
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     /// <summary>Held trident models; the special geometry is wrapped in the humanoid arm pivot.</summary>
     public static readonly EntityModelDefinition HeldTridentRight = EntityModelDefinition.FromTree(
@@ -234,10 +236,12 @@ public static class SpecialItemModelDefinition
         64,
         64,
         BuildShieldMesh(),
-        PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         ShieldTexture,
         1f,
-        additionalTexturePaths: [ShieldTexture]);
+        additionalTexturePaths: [ShieldTexture],
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     public static readonly EntityModelDefinition HeldShieldRight = EntityModelDefinition.FromTree(
         "held_special_shield_right", 64, 64, BuildShieldMesh(held: true),
