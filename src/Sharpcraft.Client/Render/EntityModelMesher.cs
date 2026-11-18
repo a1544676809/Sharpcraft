@@ -563,12 +563,21 @@ public sealed partial class EntityModelMesher
                     FaceUvTransform.Identity, partTint, target, rawUv: true);
             }
 
-            EmitRawFace(rl1, rl0, rt0, rt1, u2, v0, u1, v0, u1, v1, u2, v1);
-            EmitRawFace(rt2, rt3, rl3, rl2, u22, v1, u2, v1, u2, v0, u22, v0);
-            EmitRawFace(rt0, rl0, rl3, rt3, u1, v1, u0, v1, u0, v2, u1, v2);
-            EmitRawFace(rt1, rt0, rt3, rt2, u2, v1, u1, v1, u1, v2, u2, v2);
-            EmitRawFace(rl1, rt1, rt2, rl2, u3, v1, u2, v1, u2, v2, u3, v2);
-            EmitRawFace(rl0, rl1, rl2, rl3, u4, v1, u3, v1, u3, v2, u4, v2);
+            // Face order matches ref ModelPart.Cube polygons: DOWN, UP, WEST, NORTH, EAST, SOUTH.
+            // VisibleSides selects which source faces exist; all-6 (default) is byte-for-byte unchanged.
+            var sides = part.VisibleSides;
+            if ((sides & EntityModelVisibleSides.Down) != 0)
+                EmitRawFace(rl1, rl0, rt0, rt1, u2, v0, u1, v0, u1, v1, u2, v1);
+            if ((sides & EntityModelVisibleSides.Up) != 0)
+                EmitRawFace(rt2, rt3, rl3, rl2, u22, v1, u2, v1, u2, v0, u22, v0);
+            if ((sides & EntityModelVisibleSides.West) != 0)
+                EmitRawFace(rt0, rl0, rl3, rt3, u1, v1, u0, v1, u0, v2, u1, v2);
+            if ((sides & EntityModelVisibleSides.North) != 0)
+                EmitRawFace(rt1, rt0, rt3, rt2, u2, v1, u1, v1, u1, v2, u2, v2);
+            if ((sides & EntityModelVisibleSides.East) != 0)
+                EmitRawFace(rl1, rt1, rt2, rl2, u3, v1, u2, v1, u2, v2, u3, v2);
+            if ((sides & EntityModelVisibleSides.South) != 0)
+                EmitRawFace(rl0, rl1, rl2, rl3, u4, v1, u3, v1, u3, v2, u4, v2);
             vertexFloats = rawVertexFloats;
             indexCount = rawIndexCount;
         }

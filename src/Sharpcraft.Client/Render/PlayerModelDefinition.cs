@@ -54,6 +54,8 @@ public readonly record struct EntityModelPart
     public int UvDepth { get; init; }
     public Func<EntityRenderState, float>? YOffsetSelector { get; init; }
     public bool UsesItemAtlas { get; init; }
+    /// <summary>Raw-only face mask; <see cref="EntityModelVisibleSides.All"/> keeps every face (legacy unchanged).</summary>
+    public EntityModelVisibleSides VisibleSides { get; init; } = EntityModelVisibleSides.All;
 
     internal EntityModelPart(
         string Name,
@@ -92,7 +94,8 @@ public readonly record struct EntityModelPart
         int UvHeight = 0,
         int UvDepth = 0,
         Func<EntityRenderState, float>? YOffsetSelector = null,
-        bool UsesItemAtlas = false)
+        bool UsesItemAtlas = false,
+        EntityModelVisibleSides VisibleSides = EntityModelVisibleSides.All)
     {
         this.Name = Name;
         this.CentreX = CentreX;
@@ -131,6 +134,7 @@ public readonly record struct EntityModelPart
         this.UvDepth = UvDepth;
         this.YOffsetSelector = YOffsetSelector;
         this.UsesItemAtlas = UsesItemAtlas;
+        this.VisibleSides = VisibleSides;
     }
 
     /// <summary>Returns a copy with the metadata fields used by model-definition layers overridden.</summary>
