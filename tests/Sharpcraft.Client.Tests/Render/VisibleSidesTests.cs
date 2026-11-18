@@ -88,6 +88,39 @@ public sealed class VisibleSidesTests
                 Assert.Equal(full.Vertices[(sourceVertex + v) * stride + f], north.Vertices[v * stride + f]);
     }
 
+    [Theory]
+    [InlineData(EntityModelVisibleSides.All, 6)]
+    [InlineData(EntityModelVisibleSides.North, 1)]
+    [InlineData(EntityModelVisibleSides.Down | EntityModelVisibleSides.Up, 2)]
+    public void CompiledTreePathHonoursVisibleSides(EntityModelVisibleSides mask, int polygons)
+    {
+        // Production path: FromTree always builds a Compiled tree; BuildModel goes through compiled Emit,
+        // which must forward cube.VisibleSides onto the EntityModelPart passed to AddPart. The DSL sets the
+        // mask explicitly (no auto-inference), so this covers the path DecoratedPot/Chest would use.
+        var definition = CompiledDefinition(mask, mirror: false);
+        var geometry = new EntityModelMesher().BuildModel(definition, State(), Sprite(), 64, 64, modelScale: 1f);
+        var stride = ChunkMesher.FloatsPerVertex;
+        Assert.True(definition.Compiled is not null);
+        Assert.Equal(polygons * 4, geometry.VertexFloats / stride);
+        Assert.Equal(polygons * 6, geometry.IndexCount);
+
+        // Compare against the flat-path geometry: same mask must produce byte-identical keyed vertices/UV.
+        var flat = Geometry(mask);
+        for (var i = 0; i < geometry.VertexFloats; i++)
+            Assert.Equal(flat.Vertices[i], geometry.Vertices[i]);
+    }
+
+    [Fact]
+    public void CompiledMirrorNorthMatchesFlatMirrorNorth()
+    {
+        var compiled = new EntityModelMesher().BuildModel(
+            CompiledDefinition(EntityModelVisibleSides.North, mirror: true), State(), Sprite(), 64, 64, modelScale: 1f);
+        var flat = Geometry(EntityModelVisibleSides.North, mirror: true);
+        Assert.Equal(flat.VertexFloats, compiled.VertexFloats);
+        for (var i = 0; i < flat.VertexFloats; i++)
+            Assert.Equal(flat.Vertices[i], compiled.Vertices[i]);
+    }
+
     [Fact]
     public void DefaultVisibleSidesIsAll()
     {
@@ -123,6 +156,23 @@ public sealed class VisibleSidesTests
             faceTransforms: null, "entity/test", 1f, baselinePx: 0f, rawSourceFrame: true);
         var part = baked.Parts.Single(p => p.Name == "cube") with { VisibleSides = mask };
         return new EntityModelDefinition("mask_cube", 64, 64, [part],
+            faceTransforms: null, "entity/test", 1f, baselinePx: 0f, rawSourceFrame: true);
+    }
+
+    private static EntityModelDefinition CompiledDefinition(EntityModelVisibleSides mask, bool mirror = false)
+    {
+        // Explicit per-cube mask on the DSL; FromTree bakes it into the compiled EntityModelCube.
+        var mesh = new VanillaMeshDefinition(new VanillaPartDefinition("root", VanillaPartPose.Zero,
+            children:
+            [
+                new VanillaPartDefinition("cube", VanillaPartPose.Zero,
+                    cubes:
+                    [
+                        new VanillaCubeDefinition("cube", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f,
+                            Mirror: mirror, VisibleSides: mask)
+                    ])
+            ]));
+        return EntityModelDefinition.FromTree("mask_cube_compiled", 64, 64, mesh,
             faceTransforms: null, "entity/test", 1f, baselinePx: 0f, rawSourceFrame: true);
     }
 

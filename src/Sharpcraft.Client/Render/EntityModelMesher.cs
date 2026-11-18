@@ -799,7 +799,8 @@ public sealed partial class EntityModelMesher
                     TintSelector: node.TintSelector,
                     UvWidth: cube.UvWidth,
                     UvHeight: cube.UvHeight,
-                    UvDepth: cube.UvDepth);
+                    UvDepth: cube.UvDepth,
+                    VisibleSides: cube.VisibleSides);
 
                     if (yOffset == 0f)
                     {
