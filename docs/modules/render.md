@@ -852,10 +852,11 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 ### task-273 state matrix 覆盖基线
 
 - **工具**：`tools/Sharpcraft.Equivalence.Audit --suite statematrix`，输出 type/state/layer/sample/status TSV 与三态/每层 counts。
-- **行**：`EntityModelResolver.Definitions` 与 `VanillaBlockEntityTypes` 机器枚举 × state 类（base/baby/powered/pose/held/glint/energy）× layer 类（base/armor/trim/glint/special/…）。
-- **状态**：`SOURCE_SAMPLE` 引用真实 Repro/Data 文件与 key；`SOURCE_CONSTRAINT` 引用 energy/glint 公式样本；`NO_SOURCE` 明确未覆盖且不标 strict。
-- **校验**：`StateMatrixBaseline.Build` 自检 strict 行文件/key 存在；`StateMatrixBaselineTests` 架构测试复验；禁止 golden hash 自证。
-- **语义**：覆盖基线，不是全状态等效证明；`NO_SOURCE` 不计入覆盖通过。
+- **行**（Issue #219 二次修正）：`EntityModelResolver.Definitions` / `VanillaBlockEntityTypes` 机器枚举；`CapabilitiesFor(type)` 从 resolver/metadata 推导状态（baby=`TryResolve(type,baby:true)`、pose=`Parts>0` 实体几何、held/glint/energy/powered=`held`/`GlintScale`/`UvOffset` 层标记）；`AllowedCombinations(type)` 从每层标记推导允许的 `(state,layer)` 对（无手写 `StateLayerAffinity` 表）；layer 由真实 `RenderLayers`（`Model != null`）决定。`SourceRelevant` 为 allowed 集合成员判断（非恒 true），不允许组合在 builder 判 false 后剔除；`IsSourceRelevant` 公开供测试。非 humanoid×装备层、非 energy 宿主×powered/energy、无 baby×baby 伪行已删除；block 只用 `base`。
+- **四态**：`SOURCE_SAMPLE` 引用真实 Repro/Data 文件与 key；`SOURCE_CONSTRAINT` 引用 energy/glint 公式样本；`NO_SOURCE`（A 类真实缺口，源有行为无样本）明确未覆盖且不标 strict；`UNKNOWN`（C 类，方块实体有 renderer 但源行为无法确认）不默认当 NO_SOURCE。
+- **A/B/C 分类**：B 伪行从矩阵移除；A 真实缺口保留并按优先级输出（当前以 `pose/base` 动画逐顶点样本为主）；C 标 UNKNOWN 待逐 renderer 判定。
+- **校验**：`StateMatrixBaseline.Build` 自检 strict 行文件/key 存在；`StateMatrixBaselineTests` 以元数据驱动复验——每个真实 render layer 至少覆盖一次、每个可表达状态进入矩阵、无 allowed 集合外行、`SourceRelevant` 来自成员判断且 disallowed 组合为 false、`UNKNOWN` 不是 `NO_SOURCE`、strict 行文件/key 真实；禁止 golden hash 自证。
+- **语义**：覆盖基线，不是全状态等效证明；`NO_SOURCE`/`UNKNOWN` 不计入覆盖通过。修正后约 420 行（原 1,880），`SOURCE_SAMPLE≈136`/`CONSTRAINT≈40`/`NO_SOURCE≈199`/`UNKNOWN=45`。
 
 ### task-271 held item glint 生产层
 ### task-272 special held foil glint
