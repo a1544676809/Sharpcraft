@@ -104,6 +104,9 @@ public static class EntityVariantSpecs
         // ref://mc-26.3-analysis/src/net/minecraft/world/entity/monster/Creeper.java
         [32] = new(-1, null, ["default"], "default", PoweredAccessorIndex: 17),
 
+        // Parched: no synced variant/state fields; explicit default entry keeps the new type routed.
+        [98] = new(-1, null, ["default"], "default"),
+
         // Vex: byte flags at 16 (no AgeableMob in the chain), charging bit 0.
         [142] = new(-1, null, ["default"], "default", FlagsAccessorIndex: 16, ChargingMask: 1),
 

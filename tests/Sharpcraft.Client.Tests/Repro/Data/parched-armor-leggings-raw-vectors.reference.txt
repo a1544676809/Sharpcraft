@@ -4,7 +4,7 @@
 # space: #128 normalized render units (blocks): R*(v_px/16)+T_blocks; y-down, part pivot translation/rotationZYX; equals production modelScale:1 output
 # ref: ref://mc-26.3-analysis/src/net/minecraft/client/model/geom/ModelPart.java (Vertex/Cube/Polygon, translateAndRotate, SCALE_FACTOR=16)
 # columns: layer|part|cube|polygon|vertex|x|y|z|u|v
-# layer: PARCHED_ARMOR_LEGGINGS (shared humanoid armor deformation)
+# layer: PARCHED_ARMOR_LEGGINGS (PARCHED_ARMOR putFrom(humanoidArmor))
 PARCHED_ARMOR_LEGGINGS	/left_leg	0	0	0	-0.031250007	0.725000024	-0.150000006	0.125000000	0.625000000
 PARCHED_ARMOR_LEGGINGS	/left_leg	0	0	1	0.268750012	0.725000024	-0.150000006	0.062500000	0.625000000
 PARCHED_ARMOR_LEGGINGS	/left_leg	0	0	2	0.268750012	0.725000024	0.150000006	0.062500000	0.500000000

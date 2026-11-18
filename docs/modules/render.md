@@ -817,7 +817,15 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 ### task-245 Husk / scaled humanoid armor raw
 
 - **源公式**：HUSK_ARMOR 是共享 humanoid armor 经 MeshTransformer.scaling(1.0625)：root PartPose 缩放 1.0625 并平移 24.016*(1-1.0625) px；立方体/UV 不变。HuskArmorModelDefinition 将源公式静态烘焙为 pivot/cube 坐标缩放 + 根 yOffset（UV 维度保留原值），不依赖 non-unit node scale 路径。
-- **验收**：Husk 四 slot keyed 样本 48/72/72/48，位置 1e-5 + UV half；production resolver Husk raw layer（scale 1，baseline 0）；Drowned/Bogged 等已由 task-247 切 raw，Parched 因实体缺失仍 blocker；adult/baby/piglin/材质层零回归；full 3,657+、三门禁。
+- **验收**：Husk 四 slot keyed 样本 48/72/72/48，位置 1e-5 + UV half；production resolver Husk raw layer（scale 1，baseline 0）；Drowned/Bogged 等已由 task-247 切 raw，Parched 已由 task-257 接入；adult/baby/piglin/材质层零回归；full 3,657+、三门禁。
+### task-257 Parched entity + armor 接入
+
+- **type id**：`BuiltInRegistries.ENTITY_TYPE` 的 `minecraft:parched` 注册 id = **98**（总 161 项；Java registry probe，非猜测）。`EntityVariantSpecs[98]` 显式默认项，`EntityAnimationProvider` 复用 `SkeletonAnimationProvider`。
+- **body**：`SkeletonModel.createSingleModelDualBodyLayer` raw，64×64，312 顶点；包含 body 三层（base/waist/0.025 outer）、head 双层（0.2）和四肢双层 cube。
+- **outer**：`PARCHED_OUTER_LAYER` = `HumanoidModel.createMesh(CubeDeformation(0.25),0)` raw，64×32，168 顶点；源 `ParchedRenderer` 只挂 body+armor（没有 SkeletonClothingLayer），因此该 outer 定义/样本就绪但 production 不挂层。
+- **armor**：`PARCHED_ARMOR` 与 `humanoidArmor` 同源，复用 `PlayerArmorModelDefinition` 四 slot（48/72/72/48），production raw。
+- **验收**：body/outer/armor 全部 jar 样本 strict 1e-5 + UV half；resolver [98] 可渲染、animation provider 存在；full 3,706+、三门禁。
+
 ### task-254 Creeper powered 状态 + armor production
 
 - **状态通道**：`Creeper.DATA_IS_POWERED` 为 Boolean synced accessor；继承链 `Entity 0-7 + LivingEntity 8-14 + Mob flags 15 + Creeper swell 16 / powered 17 / ignited 18`，Boolean serializer=8。`EntityVariantSpecs[32].PoweredAccessorIndex=17` → `EntityTracker.ApplyEntityData` 校验 serializer → `TrackedEntity.IsPowered` → `EntityRenderState.IsPowered`；非 Creeper 不受影响。
@@ -841,7 +849,7 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 - **复用**：`DROWNED_ARMOR`/`BOGGED_ARMOR`/`PARCHED_ARMOR` 均 `putFrom(humanoidArmor)`，`PLAYER_SLIM_ARMOR` 与 `PLAYER_ARMOR` 同 `playerArmor`，`DROWNED_BABY_ARMOR` 与 `humanoidBabyArmor` 同源；这些 set 直接复用现有 Player/Baby raw 定义，不复制 mesh。
 - **Giant**：`GIANT_ARMOR` = `humanoidArmor.map(layer -> layer.apply(MeshTransformer.scaling(6.0)))`；`GiantArmorModelDefinition` 静态烘焙 6× pivot/cube + 源 yOffset，UV 维度保持原值，sample strict 通过。
-- **验收**：Drowned adult/baby、Bogged、Parched、PlayerSlim、Giant 共 24 个 keyed 样本（48/72/72/48、baby 24/72/72/48、Giant 48/72/72/48）位置 1e-5 + UV half；resolver 覆盖 Drowned/Bogged/Giant/PlayerSlim，Parched armor 定义/样本就绪但当前 main 没有 Parched 实体类型，production 接入记为 blocker；其余 armor/材质层零回归；full 3,662+、三门禁。
+- **验收**：Drowned adult/baby、Bogged、Parched、PlayerSlim、Giant 共 24 个 keyed 样本（48/72/72/48、baby 24/72/72/48、Giant 48/72/72/48）位置 1e-5 + UV half；resolver 覆盖 Drowned/Bogged/Giant/PlayerSlim，Parched armor 已由 task-257 接入实体与 production raw；其余 armor/材质层零回归；full 3,662+、三门禁。
 
 ### task-243 Piglin / baby piglin armor raw
 

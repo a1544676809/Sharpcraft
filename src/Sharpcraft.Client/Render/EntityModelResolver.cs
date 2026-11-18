@@ -40,6 +40,7 @@ public static partial class EntityModelResolver
         [HumanoidMobModelDefinition.DrownedEntityTypeId] = HumanoidMobModelDefinition.Drowned,
         [HumanoidMobModelDefinition.EndermanEntityTypeId] = HumanoidMobModelDefinition.Enderman,
         [CreeperModelDefinition.CreeperEntityTypeId] = CreeperModelDefinition.Definition,
+        [ParchedModelDefinition.ParchedEntityTypeId] = ParchedModelDefinition.Body,
         [SlimeModelDefinition.SlimeEntityTypeId] = SlimeModelDefinition.Definition,
         [MagmaCubeModelDefinition.MagmaCubeEntityTypeId] = MagmaCubeModelDefinition.Definition,
         [SpiderModelDefinition.SpiderEntityTypeId] = SpiderModelDefinition.Definition,
@@ -307,7 +308,8 @@ public static partial class EntityModelResolver
                         or HumanoidMobModelDefinition.ZombieEntityTypeId
                         or HumanoidMobModelDefinition.SkeletonEntityTypeId
                         or HumanoidMobModelDefinition.DrownedEntityTypeId
-                        or HumanoidMobModelDefinition.BoggedEntityTypeId;
+                        or HumanoidMobModelDefinition.BoggedEntityTypeId
+                        or ParchedModelDefinition.ParchedEntityTypeId;
                 var rawBabyHumanoidArmor = baby && !piglin
                     && effectiveKind == EquipmentAssetKind.HumanoidArmorBaby;
                 var rawArmor = rawAdultHumanoidArmor
