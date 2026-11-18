@@ -781,15 +781,25 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 ### SIM-ENTITY-RAW-SCALE：raw non-unit PartPose scale（task-152 核心已实现）
 - **规格**：源 `PartPose.scaled(factor)` 把 pivot offset 和 bind scale 同乘 factor；`ModelPart.translateAndRotate` 顺序为 translate(pivot) → rotate → scale(bind)。raw compiled tree 的 `EntityModelPartNode` 保存 `ScaleX/Y/Z`，`NodeFrame` 在源旋转/平移语义中应用 bind scale。
 - **实现**：`EntityModelDefinition.FromTree` 不再对 raw + non-unit scale 抛异常；`VanillaMeshBakery.Build` 允许 raw，legacy 仍拒绝；raw scaled 使用 compiled tree。源证据 `RawNonUnitScaleTests`：synthetic `PartPose.Offset(1,2,3).Scaled(0.5)` 24/24 顶点；以及非零 xRot/yRot/zRot 的 scaled parent + child，按源 `pivot + R*(cube*factor)`（child 含 parent scale）48/48 顶点 1e-5，并用 `PartWorldMatrix(child)` 验证 parent/child 帧。
-- **限制/blocker**：raw scaled 的 legacy flattened `Parts` 暂为空（`FromTree` 仅 compiled tree 承载），依赖 `Parts` 的旧消费方需迁移；**task-160 已将 EnderDragon 切 raw compiled tree（源 1560 顶点 strict 1e-5/UV），elytra 等 scaled 生产定义尚未切 raw**。legacy scaled 路径保持原受限实现。
+- **限制/blocker**：raw scaled 的 legacy flattened `Parts` 暂为空（`FromTree` 仅 compiled tree 承载），依赖 `Parts` 的旧消费方需迁移；**task-160 已将 EnderDragon 切 raw compiled tree（源 1560 顶点 strict 1e-5/UV），task-229 已迁 elytra、task-236 已迁 adult Player 护甲。**legacy scaled 路径保持原受限实现。
 - **状态**：核心 raw scale 已实现并有源证据；生产族迁移仍 open（R-028 / Issue #122）。
 <!-- simplification:SIM-ENTITY-RAW-SCALE task:T-41 -->
+
 
 ### task-229 Elytra raw 差异修复（#122）
 
 - **根因**：旧 elytra 设备层仍走 legacy BuildElytraWings（baseline 24、face transforms、flattened 旧 pivot/UV），源 ElytraModel.createLayer 的 raw pivot(±5,0,0)、xRot ±π/12、zRot ∓π/12、10×20×2 grow1 及 UV 未按 raw NodeFrame 叠层；adult/baby 差异来自 baseline/layer yOffset 与 cube UV。
-- **修复**：EntityModelLayerHelpers.BuildElytraSourceLayer 用 raw DSL 构造源层，WithElytraSelectors 保留节点 scale/parent，WingsLayer translate(0,0,2px) 由 raw pivots 外置；resolver elytra layer aselinePx:0、awSourceFrame:true、sourceFrameBaselinePx:0。
+- **修复**：EntityModelLayerHelpers.BuildElytraSourceLayer 用 raw DSL 构造源层，WithElytraSelectors 保留节点 scale/parent，WingsLayer translate(0,0,2px) 由 raw pivots 外置；resolver elytra layer baselinePx:0、rawSourceFrame:true、sourceFrameBaselinePx:0。
 - **验收**：ElytraRawSampleTests adult/baby 各 48 行 keyed 1e-5 + UV half；ElytraWingGeometryTests 保留原精确 golden：逐翼绝对 world min/max、逐面四角 UV、baby y 1.492..12.492px、crouch adult 3px / baby 1.5px、standing 左右翼前后关系，无排序/无上界替代。production layer 对齐源 raw：adult y −24px、baby −30.004px（−24 − 12.008×0.5）、z +2px WingsLayer，crouch 位移按 1/(1+node scale) 归一回源 3/1.5px；full 3,614 + 三门禁通过。
+
+<!-- simplification:SIM-ENTITY-RAW-SCALE task:T-41 -->
+
+### task-236 Adult Player armor raw（本体，不含 trim/glint）
+
+- **源样本**：RawRenderUnitProbe/PlayerArmorRawProbe 采 PLAYER_ARMOR 四 slot：helmet 48（head+hat）、chestplate 72（body+双臂）、leggings 72（body+双腿）、boots 48（双腿）。head/chest/feet 用 outer grow 1.0px，leggings 用 inner grow 0.5px（legs 再 extend -0.1）。
+- **raw 定义**：PlayerArmorModelDefinition 四 slot 使用源 pivot/cube/UV，baselinePx:0、rawSourceFrame:true、sourceFrameBaselinePx:0、无 FaceTransforms；生产 resolver 仅对 adult Player 走 raw layer，其他 humanoid（Zombie 等）保持 legacy 24px/face transforms。
+- **边界**：复用本体 raw 实体变换，不套 held-hand matrix；trim/glint/crackiness 材质层不混入本任务，baby/piglin 保持后续。
+- **验收**：PlayerArmorRawReferenceSampleTests 四 slot keyed 1e-5 + UV half；production raw flag/vertex count、Zombie legacy 回归、full 3,614+、三门禁。
 
 <!-- simplification:SIM-ENTITY-RAW-SCALE task:T-41 -->
 
