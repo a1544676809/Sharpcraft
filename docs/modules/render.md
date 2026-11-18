@@ -837,6 +837,7 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **实现**：`GlintClock` 注入 clock（默认 wall-clock，测试可固定 source millis，不读环境变量、无 per-vertex 分配）；`GlintTextureTransform` 按源矩阵与源 `%` 符号/`fract` wrap 计算 UV；`EntityRenderLayerDefinition.GlintScale` 标记 glint 层，`EntityModelMesher` 每帧在 build 后改写 half-UV，几何不变、不静态烘焙；armor glint 层使用 0.16，item/entity scale 作为独立 helper 分类，不串用。
 - **shader**：glint 片元只把已变换的 tile UV 映射到 sprite rect，不再重复做时钟矩阵。
 - **验收**：`glint-texture-transform.reference.txt` 固定 millis {55000, 110000, 137500, -55000} × item/entity/armor 的 UV 样本；`GlintTextureTransformTests` production zombie armor glint `BuildLayers` 顶点 UV strict，helper 覆盖三分类与负 millis。
+- **限制/blocker**：当前代码树只有 **armor glint production 层**（`glint_HumanoidArmor_*`）；item scale 8.0 / entity scale 0.5 仅 helper + 源样本覆盖，**没有对应 production item/entity glint 层可接线**，不能声称 glint 全部完成。后续需单独接入 item/entity glint 生产层并补 production 输出级样本。
 
 ### task-261 trim/glint/crackiness 跟随 raw armor 几何
 

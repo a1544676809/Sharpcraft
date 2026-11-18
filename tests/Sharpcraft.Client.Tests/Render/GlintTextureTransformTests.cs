@@ -22,6 +22,19 @@ public sealed class GlintTextureTransformTests
         AppContext.BaseDirectory, "Repro", "Data", "glint-texture-transform.reference.txt");
 
     [Fact]
+    public void DefaultClockUsesUtcEpochNotMonotonicUptime()
+    {
+        var before = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        GlintClock.SetProvider(null);
+        var millis = GlintClock.Millis;
+        var after = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        // Epoch milliseconds * 4; a monotonic Stopwatch uptime would be far below this and would depend on DST-free uptime.
+        Assert.True(millis > 1_000_000_000_000L);
+        Assert.InRange(millis, (long)(before * 4f) - 4, (long)(after * 4f) + 4);
+    }
+
+    [Fact]
     public void SourceMatrixSamplesMatchForEveryGlintScale()
     {
         var sample = ReadSample();
@@ -65,7 +78,7 @@ public sealed class GlintTextureTransformTests
         {
             foreach (var row in ReadSample().Where(row => row.Scale == GlintTextureTransform.ArmorScale))
             {
-                GlintClock.SetProvider(() => row.Millis);
+                GlintClock.SetFixedSourceMillis(row.Millis);
                 var layers = new EntityModelMesher().BuildLayers(
                     [state], texture, 64, 64, variants: EntityVariantTable.Builtin);
                 var built = layers.Single(layer => layer.Name == "glint_HumanoidArmor_5");

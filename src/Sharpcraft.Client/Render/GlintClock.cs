@@ -14,24 +14,24 @@ public static class GlintClock
     /// <summary>Options.glintSpeed default.</summary>
     public const float DefaultGlintSpeed = 0.5f;
 
-    private static Func<long>? _fixedMillis;
+    private static Func<long>? _fixedWallMillis;
 
     /// <summary>Source <c>millis</c> after the glint speed multiplier.</summary>
     public static long Millis
     {
         get
         {
-            if (_fixedMillis is { } fixedMillis)
-            {
-                return fixedMillis();
-            }
-
-            var wallMillis = (long)(System.Diagnostics.Stopwatch.GetTimestamp()
-                * (1000.0 / System.Diagnostics.Stopwatch.Frequency));
+            var wallMillis = _fixedWallMillis is { } fixedMillis
+                ? fixedMillis()
+                : DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             return (long)(wallMillis * DefaultGlintSpeed * 8f);
         }
     }
 
-    /// <summary>Installs a fixed source-millis provider, or null to restore the wall clock.</summary>
-    public static void SetProvider(Func<long>? provider) => _fixedMillis = provider;
+    /// <summary>Installs a fixed wall-clock-millis provider, or null to restore the UTC epoch clock.</summary>
+    public static void SetProvider(Func<long>? provider) => _fixedWallMillis = provider;
+
+    /// <summary>Test helper: installs a fixed source millis (pre glint-speed multiplier).</summary>
+    public static void SetFixedSourceMillis(long millis) =>
+        _fixedWallMillis = () => (long)(millis / (DefaultGlintSpeed * 8f));
 }
