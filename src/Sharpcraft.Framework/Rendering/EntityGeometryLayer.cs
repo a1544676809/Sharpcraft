@@ -29,7 +29,15 @@ public enum EntityGeometryLayerKind
     Emissive,
 
     /// <summary>Enchanted glint overlay: additive, depth test greater-or-equal, no writes.</summary>
-    Glint
+    Glint,
+
+    /// <summary>
+    /// SPECIAL foil glint (compass/clock). The reference uses its own render types — <c>item_cutout_glint_special</c>
+    /// and <c>item_translucent_glint_special</c> — whose glint coordinate is the projected decal (UV3) rather than the
+    /// sprite UV. This stays a separate kind so the standard and special glint render types never collapse onto one
+    /// layer; the shader body is still the shared additive overlay (documented controlled deviation).
+    /// </summary>
+    SpecialGlint
 }
 
 /// <summary>

@@ -71,6 +71,7 @@ internal sealed class FrameResources : IDisposable
         EntityElytraPipeline = FramePipelines.CreateEntityElytraPipeline(backend, format, pipelineLayout);
         EntityEmissivePipeline = FramePipelines.CreateEntityEmissivePipeline(backend, format, pipelineLayout);
         EntityGlintPipeline = FramePipelines.CreateEntityGlintPipeline(backend, format, pipelineLayout);
+        EntitySpecialGlintPipeline = FramePipelines.CreateEntitySpecialGlintPipeline(backend, format, pipelineLayout);
         SkyPipeline = FramePipelines.CreateSkyPipeline(backend, format);
         UiPipeline = UiRenderer.CreatePipeline(backend, BackendConvert.FromWgpu(format), pipelineLayout);
         UiTextPipeline = UiRenderer.CreateTextPipeline(backend, BackendConvert.FromWgpu(format), pipelineLayout);
@@ -173,6 +174,7 @@ internal sealed class FrameResources : IDisposable
             EntityElytraPipeline,
             EntityEmissivePipeline,
             EntityGlintPipeline,
+            EntitySpecialGlintPipeline,
             options.EntitySkin,
             options.ItemAtlasGpu,
             LayerPool,
@@ -517,6 +519,9 @@ internal sealed class FrameResources : IDisposable
     /// <summary>Entity glint pipeline.</summary>
     public PipelineHandle EntityGlintPipeline { get; }
 
+    /// <summary>SPECIAL foil glint pipeline (compass/clock decal glint).</summary>
+    public PipelineHandle EntitySpecialGlintPipeline { get; }
+
     /// <summary>Gradient backdrop pipeline.</summary>
     public PipelineHandle SkyPipeline { get; }
 
@@ -641,6 +646,7 @@ internal sealed class FrameResources : IDisposable
         _backend.Destroy(BlitDepthPipeline);
         _backend.Destroy(SkyPipeline);
         _backend.Destroy(EntityGlintPipeline);
+        _backend.Destroy(EntitySpecialGlintPipeline);
         _backend.Destroy(EntityEmissivePipeline);
         _backend.Destroy(EntityElytraPipeline);
         _backend.Destroy(ItemCutoutPipeline);

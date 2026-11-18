@@ -97,7 +97,18 @@ internal static class FramePipelines
     }
 
     /// <summary>Enchanted glint overlay: additive, depth test greater-or-equal and no depth writes.</summary>
-    internal static PipelineHandle CreateEntityGlintPipeline(WgpuRenderBackend backend, WGPUTextureFormat format, PipelineLayoutHandle layout)
+    internal static PipelineHandle CreateEntityGlintPipeline(WgpuRenderBackend backend, WGPUTextureFormat format, PipelineLayoutHandle layout) =>
+        CreateGlintOverlayPipeline(backend, format, layout);
+
+    /// <summary>
+    /// SPECIAL foil glint overlay: the source render types are <c>item_cutout_glint_special</c> and
+    /// <c>item_translucent_glint_special</c>. Its own pipeline keeps that render type distinct from the standard glint;
+    /// the fragment body is the shared glint overlay (see docs/modules/item-rendering.md §3.5.21).
+    /// </summary>
+    internal static PipelineHandle CreateEntitySpecialGlintPipeline(WgpuRenderBackend backend, WGPUTextureFormat format, PipelineLayoutHandle layout) =>
+        CreateGlintOverlayPipeline(backend, format, layout);
+
+    private static PipelineHandle CreateGlintOverlayPipeline(WgpuRenderBackend backend, WGPUTextureFormat format, PipelineLayoutHandle layout)
     {
         var source = System.Text.Encoding.UTF8.GetBytes(OffscreenRenderer.ShaderSourceText);
         return backend.CreateRenderPipeline(new PipelineDesc(

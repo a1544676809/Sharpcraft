@@ -171,7 +171,7 @@ public static partial class EntityModelResolver
 
     /// <summary>Glint sampler for held special models that use the entity-scale glint pass.</summary>
     public static string? ResolveHeldItemSpecialGlintTexture(EntityRenderState state, bool offhand = false) =>
-        (offhand ? state.OffHandGlint : state.MainHandGlint)
+        (offhand ? state.OffHandFoil : state.MainHandFoil) != ItemFoilType.None
         && ResolveHeldItemSpecial(state, offhand) is "minecraft:trident" or "minecraft:shield"
             ? ItemInHandMesher.GlintTexture
             : null;
@@ -304,6 +304,10 @@ public static partial class EntityModelResolver
     /// <summary>Model-space mirror: Sharpcraft stores models with X and Y negated relative to the reference frame.</summary>
     private static Matrix4x4 Mirror => Matrix4x4.CreateScale(-1f, -1f, 1f);
 
+    /// <summary>The display context a hand's held item is submitted with: held items are always third person.</summary>
+    public static ItemDisplayContext DisplayContextFor(bool offhand) =>
+        offhand ? ItemDisplayContext.ThirdPersonLeftHand : ItemDisplayContext.ThirdPersonRightHand;
+
     /// <summary>Item display transform for a hand context, or identity when the model has none.</summary>
     public static Matrix4x4 DisplayFor(ItemModelResolution? model, bool offhand)
     {
@@ -312,7 +316,7 @@ public static partial class EntityModelResolver
             return Matrix4x4.Identity;
         }
 
-        var context = offhand ? ItemDisplayContext.ThirdPersonLeftHand : ItemDisplayContext.ThirdPersonRightHand;
+        var context = DisplayContextFor(offhand);
         // Reference LayerRenderState.applyTransform passes displayContext.leftHand() into ItemTransform.apply, which
         // negates translation.x and rotation.y/z on top of the per-context JSON entry. Omitting that fix renders offhand
         // items unmirrored — a bow lies flat instead of upright.
@@ -327,7 +331,7 @@ public static partial class EntityModelResolver
         var display = Matrix4x4.Identity;
         if (model is not null)
         {
-            var context = offhand ? ItemDisplayContext.ThirdPersonLeftHand : ItemDisplayContext.ThirdPersonRightHand;
+            var context = DisplayContextFor(offhand);
             if (model.Display.TryGetValue(context, out var transform))
             {
                 display = transform.ToMatrix(applyLeftHandFix: offhand);
@@ -452,8 +456,8 @@ public static partial class EntityModelResolver
             order + 2,
             right,
             glintTexture,
-            state => state.MainHandGlint && ResolveHeldItemSpecial(state, offhand: false) == specialType ? glintTexture : null,
-            state => state.MainHandGlint && ResolveHeldItemSpecial(state, offhand: false) == specialType,
+            state => state.MainHandFoil != ItemFoilType.None && ResolveHeldItemSpecial(state, offhand: false) == specialType ? glintTexture : null,
+            state => state.MainHandFoil != ItemFoilType.None && ResolveHeldItemSpecial(state, offhand: false) == specialType,
             AllCubes: true,
             UsesItemAtlas: true,
             GlintScale: GlintTextureTransform.EntityScale));
@@ -463,8 +467,8 @@ public static partial class EntityModelResolver
             order + 3,
             left,
             glintTexture,
-            state => state.OffHandGlint && ResolveHeldItemSpecial(state, offhand: true) == specialType ? glintTexture : null,
-            state => state.OffHandGlint && ResolveHeldItemSpecial(state, offhand: true) == specialType,
+            state => state.OffHandFoil != ItemFoilType.None && ResolveHeldItemSpecial(state, offhand: true) == specialType ? glintTexture : null,
+            state => state.OffHandFoil != ItemFoilType.None && ResolveHeldItemSpecial(state, offhand: true) == specialType,
             AllCubes: true,
             UsesItemAtlas: true,
             GlintScale: GlintTextureTransform.EntityScale));
