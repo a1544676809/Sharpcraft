@@ -68,7 +68,7 @@ public sealed class ItemInHandMesher
                 }
 
                 var armName = offhand ? "left_arm" : "right_arm";
-                var humanoidSource = model.RawSourceFrame && HumanoidHeldHandFrame.IsHumanoid(entity.TypeId);
+                var humanoidSource = HumanoidHeldHandFrame.IsHumanoid(entity.TypeId);
                 var handFrame = humanoidSource
                     ? HumanoidHeldHandFrame.SourceWorld(model, armName, pose, offhand, entity.IsBaby)
                     : model.RawSourceFrame

@@ -88,9 +88,9 @@ public sealed class HumanoidHeldHandSourceFrameTests
         Assert.Equal(16, values.Length);
         // File is column-major JOML; System.Numerics is row-vector.
         return (parts[1], new Matrix4x4(
-            values[0], values[4], values[8], 0f,
-            values[1], values[5], values[9], 0f,
-            values[2], values[6], values[10], 0f,
+            values[0], values[1], values[2], 0f,
+            values[4], values[5], values[6], 0f,
+            values[8], values[9], values[10], 0f,
             values[12], values[13], values[14], values[15]));
     }
 

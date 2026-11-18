@@ -29,10 +29,7 @@ public sealed class HumanoidHeldHandProductionTests
         Assert.Equal(4, vertices.Keys.Count(key => key.Contains("_attack_", StringComparison.Ordinal)));
 
         var paperId = EntityModelResolver.Items?.GetId(Identifier.Parse("minecraft:paper")) ?? -1;
-        if (paperId <= 0)
-        {
-            return;
-        }
+        Assert.True(paperId > 0, "embedded item registry must contain minecraft:paper");
 
         var root = Path.Combine(Path.GetTempPath(), "sharpcraft-held-frame-" + Guid.NewGuid().ToString("N"));
         try
@@ -67,13 +64,13 @@ public sealed class HumanoidHeldHandProductionTests
                         continue;
                     }
 
+                    var expectedSource = vertices[state];
+                    Assert.Equal(24, expectedSource.Length);
                     var parts = state.Split('_');
                     var left = parts[0] == "LEFT";
                     var motion = parts[1];
                     var baby = parts[2] == "baby";
-                    var typeId = baby
-                        ? HumanoidMobModelDefinition.ZombieEntityTypeId
-                        : EntityPlaceholderMesher.PlayerEntityTypeId;
+                    var typeId = EntityPlaceholderMesher.PlayerEntityTypeId;
                     var frame = default(EntityAnimationFrame) with
                     {
                         TypeId = typeId,
@@ -95,7 +92,7 @@ public sealed class HumanoidHeldHandProductionTests
                     var entity = new EntityRenderState(
                         1,
                         typeId,
-                        0f, 0f, 0f, 0f, 0f,
+                        0f, 0f, 0f, 180f, 0f,
                         IsBaby: baby,
                         MainHandItemId: left ? -1 : paperId,
                         IsUsingItem: motion == "use",
@@ -106,11 +103,38 @@ public sealed class HumanoidHeldHandProductionTests
                     var actual = ReadPositions(layer.Geometry);
                     var productionModel = EntityModelMesher.ResolveEntityModel(entity, variants: null);
                     var entityMatrix = EntityModelTransform.From(entity).ToMatrix();
-                    var world = HumanoidHeldHandFrame.SourceWorld(
-                        productionModel, left ? "left_arm" : "right_arm", pose, left, baby) * entityMatrix;
-                    var expected = CubeCorners.Select(vertex => Vector3.Transform(vertex, world)).ToArray();
+                    // Independent sample -> production map: sample vertices are already source render units
+                    // (px/16), so only the model scale and the entity transform are applied. No
+                    // HumanoidHeldHandFrame helper participates in the expectation.
+                    var scale = baby ? 0.5f : 0.9f;
+                    var expected = expectedSource
+                        .Select(vertex => Vector3.Transform(vertex, Matrix4x4.CreateScale(scale) * entityMatrix))
+                        .ToArray();
                     AssertVertexSet(expected, actual, state);
                 }
+
+                // Non-humanoid raw models must still use the legacy hand adapter in the real mesher.
+                var copper = new EntityRenderState(
+                    2,
+                    CopperGolemModelDefinition.CopperGolemEntityTypeId,
+                    0f, 0f, 0f, 180f, 0f,
+                    MainHandItemId: paperId);
+                var copperModel = EntityModelMesher.ResolveEntityModel(copper, variants: null);
+                var copperMatrix = EntityModelTransform.From(copper).ToMatrix();
+                var legacyWorld = EntityModelResolver.AnchorCoreFor(offhand: false, baby: false)
+                    * EntityModelMesher.LegacyHandWorldMatrix(copperModel, copper, "right_arm")
+                    * copperMatrix;
+                var copperCorners = new[]
+                {
+                    new Vector3(0f, 0f, 0f), new Vector3(1f, 0f, 0f), new Vector3(1f, 1f, 0f), new Vector3(0f, 1f, 0f),
+                    new Vector3(0f, 0f, 1f), new Vector3(1f, 0f, 1f), new Vector3(1f, 1f, 1f), new Vector3(0f, 1f, 1f),
+                };
+                var copperExpected = copperCorners
+                    .Select(vertex => Vector3.Transform(vertex, legacyWorld))
+                    .ToArray();
+                var copperLayers = mesher.Build([copper], [new EntityPose()], variants: null, atlas);
+                var copperLayer = copperLayers.Single(entry => entry.Name == ItemInHandMesher.LayerName);
+                AssertVertexSet(copperExpected, ReadPositions(copperLayer.Geometry), "CopperGolem_right_rest");
             }
             finally
             {

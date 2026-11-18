@@ -80,11 +80,18 @@ public static class HumanoidHeldHandFrame
                 ColumnMultiply(hColumn, ColumnRotation(new Vector3(-MathF.PI / 2f, 0f, 0f))),
                 ColumnRotation(new Vector3(0f, MathF.PI, 0f))),
             ColumnTranslation(off));
-        return new Matrix4x4(
+        var result = Matrix4x4.Transpose(new Matrix4x4(
             pColumn.M11, pColumn.M12, pColumn.M13, 0f,
             pColumn.M21, pColumn.M22, pColumn.M23, 0f,
             pColumn.M31, pColumn.M32, pColumn.M33, 0f,
-            pColumn.M14, pColumn.M24, pColumn.M34, 1f);
+            pColumn.M14, pColumn.M24, pColumn.M34, 1f));
+        result.M14 = 0f;
+        result.M24 = 0f;
+        result.M34 = 0f;
+        result.M41 = pColumn.M14;
+        result.M42 = pColumn.M24;
+        result.M43 = pColumn.M34;
+        return result;
     }
 
     private static Matrix4x4 ColumnTranslation(Vector3 translation) =>

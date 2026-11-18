@@ -828,7 +828,7 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 - **实现**：新增 `HumanoidHeldHandFrame.Source`，按 `ItemInHandLayer.submitArmWithItem` 源链 `translateToHand(root→arm) → Rx(-90)·Ry(180) → T_off`（成人 `(±1,2,-10)/16`，baby `(0,1,-4.5)/16`）合成；left hand `tx/ry/rz` 取负由源 arm 数据自然给出。`SourceWorld` 再乘 model scale（adult 0.9 / baby 0.5）映射到 production raw 模型帧，再由 entity transform 处理 flip/baseline。
 - **接入**：`ItemInHandMesher` 对 `RawSourceFrame && HumanoidHeldHandFrame.IsHumanoid(typeId)` 使用 source frame 且跳过 legacy `AnchorCoreFor`；CopperGolem/non-humanoid 仍走 `LegacyHandWorldMatrix + anchor`。STAB/use/item display 顺序保持 `D · use · STAB · hand · entity`；trident/shield/banner special 图层不变。
-- **真值**：`humanoid-held-hand-source-vectors.reference.txt` 12 状态（right/left × rest/attack/use × adult/baby）；`HumanoidHeldHandSourceFrameTests` 显式断言 **8 checked + 4 attack skipped**，rest/use 8 状态矩阵严格 1e-5 通过；`HumanoidHeldHandProductionTests` 用 `ItemInHandMesher.Build` 输出级验证同 8 状态（adult player + baby zombie）1e-5 通过，覆盖 `SourceWorld` + entity transform。
+- **真值**：`humanoid-held-hand-source-vectors.reference.txt` 12 状态（right/left × rest/attack/use × adult/baby）；`HumanoidHeldHandSourceFrameTests` 显式断言 **8 checked + 4 attack skipped**，rest/use 8 状态矩阵严格 1e-5 通过；`HumanoidHeldHandProductionTests` 用真实 `ItemInHandMesher.Build` 输出级验证同 8 状态 1e-5 通过：expected 直接来自样本 24 顶点 × model scale × entity transform（独立公式，不经 helper）；另用 mesher 输出断言 CopperGolem 仍走 legacy `anchor × LegacyHandWorldMatrix`。player baby 无独立模型时 resolver 回退 base player model（样本 baby 同一套源部件）。
 - **blocker**：attack 4 状态仍未严格通过；源样本 attack 包含 `THROW_TRIDENT` 的 `setupAnim` 攻击臂/身体 pass，当前 source adapter 只重放 `THROW_TRIDENT` 基础臂姿态，差值集中在 body/arm attack 项。`R-026` 记录。
 
 ### task-261 trim/glint/crackiness 跟随 raw armor 几何
