@@ -116,71 +116,107 @@ public sealed class ShulkerBoxMesher
 
             var lightSky = entity.Sky / 15f;
             var lightBlock = entity.Block / 15f;
-
-            // The base fills the bottom half of the block.
-            EntityPlaceholderMesher.AppendBox(
-                _geometry,
-                new Vector3(0f, BaseBottom, 0f),
-                width: 1f,
-                height: BaseHeight,
-                red: 1f,
-                green: 1f,
-                blue: 1f,
-                sprite: sprite,
-                ref vertexFloats,
-                ref indexCount,
-                depth: 1f,
-                sky: lightSky,
-                block: lightBlock,
-                texU: 0,
-                texV: 28,
-                texDx: 16,
-                texDy: 8,
-                texDz: 16);
-
-            // The lid overlaps the base and lifts as the box opens.
-            var lidBottom = LidBottom - (LidRise * entity.Open);
+            var raw = RawMesh();
             var lidStart = vertexFloats;
-            var lidIndexStart = indexCount;
-            EntityPlaceholderMesher.AppendBox(
-                _geometry,
-                new Vector3(0f, lidBottom, 0f),
-                width: 1f,
-                height: LidHeight,
-                red: 1f,
-                green: 1f,
-                blue: 1f,
-                sprite: sprite,
-                ref vertexFloats,
-                ref indexCount,
-                depth: 1f,
-                sky: lightSky,
-                block: lightBlock,
-                texU: 0,
-                texV: 0,
-                texDx: 16,
-                texDy: 12,
-                texDz: 16);
+            AppendRaw(raw, sprite, lightSky, lightBlock, ref vertexFloats, ref indexCount);
+            var lidEnd = lidStart + 24 * ChunkMesher.FloatsPerVertex;
 
-            // Model space runs the other way up, so the matrix flips handedness and every box comes out
-            // wound backwards; reverse both index ranges so the faces survive back face culling.
-            ReverseWinding(_geometry, entityIndexStart, lidIndexStart);
-            ReverseWinding(_geometry, lidIndexStart, indexCount);
+            // Source setupAnim(progress): lid y = 24 - progress*8 and yRot = 270*progress degrees.
+            // Bind sample is in source model space; apply both on the raw lid vertices, then the
+            // per-direction model transform.
+            if (entity.Open != 0f)
+            {
+                for (var vertex = lidStart; vertex < lidEnd; vertex += ChunkMesher.FloatsPerVertex)
+                {
+                    _geometry.Vertices[vertex + 1] -= LidRise * entity.Open;
+                }
 
-            // The lid turns about the vertical line through the middle of the block, not its own centre.
-            RotateAboutY(_geometry, lidStart, vertexFloats, LidTurnDegrees * entity.Open);
+                RotateAboutY(_geometry, lidStart, lidEnd, LidTurnDegrees * entity.Open);
+            }
 
             var matrix = Transforms.TryGetValue(entity.Facing, out var found) ? found : Transforms[5];
             ApplyMatrix(_geometry, entityStart, vertexFloats, matrix, new Vector3(entity.X, entity.Y, entity.Z));
 
-            LastEntityCount++;
+            // The sample's raw winding is source-positive; the model matrix flips handedness for some
+            // directions, so reverse every triangle to keep faces outward after the transform.
+            ReverseWinding(_geometry, entityIndexStart, indexCount);
 
+            LastEntityCount++;
         }
 
         _geometry.VertexFloats = vertexFloats;
         _geometry.IndexCount = indexCount;
 
         return _geometry;
+    }
+
+    private sealed record RawShulkerMesh(float[] Vertices, uint[] Indices);
+
+    private static readonly RawShulkerMesh?[] RawCache = new RawShulkerMesh?[1];
+
+    private static RawShulkerMesh RawMesh()
+    {
+        lock (RawCache)
+        {
+            if (RawCache[0] is { } cached)
+            {
+                return cached;
+            }
+
+            var sprite = new SpriteRect(0, 0, 64, 64, 1) { U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f };
+            var geometry = new EntityModelMesher().BuildModel(
+                ShulkerBoxModelDefinition.Definition,
+                new Sharpcraft.Client.World.EntityRenderState(1, 0, 0f, 0f, 0f, 180f, 0f),
+                sprite,
+                64,
+                64,
+                modelScale: 1f);
+            var vertices = new float[geometry.VertexFloats];
+            Array.Copy(geometry.Vertices, vertices, vertices.Length);
+            var indices = new uint[geometry.IndexCount];
+            Array.Copy(geometry.Indices, indices, indices.Length);
+            var result = new RawShulkerMesh(vertices, indices);
+            RawCache[0] = result;
+            return result;
+        }
+    }
+
+    private void AppendRaw(
+        RawShulkerMesh raw,
+        SpriteRect sprite,
+        float sky,
+        float block,
+        ref int vertexFloats,
+        ref int indexCount)
+    {
+        var baseVertex = (uint)(vertexFloats / ChunkMesher.FloatsPerVertex);
+        var vertexCount = raw.Vertices.Length / ChunkMesher.FloatsPerVertex;
+        for (var i = 0; i < vertexCount; i++)
+        {
+            var offset = i * ChunkMesher.FloatsPerVertex;
+            var packedUv = BitConverter.SingleToUInt32Bits(raw.Vertices[offset + 4]);
+            var u = (float)BitConverter.UInt16BitsToHalf((ushort)(packedUv & 0xFFFF));
+            var v = (float)BitConverter.UInt16BitsToHalf((ushort)(packedUv >> 16));
+            TerrainVertexWriter.Write(
+                _geometry.Vertices,
+                ref vertexFloats,
+                raw.Vertices[offset],
+                raw.Vertices[offset + 1],
+                raw.Vertices[offset + 2],
+                1f,
+                1f,
+                1f,
+                u,
+                v,
+                sprite,
+                sky,
+                block);
+        }
+
+        for (var i = 0; i < raw.Indices.Length; i++)
+        {
+            _geometry.Indices[indexCount++] = baseVertex + raw.Indices[i];
+        }
     }
 
     /// <summary>Swaps the second and third index of every triangle in a range.</summary>
