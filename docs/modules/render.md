@@ -831,6 +831,13 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **真值**：`humanoid-held-hand-source-vectors.reference.txt` 12 状态（right/left × rest/attack/use × adult/baby）；`HumanoidHeldHandSourceFrameTests` 断言 **12 checked / 0 skipped** 全部矩阵 1e-5 通过（attack 期望为 `STAB * Source`）；`HumanoidHeldHandProductionTests` 用真实 `ItemInHandMesher.Build` 12/12 输出级验证：expected 直接来自样本 24 顶点 × model scale × entity transform（独立公式，不经 helper）；CopperGolem 仍走 legacy `anchor × LegacyHandWorldMatrix` 输出级回归。
 - **结论**：attack 不需要改生产矩阵；干净 `d67dc28b` 的 `world = STAB * (Source * scale) * entity` 与 sample `STAB * Source` 的 scale 后结果一致，trace 逐顶点差 <4.2e-7。
 
+### task-270 glint TextureTransform
+
+- **源**：`TextureTransform.setupGlintTexturing(scale)`：`millis=(long)(Util.getMillis()*glintSpeed*8)`，`o0=millis%110000/110000`，`o1=millis%30000/30000`，`M=T(-o0,o1,0)·Rz(π/18)·S(scale)`；scale 分类 item 8.0 / entity 0.5 / armor 0.16，glintSpeed 默认 0.5。
+- **实现**：`GlintClock` 注入 clock（默认 wall-clock，测试可固定 source millis，不读环境变量、无 per-vertex 分配）；`GlintTextureTransform` 按源矩阵与源 `%` 符号/`fract` wrap 计算 UV；`EntityRenderLayerDefinition.GlintScale` 标记 glint 层，`EntityModelMesher` 每帧在 build 后改写 half-UV，几何不变、不静态烘焙；armor glint 层使用 0.16，item/entity scale 作为独立 helper 分类，不串用。
+- **shader**：glint 片元只把已变换的 tile UV 映射到 sprite rect，不再重复做时钟矩阵。
+- **验收**：`glint-texture-transform.reference.txt` 固定 millis {55000, 110000, 137500, -55000} × item/entity/armor 的 UV 样本；`GlintTextureTransformTests` production zombie armor glint `BuildLayers` 顶点 UV strict，helper 覆盖三分类与负 millis。
+
 ### task-261 trim/glint/crackiness 跟随 raw armor 几何
 
 - **审计**：`rawArmor` 已为 raw 时，trim/glint 仍用 `equipmentTree`（legacy 24px compiled）且 `baselinePx:24/rawSourceFrame:false`；wolf crackiness 仍用 `EquipmentModelTrees` 的 legacy wolf armor tree。结果材质层与 armor 层几何/基线不一致。
