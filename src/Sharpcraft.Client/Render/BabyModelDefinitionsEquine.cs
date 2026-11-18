@@ -9,36 +9,36 @@ public static class BabyModelDefinitionsEquine
 {
     private static readonly VanillaMeshDefinition HorseMesh = BuildHorseMesh();
     private static readonly EntityModelPart[] HorseParts = EntityModelLayerHelpers.WithHorseMarkings(
-        [.. VanillaMeshBake.Bake(HorseMesh, 0, 0)], "entity/horse/horse_markings_", true);
+        [.. VanillaMeshBake.Bake(HorseMesh, 0, 0, rawSourceFrame: true)], "entity/horse/horse_markings_", true);
     private static readonly VanillaMeshDefinition LlamaMesh = BuildLlamaMesh();
     private static readonly EntityModelPart[] LlamaParts = [.. VanillaMeshBake.Bake(LlamaMesh, 0, 0, rawSourceFrame: true)];
     private static readonly VanillaMeshDefinition CamelMesh = BuildCamelMesh();
-    private static readonly EntityModelPart[] CamelParts = [.. VanillaMeshBake.Bake(CamelMesh, 0, 0)];
+    private static readonly EntityModelPart[] CamelParts = [.. VanillaMeshBake.Bake(CamelMesh, 0, 0, rawSourceFrame: true)];
     private static readonly VanillaMeshDefinition DonkeyMesh = BuildDonkeyMesh();
-    private static readonly EntityModelPart[] DonkeyParts = [.. VanillaMeshBake.Bake(DonkeyMesh, 0, 0)];
+    private static readonly EntityModelPart[] DonkeyParts = [.. VanillaMeshBake.Bake(DonkeyMesh, 0, 0, rawSourceFrame: true)];
 
-    private static readonly CompiledEntityModel HorseCompiled = VanillaMeshBakery.Build(HorseMesh, 64, 64);
+    private static readonly CompiledEntityModel HorseCompiled = VanillaMeshBakery.Build(HorseMesh, 64, 64, rawSourceFrame: true);
     private static readonly CompiledEntityModel HorseMarkedCompiled =
         EntityModelLayerHelpers.WithHorseMarkings(HorseCompiled, "entity/horse/horse_markings_", true);
     private static readonly CompiledEntityModel LlamaCompiled = VanillaMeshBakery.Build(LlamaMesh, 64, 64, rawSourceFrame: true);
-    private static readonly CompiledEntityModel CamelCompiled = VanillaMeshBakery.Build(CamelMesh, 64, 64);
-    private static readonly CompiledEntityModel DonkeyCompiled = VanillaMeshBakery.Build(DonkeyMesh, 64, 64);
+    private static readonly CompiledEntityModel CamelCompiled = VanillaMeshBakery.Build(CamelMesh, 64, 64, rawSourceFrame: true);
+    private static readonly CompiledEntityModel DonkeyCompiled = VanillaMeshBakery.Build(DonkeyMesh, 64, 64, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Horse = new(
-        "baby_horse", 64, 64, HorseParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/horse/horse_brown_baby",
-        compiled: HorseMarkedCompiled);
+        "baby_horse", 64, 64, HorseParts, faceTransforms: null, "entity/horse/horse_brown_baby",
+        compiled: HorseMarkedCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Llama = new(
         "baby_llama", 64, 64, LlamaParts, faceTransforms: null, "entity/llama/llama_brown_baby",
         compiled: LlamaCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Camel = new(
-        "baby_camel", 64, 64, CamelParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/camel/camel_baby",
-        compiled: CamelCompiled);
+        "baby_camel", 64, 64, CamelParts, faceTransforms: null, "entity/camel/camel_baby",
+        compiled: CamelCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Donkey = new(
-        "baby_donkey", 64, 64, DonkeyParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/horse/donkey_baby",
-        compiled: DonkeyCompiled);
+        "baby_donkey", 64, 64, DonkeyParts, faceTransforms: null, "entity/horse/donkey_baby",
+        compiled: DonkeyCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly IReadOnlyDictionary<int, EntityModelDefinition> Models =
         new Dictionary<int, EntityModelDefinition>
@@ -103,7 +103,7 @@ public static class BabyModelDefinitionsEquine
             new VanillaCubeDefinition("left_front_leg", 12, 34, -1.5f, -1f, -1.5f, 3f, 9f, 3f));
         root.AddOrReplaceChild("right_front_leg", VanillaPartPose.Offset(-2.4f, 16f, -5.4f),
             new VanillaCubeDefinition("right_front_leg", 0, 34, -1.5f, -1f, -1.5f, 3f, 9f, 3f));
-        var headParts = root.AddOrReplaceChild("head_parts", VanillaPartPose.OffsetAndRotation(0f, 10f, -6f, -0.6109f, 0f, 0f),
+        var headParts = root.AddOrReplaceChild("head_parts", VanillaPartPose.OffsetAndRotation(0f, 10f, -6f, 0.6109f, 0f, 0f),
             new VanillaCubeDefinition("head_parts", 30, 0, -2f, -6f, -2f, 4f, 8f, 4f));
         var head = headParts.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, -6.0516f, -0.2951f),
             new VanillaCubeDefinition("head", 0, 0, -3f, -3.9484f, -6.705f, 6f, 4f, 9f));

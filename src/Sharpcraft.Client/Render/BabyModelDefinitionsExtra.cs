@@ -14,44 +14,44 @@ public static class BabyModelDefinitionsExtra
 
     private static readonly CompiledEntityModel CatCompiled =
         EntityModelLayerHelpers.WithCollar(
-            VanillaMeshBakery.Build(CatMesh, 32, 32),
+            VanillaMeshBakery.Build(CatMesh, 32, 32, rawSourceFrame: true),
             "entity/cat/cat_collar_baby",
             inflate: 0.1f);
 
     private static readonly CompiledEntityModel WolfCompiled =
         EntityModelLayerHelpers.WithCollar(
-            VanillaMeshBakery.Build(WolfMesh, 32, 32),
+            VanillaMeshBakery.Build(WolfMesh, 32, 32, rawSourceFrame: true),
             "entity/wolf/wolf_collar_baby",
             inflate: 0.1f);
 
-    private static readonly CompiledEntityModel FoxCompiled = VanillaMeshBakery.Build(FoxMesh, 32, 32);
-    private static readonly CompiledEntityModel RabbitCompiled = VanillaMeshBakery.Build(RabbitMesh, 32, 32);
+    private static readonly CompiledEntityModel FoxCompiled = VanillaMeshBakery.Build(FoxMesh, 32, 32, rawSourceFrame: true);
+    private static readonly CompiledEntityModel RabbitCompiled = VanillaMeshBakery.Build(RabbitMesh, 32, 32, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Cat = new(
         "baby_cat", 32, 32,
-        EntityModelLayerHelpers.WithCollar([.. VanillaMeshBake.Bake(CatMesh, 0, 0)], "entity/cat/cat_collar_baby"),
+        EntityModelLayerHelpers.WithCollar([.. VanillaMeshBake.Bake(CatMesh, 0, 0, rawSourceFrame: true)], "entity/cat/cat_collar_baby"),
         PlayerModelDefinition.DefaultFaceTransforms, "entity/cat/cat_tabby_baby",
-        compiled: CatCompiled);
+        compiled: CatCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Wolf = new(
         "baby_wolf", 32, 32,
-        EntityModelLayerHelpers.WithCollar([.. VanillaMeshBake.Bake(WolfMesh, 0, 0)], "entity/wolf/wolf_collar_baby"),
+        EntityModelLayerHelpers.WithCollar([.. VanillaMeshBake.Bake(WolfMesh, 0, 0, rawSourceFrame: true)], "entity/wolf/wolf_collar_baby"),
         PlayerModelDefinition.DefaultFaceTransforms, "entity/wolf/wolf_baby",
         textureSelector: state => state.IsTame ? "entity/wolf/wolf_tame_baby" : state.IsAngry ? "entity/wolf/wolf_angry_baby" : "entity/wolf/wolf_baby",
         additionalTexturePaths: ["entity/wolf/wolf_tame_baby", "entity/wolf/wolf_angry_baby"],
-        compiled: WolfCompiled);
+        compiled: WolfCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Fox = new(
-        "baby_fox", 32, 32, [.. VanillaMeshBake.Bake(FoxMesh, 0, 0)],
+        "baby_fox", 32, 32, [.. VanillaMeshBake.Bake(FoxMesh, 0, 0, rawSourceFrame: true)],
         PlayerModelDefinition.DefaultFaceTransforms, "entity/fox/fox_baby",
         textureSelector: state => state.IsSleeping ? "entity/fox/fox_sleep_baby" : "entity/fox/fox_baby",
         additionalTexturePaths: ["entity/fox/fox_sleep_baby"],
-        compiled: FoxCompiled);
+        compiled: FoxCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Rabbit = new(
-        "baby_rabbit", 32, 32, [.. VanillaMeshBake.Bake(RabbitMesh, 0, 0)],
+        "baby_rabbit", 32, 32, [.. VanillaMeshBake.Bake(RabbitMesh, 0, 0, rawSourceFrame: true)],
         PlayerModelDefinition.DefaultFaceTransforms, "entity/rabbit/rabbit_brown_baby",
-        compiled: RabbitCompiled);
+        compiled: RabbitCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly IReadOnlyDictionary<int, EntityModelDefinition> Models =
         new Dictionary<int, EntityModelDefinition>
@@ -169,7 +169,7 @@ public static class BabyModelDefinitionsExtra
             new VanillaCubeDefinition("right_hind_leg", 12, 22, -0.5f, 0f, -1f, 1f, 2f, 2f));
         root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, 20.5f, 0.5f),
             new VanillaCubeDefinition("body", 0, 8, -2f, -1.5f, -3.5f, 4f, 3f, 7f));
-        root.AddOrReplaceChild("tail1", VanillaPartPose.OffsetAndRotation(0f, 19.107f, 3.9151f, 0.567232f, 0f, 0f),
+        root.AddOrReplaceChild("tail1", VanillaPartPose.OffsetAndRotation(0f, 19.107f, 3.9151f, -0.567232f, 0f, 0f),
             new VanillaCubeDefinition("tail1", 0, 18, -0.5f, -0.107f, 0.0849f, 1f, 1f, 5f));
         root.AddOrReplaceChild("tail2", VanillaPartPose.Zero,
             new VanillaCubeDefinition("tail2", 0, 0, 0f, 0f, 0f, 0f, 0f, 0f));
@@ -197,7 +197,7 @@ public static class BabyModelDefinitionsExtra
             new VanillaCubeDefinition("right_front_leg", 0, 0, -1f, 0f, -1f, 2f, 3f, 2f));
         root.AddOrReplaceChild("left_front_leg", VanillaPartPose.Offset(1.5f, 21f, -3f),
             new VanillaCubeDefinition("left_front_leg", 20, 0, -1f, 0f, -1f, 2f, 3f, 2f));
-        var tail = root.AddOrReplaceChild("tail", VanillaPartPose.OffsetAndRotation(0f, 19f, 3f, 0.5236f, 0f, 0f),
+        var tail = root.AddOrReplaceChild("tail", VanillaPartPose.OffsetAndRotation(0f, 19f, 3f, -0.5236f, 0f, 0f),
             new VanillaCubeDefinition("tail", 0, 0, 0f, 0f, 0f, 0f, 0f, 0f));
         tail.AddOrReplaceChild("tail_r1", VanillaPartPose.OffsetAndRotation(0f, -0.6f, 0.2f, -3.1f, 0f, 0f),
             new VanillaCubeDefinition("tail_r1", 22, 16, -1f, -5.7f, -1f, 2f, 6f, 2f));

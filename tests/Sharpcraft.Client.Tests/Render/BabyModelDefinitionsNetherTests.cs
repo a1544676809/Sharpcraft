@@ -14,18 +14,18 @@ public sealed class BabyModelDefinitionsNetherTests
     {
         var expected = new[]
         {
-            LegacyModelPartFactory.FromVanilla("body", 0f, 18f, -0.5f, -3f, -3f, -1f, 6f, 5f, 3f, 0, 13),
-            LegacyModelPartFactory.FromVanilla("head", 0f, 15f, 0f, -4.5f, -6f, -3.5f, 9f, 6f, 7f, 0, 0),
-            LegacyModelPartFactory.FromVanillaChild("head_snout", "head", 0f, 0f, 0f, -1.5f, -3f, -4.5f, 3f, 3f, 1f, 21, 30),
-            LegacyModelPartFactory.FromVanillaChild("hat", "head", 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-            LegacyModelPartFactory.FromVanillaChild("left_ear", "head", 4.2f, -4f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-            LegacyModelPartFactory.FromVanillaChild("left_ear_r1", "left_ear", 1f, 1.75f, 0f, -0.5f, -3f, -2f, 1f, 6f, 4f, 0, 21, rotationZ: -0.6109f),
-            LegacyModelPartFactory.FromVanillaChild("right_ear", "head", -4.2f, -4f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-            LegacyModelPartFactory.FromVanillaChild("right_ear_r1", "right_ear", -1f, 1.75f, 0f, -0.5f, -3f, -2f, 1f, 6f, 4f, 18, 13, rotationZ: 0.6109f),
-            LegacyModelPartFactory.FromVanilla("left_arm", 4f, 15f, 0f, -1f, 0f, -1.5f, 2f, 5f, 3f, 28, 13),
-            LegacyModelPartFactory.FromVanilla("right_arm", -4f, 15f, 0f, -1f, 0f, -1.5f, 2f, 5f, 3f, 10, 30),
-            LegacyModelPartFactory.FromVanilla("right_leg", -1.5f, 20f, 0f, -1.5f, 0f, -1.5f, 3f, 4f, 3f, 22, 23),
-            LegacyModelPartFactory.FromVanilla("left_leg", 1.5f, 20f, 0f, -1.5f, 0f, -1.5f, 3f, 4f, 3f, 10, 23)
+            RawModelPartFactory.FromVanilla("body", 0f, 18f, -0.5f, -3f, -3f, -1f, 6f, 5f, 3f, 0, 13),
+            RawModelPartFactory.FromVanilla("head", 0f, 15f, 0f, -4.5f, -6f, -3.5f, 9f, 6f, 7f, 0, 0),
+            RawModelPartFactory.FromVanillaChild("head_snout", "head", 0f, 0f, 0f, -1.5f, -3f, -4.5f, 3f, 3f, 1f, 21, 30),
+            RawModelPartFactory.FromVanillaChild("hat", "head", 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
+            RawModelPartFactory.FromVanillaChild("left_ear", "head", 4.2f, -4f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
+            RawModelPartFactory.FromVanillaChild("left_ear_r1", "left_ear", 1f, 1.75f, 0f, -0.5f, -3f, -2f, 1f, 6f, 4f, 0, 21, rotationZ: -0.6109f),
+            RawModelPartFactory.FromVanillaChild("right_ear", "head", -4.2f, -4f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
+            RawModelPartFactory.FromVanillaChild("right_ear_r1", "right_ear", -1f, 1.75f, 0f, -0.5f, -3f, -2f, 1f, 6f, 4f, 18, 13, rotationZ: 0.6109f),
+            RawModelPartFactory.FromVanilla("left_arm", 4f, 15f, 0f, -1f, 0f, -1.5f, 2f, 5f, 3f, 28, 13),
+            RawModelPartFactory.FromVanilla("right_arm", -4f, 15f, 0f, -1f, 0f, -1.5f, 2f, 5f, 3f, 10, 30),
+            RawModelPartFactory.FromVanilla("right_leg", -1.5f, 20f, 0f, -1.5f, 0f, -1.5f, 3f, 4f, 3f, 22, 23),
+            RawModelPartFactory.FromVanilla("left_leg", 1.5f, 20f, 0f, -1.5f, 0f, -1.5f, 3f, 4f, 3f, 10, 23)
         };
         AssertPartsMatch(expected, BabyModelDefinitionsNether.Piglin.Parts);
         AssertPartsMatch(expected, BabyModelDefinitionsNether.ZombifiedPiglin.Parts);

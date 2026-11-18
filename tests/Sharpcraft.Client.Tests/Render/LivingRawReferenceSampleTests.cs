@@ -152,6 +152,16 @@ public sealed class LivingRawReferenceSampleTests
         { "baby-hoglin-raw-vectors.reference.txt", BabyModelDefinitionsNether.Hoglin, 64, 64, "entity/hoglin/hoglin_baby", 264, 24, 216, 24 },
         // task-158: baby_llama raw (distinct BabyLlamaModel geometry, chest yRot +PI/2).
         { "baby-llama-raw-vectors.reference.txt", BabyModelDefinitionsEquine.Llama, 64, 64, "entity/llama/llama_brown_baby", 264, 0, 216, 48 },
+        // task-190 baby batch: Nether/Equine/Extra 9 families.
+        { "baby-piglin-raw-vectors.reference.txt", BabyModelDefinitionsNether.Piglin, 64, 64, "entity/piglin/piglin_baby", 216, 0, 216, 0 },
+        { "baby-zombified-piglin-raw-vectors.reference.txt", BabyModelDefinitionsNether.ZombifiedPiglin, 64, 64, "entity/piglin/zombified_piglin_baby", 216, 0, 216, 0 },
+        { "baby-horse-raw-vectors.reference.txt", BabyModelDefinitionsEquine.Horse, 64, 64, "entity/horse/horse_brown_baby", 240, 0, 240, 0 },
+        { "baby-camel-raw-vectors.reference.txt", BabyModelDefinitionsEquine.Camel, 64, 64, "entity/camel/camel_baby", 264, 0, 264, 0 },
+        { "baby-donkey-raw-vectors.reference.txt", BabyModelDefinitionsEquine.Donkey, 64, 64, "entity/horse/donkey_baby", 240, 24, 216, 0 },
+        { "baby-cat-raw-vectors.reference.txt", BabyModelDefinitionsExtra.Cat, 32, 32, "entity/cat/cat_tabby_baby", 240, 0, 240, 0 },
+        { "baby-wolf-raw-vectors.reference.txt", BabyModelDefinitionsExtra.Wolf, 32, 32, "entity/wolf/wolf_baby", 240, 0, 240, 0 },
+        { "baby-fox-raw-vectors.reference.txt", BabyModelDefinitionsExtra.Fox, 32, 32, "entity/fox/fox_baby", 240, 0, 240, 0 },
+        { "baby-rabbit-raw-vectors.reference.txt", BabyModelDefinitionsExtra.Rabbit, 32, 32, "entity/rabbit/rabbit_brown_baby", 216, 0, 216, 0 },
         // task-150: Armadillo raw (multi-cube body/head, rolled cube).
         { "armadillo-raw-vectors.reference.txt", ArmadilloModelDefinition.Definition, 64, 64, "entity/armadillo/armadillo", 264, 0, 216, 48 },
         // task-150: Ravager raw (multi-cube head, source Mirror on right_horn + left legs, body +PI/2).
@@ -256,6 +266,15 @@ public sealed class LivingRawReferenceSampleTests
                 || sampleFile.StartsWith("tadpole-", StringComparison.Ordinal)
                 || sampleFile.StartsWith("bee-", StringComparison.Ordinal)
                 || sampleFile.StartsWith("bogged-", StringComparison.Ordinal)
+                || sampleFile.StartsWith("baby-piglin-", StringComparison.Ordinal)
+                || sampleFile.StartsWith("baby-zombified-piglin-", StringComparison.Ordinal)
+                || sampleFile.StartsWith("baby-horse-", StringComparison.Ordinal)
+                || sampleFile.StartsWith("baby-camel-", StringComparison.Ordinal)
+                || sampleFile.StartsWith("baby-donkey-", StringComparison.Ordinal)
+                || sampleFile.StartsWith("baby-cat-", StringComparison.Ordinal)
+                || sampleFile.StartsWith("baby-wolf-", StringComparison.Ordinal)
+                || sampleFile.StartsWith("baby-fox-", StringComparison.Ordinal)
+                || sampleFile.StartsWith("baby-rabbit-", StringComparison.Ordinal)
                 || sampleFile.StartsWith("parrot-", StringComparison.Ordinal)
                 || sampleFile.StartsWith("allay-", StringComparison.Ordinal);
             if ((!includeRawDegenerate && (sourceParts[0].Width == 0f || sourceParts[0].Height == 0f || sourceParts[0].Depth == 0f))
@@ -455,8 +474,19 @@ public sealed class LivingRawReferenceSampleTests
         switch (part)
         {
             // Baby variants: cube order follows the reference Baby*Model CubeListBuilder.addBox order.
-            case "/head" when definition.Name.StartsWith("baby_pig", StringComparison.Ordinal):
+            case "/head" when definition.Name.StartsWith("baby_pig", StringComparison.Ordinal)
+                && !definition.Name.StartsWith("baby_piglin", StringComparison.Ordinal):
                 flatName = cube == 0 ? "head" : "snout"; break;
+            case "/head" when definition.Name is "baby_piglin" or "baby_zombified_piglin":
+                flatName = cube == 0 ? "head_snout" : "head"; break;
+            case "/head" when definition.Name == "baby_cat":
+                flatName = cube switch { 0 => "head", 1 => "right_ear", 2 => "left_ear", _ => "nose" }; break;
+            case "/head" when definition.Name == "baby_wolf":
+                flatName = cube == 0 ? "head" : "snout"; break;
+            case "/head" when definition.Name == "baby_fox":
+                flatName = cube switch { 0 => "head", 1 => "snout", 2 => "right_ear", _ => "left_ear" }; break;
+            case "/body/head" when definition.Name == "baby_camel":
+                flatName = cube switch { 0 => "head", 1 => "head_upper", _ => "muzzle" }; break;
             case "/head" when definition.Name.StartsWith("baby_cow", StringComparison.Ordinal):
                 flatName = cube switch { 0 => "head", 1 => "ear_right", 2 => "ear_left", _ => "snout" }; break;
             case "/body" when definition.Name.StartsWith("baby_chicken", StringComparison.Ordinal):
