@@ -63,7 +63,7 @@ public sealed class BabyHumanoidArmorRawReferenceSampleTests
     }
 
     [Fact]
-    public void ProductionBabyHumanoidArmorUsesRawLayersAndLeavesBabyPiglinLegacy()
+    public void ProductionBabyHumanoidArmorUsesRawLayers()
     {
         foreach (var typeId in new[]
                  {
@@ -92,9 +92,9 @@ public sealed class BabyHumanoidArmorRawReferenceSampleTests
 
         var piglin = EntityModelResolver.Resolve(Sharpcraft.Client.Render.PiglinModelDefinition.PiglinEntityTypeId, baby: true);
         var piglinArmor = piglin.RenderLayers!.First(layer => layer.Name == "equipment_HumanoidArmorBaby_5").Model!;
-        Assert.False(piglinArmor.RawSourceFrame);
-        Assert.Equal(24f, piglinArmor.BaselinePx);
-        Assert.NotNull(piglinArmor.FaceTransforms);
+        Assert.True(piglinArmor.RawSourceFrame);
+        Assert.Equal(0f, piglinArmor.BaselinePx);
+        Assert.True(piglinArmor.FaceTransforms is null || piglinArmor.FaceTransforms.Count == 0);
     }
 
     private static float QuantizeHalf(float value) =>
