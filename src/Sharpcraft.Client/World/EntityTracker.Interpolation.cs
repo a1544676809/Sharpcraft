@@ -94,6 +94,7 @@ public sealed partial class EntityTracker
                 IsBaby: entity.IsBaby,
                 CollarTint: DyeTint(entity.CollarColor >= 0 ? entity.CollarColor : 14),
                 HasCollar: spec.CollarAccessorIndex >= 0 && spec.TameMask != 0 && (entity.Flags & spec.TameMask) != 0,
+                IsPowered: entity.IsPowered,
                 Markings: entity.Markings,
                 Equipment: new EntityEquipment(
                     entity.EquipmentItemAt(0), entity.EquipmentItemAt(1), entity.EquipmentItemAt(2), entity.EquipmentItemAt(3),

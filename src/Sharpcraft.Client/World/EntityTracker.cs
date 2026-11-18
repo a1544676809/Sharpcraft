@@ -145,6 +145,13 @@ public sealed class TrackedEntity
     /// <summary>True when the entity reports the AgeableMob baby flag (synced data index 16).</summary>
     public bool IsBaby { get; internal set; }
 
+    /// <summary>
+    /// Creeper DATA_IS_POWERED (synced Boolean accessor 17). Kept on the tracked entity so the render state and the
+    /// powered-only Creeper armor layer observe the authoritative server value.
+    /// ref://mc-26.3-analysis/src/net/minecraft/world/entity/monster/Creeper.java
+    /// </summary>
+    public bool IsPowered { get; internal set; }
+
     /// <summary>Raw dye id of a tamed cat/wolf collar, or -1 when unknown.</summary>
     public int CollarColor { get; internal set; } = -1;
 
@@ -570,7 +577,8 @@ public readonly record struct EntityRenderState(
     bool DragonIsLandingOrTakingOff = false,
     bool DragonIsSitting = false,
     double DragonDistanceToEgg = 0,
-    bool IsHoldingPotion = false)
+    bool IsHoldingPotion = false,
+    bool IsPowered = false)
 {
     /// <summary>Equippable asset id for one equipment slot, when the item supplied one.</summary>
     public string? EquipmentAssetIdAt(int slot) =>
@@ -1167,6 +1175,11 @@ public sealed partial class EntityTracker
             else if (spec.AngerAccessorIndex >= 0 && item.Index == spec.AngerAccessorIndex && item.LongValue != EntityDataItem.NotALong)
             {
                 entity.AngerEndTime = item.LongValue;
+                applied = true;
+            }
+            else if (spec.PoweredAccessorIndex >= 0 && item.Index == spec.PoweredAccessorIndex && item.SerializerId == 8)
+            {
+                entity.IsPowered = item.Value != 0;
                 applied = true;
             }
             else if (item.Index == 16 && item.SerializerId == 8 && AgeableTypes.Contains(entity.TypeId))

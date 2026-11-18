@@ -818,6 +818,12 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 - **源公式**：HUSK_ARMOR 是共享 humanoid armor 经 MeshTransformer.scaling(1.0625)：root PartPose 缩放 1.0625 并平移 24.016*(1-1.0625) px；立方体/UV 不变。HuskArmorModelDefinition 将源公式静态烘焙为 pivot/cube 坐标缩放 + 根 yOffset（UV 维度保留原值），不依赖 non-unit node scale 路径。
 - **验收**：Husk 四 slot keyed 样本 48/72/72/48，位置 1e-5 + UV half；production resolver Husk raw layer（scale 1，baseline 0）；Drowned 等未缩放 humanoid 仍 legacy；adult/baby/piglin/材质层零回归；full 3,657+、三门禁。
+### task-254 Creeper powered 状态 + armor production
+
+- **状态通道**：`Creeper.DATA_IS_POWERED` 为 Boolean synced accessor；继承链 `Entity 0-7 + LivingEntity 8-14 + Mob flags 15 + Creeper swell 16 / powered 17 / ignited 18`，Boolean serializer=8。`EntityVariantSpecs[32].PoweredAccessorIndex=17` → `EntityTracker.ApplyEntityData` 校验 serializer → `TrackedEntity.IsPowered` → `EntityRenderState.IsPowered`；非 Creeper 不受影响。
+- **armor**：production resolver 给 Creeper 挂 `creeper_power` 层，model 为 task-249 的 raw `CreeperArmorModelDefinition`，`VisibleWhen: state.IsPowered`；非 powered 不绘制，base creeper 几何/材质不变。Layer kind 采用现有 additive `Emissive` 路径（源 EnergySwirl 的 UV 滚动不在本任务范围）。
+- **验收**：powered true/false tracker→render-state regression，layer 存在性 + VisibleWhen，144 顶点 raw 样本 strict 保持；full 3,702+、三门禁。
+
 ### task-252 Horse / Nautilus / ArmorStand armor raw
 
 - **Horse**：`HORSE_ARMOR` = equine body grow0.1 + `MeshTransformer.scaling(1.1)`，`UNDEAD_HORSE_ARMOR` 同 mesh 无 1.1；`HorseArmorModelDefinition` 静态烘焙 living scale/yOffset（body 固定 0.05、ears -0.001），各 288 顶点 strict 1e-5 + UV half。production 的 Horse/ZombieHorse/SkeletonHorse `HorseBody` 层走 raw（undead 用无 1.1 定义）。

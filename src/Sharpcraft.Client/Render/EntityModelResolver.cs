@@ -192,7 +192,8 @@ public static partial class EntityModelResolver
     private static EntityModelDefinition Decorate(int typeId, bool baby, EntityModelDefinition definition)
     {
         var layers = EquipmentLayers(typeId);
-        if (layers.Length == 0 && typeId != WitchModelDefinition.WitchEntityTypeId)
+        if (layers.Length == 0 && typeId != WitchModelDefinition.WitchEntityTypeId
+            && typeId != CreeperModelDefinition.CreeperEntityTypeId)
         {
             return definition;
         }
@@ -604,6 +605,24 @@ public static partial class EntityModelResolver
             {
                 compiled = EntityModelLayerHelpers.WithElytra(compiled, baby);
             }
+        }
+
+        if (typeId == CreeperModelDefinition.CreeperEntityTypeId)
+        {
+            // CreeperPowerLayer: EnergySwirlLayer renders ModelLayers.CREEPER_ARMOR only while
+            // Creeper.getSwellDir()/DATA_IS_POWERED says powered; base creeper geometry is untouched.
+            var existing = renderLayers ?? definition.RenderLayers;
+            var poweredLayers = new List<EntityRenderLayerDefinition>(existing);
+            poweredLayers.Add(new EntityRenderLayerDefinition(
+                "creeper_power",
+                EntityGeometryLayerKind.Emissive,
+                20,
+                CreeperArmorModelDefinition.Definition,
+                "entity/creeper/creeper_armor",
+                static _ => "entity/creeper/creeper_armor",
+                static state => state.IsPowered,
+                AllCubes: true));
+            renderLayers = poweredLayers;
         }
 
         var decorated = new EntityModelDefinition(
