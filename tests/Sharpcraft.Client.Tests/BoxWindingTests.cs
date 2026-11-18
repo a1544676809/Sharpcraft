@@ -61,12 +61,22 @@ public sealed class BoxWindingTests
         Assert.Equal(18, normals.Count);
 
         var wrong = new List<string>();
-        for (var face = 0; face < normals.Count; face++)
+        for (var box = 0; box < normals.Count / 6; box++)
         {
-            var expected = FaceNormals[face % 6];
-            if (Vector3.Dot(normals[face].Normal, expected) < 0.5f)
+            // Raw chest parts follow the source Cube polygon order (UP/DOWN/EAST/SOUTH/WEST/NORTH),
+            // which differs from the old AppendBox order; check the six outward normals as a set.
+            var remaining = FaceNormals.ToList();
+            for (var face = box * 6; face < (box * 6) + 6; face++)
             {
-                wrong.Add($"box {face / 6} {normals[face].Face}: got {normals[face].Normal}, expected {expected}");
+                var match = remaining.FindIndex(expected => Vector3.Dot(normals[face].Normal, expected) >= 0.5f);
+                if (match >= 0)
+                {
+                    remaining.RemoveAt(match);
+                }
+                else
+                {
+                    wrong.Add($"box {box} {normals[face].Face}: got {normals[face].Normal}");
+                }
             }
         }
 

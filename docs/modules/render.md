@@ -555,7 +555,7 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **为什么**：陶片图案来自方块实体 NBT 的四个 sherd 物品与 26.3 图案资源映射；本切片先落地静态基底与几何，图案选择需要额外的物品组件与图案注册表解析。
 - **对等效性的影响**：任意有图案的陶罐会显示空白侧面；基底、四个侧面平面的位置、法线、朝向与 UV 与原版一致。
 - **状态**：受控偏差，计划由 T-47（#47 批次 1）后续陶片图案切片跟进。
-- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/DecoratedPotMesherGoldenTests.cs` 覆盖脖子两盒与 top/bottom 平面 world bounds、四个侧面在四个水平朝向下的位置/法线/UV、6 组 `FacingDegrees` 真值、单 pot 72 顶点 / 108 索引、双 pot 批量偏移、32/16 纹理归一化与注册表 `Handles(41)`；接入图案后需补 sherds 选择真值与单方块像素对比。task-207 新增 `decorated-pot-base-raw-vectors.reference.txt`（96 行）与 `decorated-pot-sides-raw-vectors.reference.txt`（16 行）作为源真值；评估结论为 **raw 迁移 blocker**：side 源使用 `EnumSet.of(Direction.NORTH)` 每 cube 仅 1 面 4 顶点，现有 `EntityModelPart` 无 VisibleSides/面掩码，raw 固定 6 面 24 顶点，无法表达；custom mesher 保持并从源值核对（base 源 96 vs 当前 72，top/bottom 需完整 cube 面）。**task-218 已新增 `[Flags] EntityModelVisibleSides` 面掩码 API（源 `CubeListBuilder.addBox(..., visibleFaces)` 语义）：`EntityModelPart`/`EntityModelCube.VisibleSides=All`（默认不改 legacy），raw `AddPart` 按掩码只发选中面（DOWN/UP/WEST/NORTH/EAST/SOUTH 序），keyed 测试 `VisibleSidesTests` 验证 North 4/6、Down|Up 8/12、镜像+子集。API 已就绪，但本任务不迁 DecoratedPot/Chest；其状态动画/布局仍按各自 blocker 处理（见 R-037/R-038）。**
+- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/DecoratedPotMesherGoldenTests.cs` 覆盖脖子两盒与 top/bottom 平面 world bounds、四个侧面在四个水平朝向下的位置/法线/UV、6 组 `FacingDegrees` 真值、单 pot 72 顶点 / 108 索引、双 pot 批量偏移、32/16 纹理归一化与注册表 `Handles(41)`；接入图案后需补 sherds 选择真值与单方块像素对比。task-207 新增 `decorated-pot-base-raw-vectors.reference.txt`（96 行）与 `decorated-pot-sides-raw-vectors.reference.txt`（16 行）作为源真值；评估结论为 **raw 迁移 blocker**：side 源使用 `EnumSet.of(Direction.NORTH)` 每 cube 仅 1 面 4 顶点，现有 `EntityModelPart` 无 VisibleSides/面掩码，raw 固定 6 面 24 顶点，无法表达；custom mesher 保持并从源值核对（base 源 96 vs 当前 72，top/bottom 需完整 cube 面）。**task-218 已新增 `[Flags] EntityModelVisibleSides` 面掩码 API（源 `CubeListBuilder.addBox(..., visibleFaces)` 语义）：`EntityModelPart`/`EntityModelCube.VisibleSides=All`（默认不改 legacy），raw `AddPart` 按掩码只发选中面（DOWN/UP/WEST/NORTH/EAST/SOUTH 序），keyed 测试 `VisibleSidesTests` 验证 North 4/6、Down|Up 8/12、镜像+子集。task-222 已用其完成 Chest raw 迁移（Single/DoubleLeft/DoubleRight，双半源掩码剔除 JOIN 面）；DecoratedPot 仍保持 blocker（见 R-037/R-038）。**
 
 <!-- simplification:SIM-BE-POT-NO-PATTERNS task:T-47 -->
 
@@ -575,6 +575,14 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **运行时状态**：源 ShulkerBoxModel.setupAnim(progress) 将 lid 设为 y = 24 - progress*8 并绕 Y 旋转 270*progress°；外层还按 Direction 施加 modelTransform（0.9995 scale + 方向旋转 + y/z 翻转）。
 - **结论**：静态 bind 几何本身可表达，但 openness 连续 progress 与朝向矩阵是运行时状态，现有 EntityModelDefinition 只能静态烘焙，不能无损表达；按任务口径保持 ShulkerBoxMesher custom mesher，登记 blocker，不拟合、不改状态语义。
 - **证据**：tests/Sharpcraft.Client.Tests/Repro/Data/shulker-box-raw-vectors.reference.txt。
+
+<!-- simplification:SIM-BE-POT-NO-WOBBLE task:T-47 -->
+
+### task-222 Chest raw 迁移（VisibleSides + openness 分离）
+
+- **静态 raw**：ChestModelDefinition.Single/DoubleLeft/DoubleRight，源 ChestModel bottom/lid/lock：single 全 6 面，double left 剔除 WEST、right 剔除 EAST；strict 复用 chest-single-bone 72 行、chest-double-left/right-bone 60 行，1e-5 + UV half。
+- **openness**：源 ChestModel.setupAnim(open) 只旋转 lid/lock 的 xRot；raw 静态几何保留，ChestMesher 在渲染时按 OpenAngle(open) 对 lid/lock 顶点绕源 hinge (0.5, 9/16, 1/16) 施加，再按 facing 旋转/平移，不烘焙进度、不丢状态。
+- **结果**：single 72 / double half 60 顶点，源双半 JOIN 面剔除；golden/extent/winding 测试按 raw 面序更新。
 
 <!-- simplification:SIM-BE-POT-NO-WOBBLE task:T-47 -->
 

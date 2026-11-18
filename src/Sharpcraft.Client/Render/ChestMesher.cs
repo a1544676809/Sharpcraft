@@ -3,6 +3,7 @@
 
 using System.Numerics;
 using Sharpcraft.Client.Assets;
+using Sharpcraft.Client.World;
 using Sharpcraft.Common.World;
 using Sharpcraft.Framework.Rendering;
 
@@ -123,104 +124,16 @@ public sealed class ChestMesher
             };
 
             var entityStartFloats = vertexFloats;
-            const float bodyDepth = 14f * Pixel;
-            var extentX = bodyWidth;
-            var extentZ = bodyDepth;
-
-            var bodyXz = new Vector2(bodyCentre, 8f * Pixel);
-            EntityPlaceholderMesher.AppendBox(
-                _geometry,
-                origin + new Vector3(bodyXz.X, 0f, bodyXz.Y),
-                extentX,
-                BodyHeight,
-                1f,
-                1f,
-                1f,
-                sprite,
-                ref vertexFloats,
-                ref indexCount,
-                extentZ,
-                sky: lightSky,
-                block: lightBlock,
-                texU: 0,
-                texV: 19,
-                texDx: bodyWidthPx,
-                texDy: 10,
-                texDz: 14);
-
-            // The lid and the latch swing about the back bottom edge of the lid, wherever the facing
-            // has moved that edge to.
-            var angle = -OpenAngle(entity.Open);
-            var hingeXz = new Vector2(0f, PivotZ);
-            var pivot = origin + new Vector3(0.5f, PivotY, PivotZ);
-            var hinge = Vector3.UnitX;
-            var swing = new EntityModelTransform(
-                Translation: Vector3.Zero,
-                YawDegrees: 0f,
-                PitchDegrees: 0f,
-                Scale: 1f,
-                ScaleXZ: 1f,
-                ScaleY: 1f,
-                HasAttachRotation: true,
-                AttachRotation: Quaternion.CreateFromAxisAngle(hinge, angle),
-                AttachPivot: pivot);
-
-            var lidXz = new Vector2(bodyCentre, 8f * Pixel);
-            EntityPlaceholderMesher.AppendBox(
-                _geometry,
-                origin + new Vector3(lidXz.X, PivotY, lidXz.Y),
-                extentX,
-                LidHeight,
-                1f,
-                1f,
-                1f,
-                sprite,
-                ref vertexFloats,
-                ref indexCount,
-                extentZ,
-                swing,
-                lightSky,
-                lightBlock,
-                texU: 0,
-                texV: 0,
-                texDx: bodyWidthPx,
-                texDy: 5,
-                texDz: 14);
-
-            // The latch sits on the front face; a quarter turn swaps its width and depth.
-            var lockXz = new Vector2(lockCentre, 15.5f * Pixel);
-            EntityPlaceholderMesher.AppendBox(
-                _geometry,
-                origin + new Vector3(lockXz.X, 7f * Pixel, lockXz.Y),
-                lockWidth,
-                LockHeight,
-                1f,
-                1f,
-                1f,
-                sprite,
-                ref vertexFloats,
-                ref indexCount,
-                LockDepth,
-                swing,
-                lightSky,
-                lightBlock,
-                texU: 0,
-                texV: 0,
-                texDx: lockWidthPx,
-                texDy: 4,
-                texDz: 1);
-
-
-            // The reference rotates the whole model about the middle of the block's bottom face after
-            // every part pose is applied, so each vertex keeps the texture face it was built with.
-            // Rotating the box centres instead leaves the face textures behind on the wrong side.
-            for (var v = entityStartFloats; v < vertexFloats; v += ChunkMesher.FloatsPerVertex)
+            var definition = entity.ChestType switch
             {
-                var dx = _geometry.Vertices[v] - (origin.X + 0.5f);
-                var dz = _geometry.Vertices[v + 2] - (origin.Z + 0.5f);
-                _geometry.Vertices[v] = origin.X + 0.5f + (dx * cos) + (dz * sin);
-                _geometry.Vertices[v + 2] = origin.Z + 0.5f - (dx * sin) + (dz * cos);
-            }
+                1 => ChestModelDefinition.DoubleLeft,
+                2 => ChestModelDefinition.DoubleRight,
+                _ => ChestModelDefinition.Single
+            };
+            var raw = RawMesh(definition);
+            AppendRawChest(raw, origin, sprite, lightSky, lightBlock, entity.Facing, entity.Open,
+                ref vertexFloats, ref indexCount);
+            _ = entityStartFloats;
 
             LastEntityCount++;
         }
@@ -228,6 +141,107 @@ public sealed class ChestMesher
         _geometry.VertexFloats = vertexFloats;
         _geometry.IndexCount = indexCount;
         return _geometry;
+    }
+
+    private sealed record RawChestMesh(int VertexCount, int LidStart, float[] Vertices, uint[] Indices);
+
+    private static readonly Dictionary<EntityModelDefinition, RawChestMesh> RawCache = [];
+
+    private static RawChestMesh RawMesh(EntityModelDefinition definition)
+    {
+        lock (RawCache)
+        {
+            if (RawCache.TryGetValue(definition, out var cached))
+            {
+                return cached;
+            }
+
+            var sprite = new SpriteRect(0, 0, 64, 64, 1) { U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f };
+            var geometry = new EntityModelMesher().BuildModel(
+                definition,
+                new EntityRenderState(1, 0, 0f, 0f, 0f, 180f, 0f),
+                sprite,
+                64,
+                64,
+                modelScale: 1f);
+            var vertexCount = geometry.VertexFloats / ChunkMesher.FloatsPerVertex;
+            var vertices = new float[vertexCount * ChunkMesher.FloatsPerVertex];
+            Array.Copy(geometry.Vertices, vertices, vertices.Length);
+            var indices = new uint[geometry.IndexCount];
+            Array.Copy(geometry.Indices, indices, indices.Length);
+            var lidStart = definition.Parts.TakeWhile(part => part.Name != "lid")
+                .Sum(part => System.Numerics.BitOperations.PopCount((uint)part.VisibleSides) * 4);
+            var result = new RawChestMesh(vertexCount, lidStart, vertices, indices);
+            RawCache[definition] = result;
+            return result;
+        }
+    }
+
+    private void AppendRawChest(
+        RawChestMesh raw,
+        Vector3 origin,
+        SpriteRect sprite,
+        float sky,
+        float block,
+        byte facing,
+        float open,
+        ref int vertexFloats,
+        ref int indexCount)
+    {
+        var baseVertex = (uint)(vertexFloats / ChunkMesher.FloatsPerVertex);
+        var radians = FacingDegrees(facing) * (MathF.PI / 180f);
+        var cos = MathF.Cos(radians);
+        var sin = MathF.Sin(radians);
+        var openAngle = -OpenAngle(open);
+        var openCos = MathF.Cos(openAngle);
+        var openSin = MathF.Sin(openAngle);
+        const float pivotY = 9f / 16f;
+        const float pivotZ = 1f / 16f;
+
+        for (var i = 0; i < raw.VertexCount; i++)
+        {
+            var offset = i * ChunkMesher.FloatsPerVertex;
+            var x = raw.Vertices[offset];
+            var y = raw.Vertices[offset + 1];
+            var z = raw.Vertices[offset + 2];
+            if (i >= raw.LidStart)
+            {
+                var dy = y - pivotY;
+                var dz = z - pivotZ;
+                y = pivotY + (dy * openCos) - (dz * openSin);
+                z = pivotZ + (dy * openSin) + (dz * openCos);
+            }
+
+            var dx = x - 0.5f;
+            var dz2 = z - 0.5f;
+            x = 0.5f + (dx * cos) + (dz2 * sin);
+            z = 0.5f - (dx * sin) + (dz2 * cos);
+
+            var packedUv = BitConverter.SingleToUInt32Bits(raw.Vertices[offset + 4]);
+            var u = (float)BitConverter.UInt16BitsToHalf((ushort)(packedUv & 0xFFFF));
+            var v = (float)BitConverter.UInt16BitsToHalf((ushort)(packedUv >> 16));
+            TerrainVertexWriter.Write(
+                _geometry.Vertices,
+                ref vertexFloats,
+                origin.X + x,
+                origin.Y + y,
+                origin.Z + z,
+                1f,
+                1f,
+                1f,
+                u,
+                v,
+                sprite,
+                sky,
+                block);
+        }
+
+        for (var i = 0; i + 2 < raw.Indices.Length; i += 3)
+        {
+            _geometry.Indices[indexCount++] = baseVertex + raw.Indices[i];
+            _geometry.Indices[indexCount++] = baseVertex + raw.Indices[i + 2];
+            _geometry.Indices[indexCount++] = baseVertex + raw.Indices[i + 1];
+        }
     }
 
     /// <summary>
