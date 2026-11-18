@@ -75,6 +75,14 @@ public sealed partial class EntityTracker
                 ? (entity.MainArm == 0 ? 0 : 1)
                 : (entity.Presentation.IsLeftHanded ? 0 : 1);
             var usingArm = entity.Presentation.UseItemHand == 0 ? mainArm : 1 - mainArm;
+            var useItemId = entity.EquipmentItemAt(entity.Presentation.UseItemHand);
+            var heldOnHeadItemId = entity.TypeId == 159
+                && entity.Presentation.IsUsingItem
+                && useItemId > 0
+                && EntityModelResolver.Items?.ById(useItemId) is { } heldItem
+                && heldItem.Id.Path == "spyglass"
+                ? useItemId
+                : -1;
 
             _renderStates.Add(new EntityRenderState(
                 entity.Id,
@@ -111,13 +119,11 @@ public sealed partial class EntityTracker
                 LeftLegPose: entity.LeftLegPose,
                 RightLegPose: entity.RightLegPose,
                 MainArm: mainArm,
-                LeftTicksUsingItem: entity.Presentation.IsUsingItem && usingArm == 0 ? (int)ticksUsingItem : 0,
-                RightTicksUsingItem: entity.Presentation.IsUsingItem && usingArm == 1 ? (int)ticksUsingItem : 0,
+                LeftTicksUsingItem: entity.Presentation.IsUsingItem && usingArm == 0 ? ticksUsingItem : 0f,
+                RightTicksUsingItem: entity.Presentation.IsUsingItem && usingArm == 1 ? ticksUsingItem : 0f,
                 SwingDurationTicks: entity.Presentation.Swing.DurationTicks,
                 IsSwinging: entity.Presentation.Swing.IsSwinging,
-                HeldOnHeadItemId: entity.TypeId == 159 && entity.Presentation.IsUsingItem
-                    ? entity.EquipmentItemAt(entity.Presentation.UseItemHand)
-                    : -1,
+                HeldOnHeadItemId: heldOnHeadItemId,
                 Markings: entity.Markings,
                 Equipment: new EntityEquipment(
                     entity.EquipmentItemAt(0), entity.EquipmentItemAt(1), entity.EquipmentItemAt(2), entity.EquipmentItemAt(3),

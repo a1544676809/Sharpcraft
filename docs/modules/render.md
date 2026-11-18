@@ -821,7 +821,7 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 ### task-265 held 所需 render state 状态通道
 
 - **审计**：现有 `SwingHand`/`SwingType`/`TicksUsingItem`/`UseItemHand` 已从 swing packet 和 `DATA_LIVING_ENTITY_FLAGS`（index 8 bit0/1）解析；本次只补缺失通道，不改 hand frame/adapter。
-- **新增字段**：`MainArm`（Avatar `DATA_PLAYER_MAIN_HAND` accessor 15，HUMANOID_ARM serializer **42**，LEFT=0/RIGHT=1；非 Avatar 由 `IsLeftHanded` 派生）、`LeftTicksUsingItem`/`RightTicksUsingItem`（源 `HumanoidRenderState.ticksUsingItem(arm)` 派生）、`SwingDurationTicks`/`IsSwinging`（SwingDescription payload）、`HeldOnHeadItemId`（源 `AvatarRenderer` use-item→heldOnHead，客户端派生）。
+- **新增字段**：`MainArm`（Avatar `DATA_PLAYER_MAIN_HAND` accessor 15，HUMANOID_ARM serializer **42**，LEFT=0/RIGHT=1；非 Avatar 由 `IsLeftHanded` 派生）、`LeftTicksUsingItem`/`RightTicksUsingItem`（float；源 `HumanoidRenderState.ticksUsingItem(arm)` 派生，保留 partial tick）、`SwingDurationTicks`/`IsSwinging`（SwingDescription payload）、`HeldOnHeadItemId`（源 `AvatarRenderer` 仅在 `useItem.is(Items.SPYGLASS)` 时填 heldOnHead，其它 item -1）。
 - **验收**：默认值、Player main-arm metadata roundtrip、错误 index/serializer 不误写、using-item 分臂 ticks + heldOnHead、swing duration/type 测试；full 3,722+、三门禁。
 
 ### task-261 trim/glint/crackiness 跟随 raw armor 几何

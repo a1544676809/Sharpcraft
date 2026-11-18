@@ -604,8 +604,8 @@ public readonly record struct EntityRenderState(
     Vector3 LeftLegPose = default,
     Vector3 RightLegPose = default,
     int MainArm = 1,
-    int LeftTicksUsingItem = 0,
-    int RightTicksUsingItem = 0,
+    float LeftTicksUsingItem = 0f,
+    float RightTicksUsingItem = 0f,
     float SwingDurationTicks = 0f,
     bool IsSwinging = false,
     int HeldOnHeadItemId = -1)
