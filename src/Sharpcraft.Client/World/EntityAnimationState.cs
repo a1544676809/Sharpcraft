@@ -92,7 +92,13 @@ public readonly record struct EntityAnimationFrame(
     DragonFlightHistory? DragonHistory = null,
     bool DragonIsLandingOrTakingOff = false,
     bool DragonIsSitting = false,
-    double DragonDistanceToEgg = 0)
+    double DragonDistanceToEgg = 0,
+    System.Numerics.Vector3 HeadPose = default,
+    System.Numerics.Vector3 BodyPose = default,
+    System.Numerics.Vector3 LeftArmPose = default,
+    System.Numerics.Vector3 RightArmPose = default,
+    System.Numerics.Vector3 LeftLegPose = default,
+    System.Numerics.Vector3 RightLegPose = default)
 {
     /// <summary>Projects the generic render state onto the frame. The mesher calls this once per entity per frame.</summary>
     public static EntityAnimationFrame From(in EntityRenderState state) => new(
@@ -174,7 +180,13 @@ public readonly record struct EntityAnimationFrame(
         state.DragonFlightHistory,
         state.DragonIsLandingOrTakingOff,
         state.DragonIsSitting,
-        state.DragonDistanceToEgg);
+        state.DragonDistanceToEgg,
+        state.HeadPose,
+        state.BodyPose,
+        state.LeftArmPose,
+        state.RightArmPose,
+        state.LeftLegPose,
+        state.RightLegPose);
 }
 
 /// <summary>

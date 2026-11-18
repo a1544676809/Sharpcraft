@@ -41,6 +41,7 @@ public static partial class EntityModelResolver
         [HumanoidMobModelDefinition.EndermanEntityTypeId] = HumanoidMobModelDefinition.Enderman,
         [CreeperModelDefinition.CreeperEntityTypeId] = CreeperModelDefinition.Definition,
         [ParchedModelDefinition.ParchedEntityTypeId] = ParchedModelDefinition.Body,
+        [ArmorStandModelDefinition.ArmorStandEntityTypeId] = ArmorStandModelDefinition.Body,
         [SlimeModelDefinition.SlimeEntityTypeId] = SlimeModelDefinition.Definition,
         [MagmaCubeModelDefinition.MagmaCubeEntityTypeId] = MagmaCubeModelDefinition.Definition,
         [SpiderModelDefinition.SpiderEntityTypeId] = SpiderModelDefinition.Definition,
@@ -334,7 +335,10 @@ public static partial class EntityModelResolver
                                                     or ZombieNautilusModelDefinition.ZombieNautilusEntityTypeId)
                                                 && effectiveKind == EquipmentAssetKind.NautilusBody
                                                 ? NautilusArmorModelDefinition.Definition
-                                                : piglin
+                                                : typeId == ArmorStandModelDefinition.ArmorStandEntityTypeId
+                                                    ? ArmorStandArmorModelDefinition.ForSlot(
+                                                        slot, definition.Name == "armor_stand_small")
+                                                    : piglin
                                                     ? PiglinArmorModelDefinition.ForSlot(slot, baby)
                                                     : null;
                 var layerModel = rawArmor is null
@@ -691,6 +695,7 @@ public static partial class EntityModelResolver
     static EntityModelResolver()
     {
         RegisterVariant(EntityPlaceholderMesher.PlayerEntityTypeId, SlimPlayerVariantKey, PlayerModelDefinition.SlimDefinition);
+        RegisterVariant(ArmorStandModelDefinition.ArmorStandEntityTypeId, "small", ArmorStandModelDefinition.SmallBody);
         RegisterVariants(PigModelDefinition.PigEntityTypeId, PigModelDefinition.Variants);
         RegisterVariants(CowModelDefinition.CowEntityTypeId, CowModelDefinition.Variants);
         RegisterVariants(ChickenModelDefinition.ChickenEntityTypeId, ChickenModelDefinition.Variants);

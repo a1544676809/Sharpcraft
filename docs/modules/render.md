@@ -818,6 +818,15 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 - **源公式**：HUSK_ARMOR 是共享 humanoid armor 经 MeshTransformer.scaling(1.0625)：root PartPose 缩放 1.0625 并平移 24.016*(1-1.0625) px；立方体/UV 不变。HuskArmorModelDefinition 将源公式静态烘焙为 pivot/cube 坐标缩放 + 根 yOffset（UV 维度保留原值），不依赖 non-unit node scale 路径。
 - **验收**：Husk 四 slot keyed 样本 48/72/72/48，位置 1e-5 + UV half；production resolver Husk raw layer（scale 1，baseline 0）；Drowned/Bogged 等已由 task-247 切 raw，Parched 已由 task-257 接入；adult/baby/piglin/材质层零回归；full 3,657+、三门禁。
+### task-259 ArmorStand 实体 + 姿态 + armor
+
+- **type id**：`BuiltInRegistries.ENTITY_TYPE` 的 `minecraft:armor_stand` 注册 id = **5**（总 161 项；Java registry probe）。
+- **body/small**：`ArmorStandModel.createBodyLayer` raw，64×64，**264** 顶点；small = 同 mesh 经 `HumanoidModel.BABY_TRANSFORMER`（head 特例，其余 .5/y24）。body 模型 hat 按源隐藏；arms/base plate 分别按 flags 可见。
+- **同步数据**：ArmorStand 继承 LivingEntity，accessor 15=`DATA_CLIENT_FLAGS`（Byte），16-21=`HEAD/BODY/LEFT_ARM/RIGHT_ARM/LEFT_LEG/RIGHT_LEG`（ROTATIONS serializer id **9**，三个 float）。`EntityDataPackets` 解码三 float；`EntityVariantSpecs[5].ArmorStandPoseAccessorIndex=16`、Flags=15；tracker→`EntityRenderState` 六组 Vector3。
+- **姿态应用**：`ArmorStandAnimationProvider` 将六组角度按 source setupAnim 写入对应 part；body pose 同步驱动两根 body stick 和 shoulder stick，base plate `-yRot`。
+- **small/sets**：`IsSmall` 由 flags bit1 驱动，选 `armor_stand_small` variant；armor 复用 task-252 的 `ArmorStandArmorModelDefinition` adult/small 四 slot，production raw。
+- **验收**：body/small 264 strict 1e-5 + UV half；armor 四 slot strict；flags/pose tracker roundtrip 与 provider part 旋转断言；full 3,713+、三门禁。
+
 ### task-257 Parched entity + armor 接入
 
 - **type id**：`BuiltInRegistries.ENTITY_TYPE` 的 `minecraft:parched` 注册 id = **98**（总 161 项；Java registry probe，非猜测）。`EntityVariantSpecs[98]` 显式默认项，`EntityAnimationProvider` 复用 `SkeletonAnimationProvider`。
@@ -835,7 +844,7 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 ### task-252 Horse / Nautilus / ArmorStand armor raw
 
 - **Horse**：`HORSE_ARMOR` = equine body grow0.1 + `MeshTransformer.scaling(1.1)`，`UNDEAD_HORSE_ARMOR` 同 mesh 无 1.1；`HorseArmorModelDefinition` 静态烘焙 living scale/yOffset（body 固定 0.05、ears -0.001），各 288 顶点 strict 1e-5 + UV half。production 的 Horse/ZombieHorse/SkeletonHorse `HorseBody` 层走 raw（undead 用无 1.1 定义）。
-- **ArmorStand**：`ARMOR_STAND_ARMOR` 为 head pivot y=1、legs y=11、独立 hat 的 humanoid 四 slot；small 用 `HumanoidModel.BABY_TRANSFORMER`（head 特例：translate y=16 + scale0.75；其余 translate y=24 + scale0.5）静态烘焙。adult/small 各 48/72/72/48 keyed 样本 strict。production blocker：当前 main 无 ArmorStand 实体/model，无法挂层。
+- **ArmorStand**：`ARMOR_STAND_ARMOR` 为 head pivot y=1、legs y=11、独立 hat 的 humanoid 四 slot；small 用 `HumanoidModel.BABY_TRANSFORMER`（head 特例：translate y=16 + scale0.75；其余 translate y=24 + scale0.5）静态烘焙。adult/small 各 48/72/72/48 keyed 样本 strict。production 已由 task-259 接入实体、body/small 模型、姿态与四 slot armor。
 - **Nautilus**：`NAUTILUS_ARMOR` 为 base body/mouth + 3-cube shell（grow0.01，第三 cube depth=0 按 R-029），192 顶点 strict；production 的 Nautilus/ZombieNautilus `NautilusBody` 层走 raw。
 - **验收**：full 3,690+、三门禁；其他 armor/材质层零回归。
 
