@@ -568,7 +568,8 @@ public static class EntityModelLayerHelpers
                 TextureWidth: part.TextureWidth,
                 TextureHeight: part.TextureHeight,
                 IncludeInEmissive: part.IncludeInEmissive,
-                EmissiveOnly: part.EmissiveOnly);
+                EmissiveOnly: part.EmissiveOnly,
+                VisibleSides: part.VisibleSides);
             var node = new EntityModelPartNode(
                 part.Name,
                 parent,

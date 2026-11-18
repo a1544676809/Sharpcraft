@@ -77,7 +77,8 @@ public readonly record struct VanillaCubeDefinition(
     int UvDepth = 0,
     bool UsesItemAtlas = false,
     Func<EntityRenderState, string?>? TextureSelector = null,
-    Func<EntityRenderState, Vector3>? TintSelector = null);
+    Func<EntityRenderState, Vector3>? TintSelector = null,
+    EntityModelVisibleSides VisibleSides = EntityModelVisibleSides.All);
 
 /// <summary>
 /// One node of the declarative model tree. Direct children of <c>VanillaMeshDefinition.Root</c> are root parts;
@@ -470,6 +471,9 @@ static partial class VanillaMeshBake
             }
 
             first = false;
+
+            // task-218: explicit per-cube face mask (default All -- no DSL auto-inference).
+            baked = baked with { VisibleSides = cube.VisibleSides };
 
             if (cube.PoseSource is not null)
             {
