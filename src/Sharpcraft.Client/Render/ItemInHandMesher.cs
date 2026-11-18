@@ -22,7 +22,11 @@ public sealed class ItemInHandMesher
 
     private readonly DynamicGeometry _cutoutGeometry = new();
     private readonly DynamicGeometry _translucentGeometry = new();
+    private readonly DynamicGeometry _glintGeometry = new();
     private readonly List<ItemModelQuad> _quads = [];
+
+    /// <summary>Item glint sampler texture (ItemFeatureRenderer.ENCHANTED_GLINT_ITEM).</summary>
+    public const string GlintTexture = "misc/enchanted_glint_item";
 
     /// <summary>
     /// Builds one item-atlas layer with every held item in <paramref name="entities"/>, or null when no hand carries a
@@ -45,10 +49,13 @@ public sealed class ItemInHandMesher
 
         _cutoutGeometry.Clear();
         _translucentGeometry.Clear();
+        _glintGeometry.Clear();
         var cutoutFloats = 0;
         var cutoutIndices = 0;
         var translucentFloats = 0;
         var translucentIndices = 0;
+        var glintFloats = 0;
+        var glintIndices = 0;
         var grass = models.GrassColormap;
 
         for (var index = 0; index < entities.Count; index++)
@@ -121,6 +128,20 @@ public sealed class ItemInHandMesher
                             ref cutoutFloats,
                             ref cutoutIndices);
                     }
+
+                    if (offhand ? entity.OffHandGlint : entity.MainHandGlint)
+                    {
+                        ItemEntityMesher.EmitQuads(
+                            _glintGeometry,
+                            _quads,
+                            world,
+                            itemAtlas,
+                            placement.Model,
+                            grass,
+                            ref glintFloats,
+                            ref glintIndices,
+                            GlintTexture);
+                    }
                 }
             }
         }
@@ -140,6 +161,14 @@ public sealed class ItemInHandMesher
             layers.Add(new EntityGeometryLayer($"{LayerName}_translucent", EntityGeometryLayerKind.ItemTranslucent, 895, _translucentGeometry, usesItemAtlas: true));
         }
 
+        if (glintIndices > 0)
+        {
+            _glintGeometry.VertexFloats = glintFloats;
+            _glintGeometry.IndexCount = glintIndices;
+            GlintTextureTransform.ApplyToGeometry(_glintGeometry, GlintClock.Millis, GlintTextureTransform.ItemScale);
+            layers.Add(new EntityGeometryLayer($"{LayerName}_glint", EntityGeometryLayerKind.Glint, 892, _glintGeometry, usesItemAtlas: true));
+        }
+
         return layers;
     }
 
@@ -149,6 +178,11 @@ public sealed class ItemInHandMesher
     /// </summary>
     public static IEnumerable<string> ResolveTextures(EntityRenderState entity)
     {
+        if (entity.MainHandGlint || entity.OffHandGlint)
+        {
+            yield return GlintTexture;
+        }
+
         foreach (var offhand in new[] { false, true })
         {
             foreach (var placement in EntityModelResolver.ResolveHeldItemPlacements(entity, offhand))

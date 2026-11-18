@@ -608,7 +608,9 @@ public readonly record struct EntityRenderState(
     float RightTicksUsingItem = 0f,
     float SwingDurationTicks = 0f,
     bool IsSwinging = false,
-    int HeldOnHeadItemId = -1)
+    int HeldOnHeadItemId = -1,
+    bool MainHandGlint = false,
+    bool OffHandGlint = false)
 {
     /// <summary>Equippable asset id for one equipment slot, when the item supplied one.</summary>
     public string? EquipmentAssetIdAt(int slot) =>

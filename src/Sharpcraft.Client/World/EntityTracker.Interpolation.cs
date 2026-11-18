@@ -11,6 +11,9 @@ namespace Sharpcraft.Client.World;
 
 public sealed partial class EntityTracker
 {
+    // ItemStack.hasFoil(): an explicit glint override wins, otherwise enchantment presence decides.
+    private static bool HasFoil(ItemComponentInfo components) =>
+        components.GlintOverride ?? components.HasEnchantments;
 
     public ReadOnlySpan<EntityRenderState> Interpolate(float alpha)
     {
@@ -144,12 +147,14 @@ public sealed partial class EntityTracker
                 SwingAnimation: entity.Presentation.Swing.Animation(t),
                 IsAggressive: entity.Presentation.IsAggressive,
                 MainHandItemId: entity.EquipmentItemAt(0),
+                MainHandGlint: HasFoil(entity.EquipmentComponentsAt(0)),
                 ArmPose: entity.Animation is IEntityArmPoseAnimationState armPose ? armPose.ArmPose : 0,
                 IsUsingItem: entity.Presentation.IsUsingItem,
                 // Reference LivingEntity.getTicksUsingItem(partialTicks): integer ticks plus the partial tick, so the
                 // spear and crossbow animations advance smoothly instead of stepping once per tick.
                 TicksUsingItem: ticksUsingItem,
                 OffHandItemId: entity.EquipmentItemAt(1),
+                OffHandGlint: HasFoil(entity.EquipmentComponentsAt(1)),
                 MainHandChargedCrossbow: entity.EquipmentComponentsAt(0).HasChargedProjectiles,
                 MainHandQuickChargeLevel: entity.EquipmentComponentsAt(0).QuickChargeLevel,
                 IsLeftHanded: entity.Presentation.IsLeftHanded,

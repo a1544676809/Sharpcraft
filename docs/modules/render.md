@@ -837,7 +837,15 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **实现**：`GlintClock` 注入 clock（默认 wall-clock，测试可固定 source millis，不读环境变量、无 per-vertex 分配）；`GlintTextureTransform` 按源矩阵与源 `%` 符号/`fract` wrap 计算 UV；`EntityRenderLayerDefinition.GlintScale` 标记 glint 层，`EntityModelMesher` 每帧在 build 后改写 half-UV，几何不变、不静态烘焙；armor glint 层使用 0.16，item/entity scale 作为独立 helper 分类，不串用。
 - **shader**：glint 片元只把已变换的 tile UV 映射到 sprite rect，不再重复做时钟矩阵。
 - **验收**：`glint-texture-transform.reference.txt` 固定 millis {55000, 110000, 137500, -55000} × item/entity/armor 的 UV 样本；`GlintTextureTransformTests` production zombie armor glint `BuildLayers` 顶点 UV strict，helper 覆盖三分类与负 millis。
-- **限制/blocker**：当前代码树只有 **armor glint production 层**（`glint_HumanoidArmor_*`）；item scale 8.0 / entity scale 0.5 仅 helper + 源样本覆盖，**没有对应 production item/entity glint 层可接线**，不能声称 glint 全部完成。后续需单独接入 item/entity glint 生产层并补 production 输出级样本。
+- **限制/blocker**：task-270 当时只有 **armor glint production 层**（`glint_HumanoidArmor_*`）；item glint 已由 task-271 接入 held item production。entity glint 仍只有 scale 0.5 helper + 源样本，**没有 entity glint production 层可接线**，不能声称 glint 全部完成。
+
+### task-271 held item glint 生产层
+
+- **foil 依据**：`ItemComponentInfo.GlintOverride ?? ItemComponentInfo.HasEnchantments`（`ItemStack.hasFoil()` 同序；override=false 压过 enchantment）；`EntityTracker.Interpolate` 填 `EntityRenderState.MainHandGlint/OffHandGlint`，不按 item id 猜。
+- **glint pass**：`ItemInHandMesher` 对 foil hand 复用**同一批 `ItemModelQuad`** 追加 `_glint` geometry，纹理 `misc/enchanted_glint_item`，scale `8.0`，`GlintTextureTransform` + `GlintClock` 变换 half-UV；不复制模型/不烘焙，非 foil 不生成 glint layer。
+- **atlas**：`ResolveTextures` 为 foil hand 追加 glint 纹理，glint layer 使用 item atlas、`EntityGeometryLayerKind.Glint`。
+- **验收**：`ItemGlintTests` 固定 millis=55000 的 production `ItemInHandMesher.Build` glint UV = base UV 经 item scale 源矩阵且位置与 base 相同；非 foil 无 glint layer；tracker foil 由 enchantment/override 驱动。
+- **未改**：entity/armor glint 路径、EnergySwirl、其它材质。
 
 ### task-261 trim/glint/crackiness 跟随 raw armor 几何
 
