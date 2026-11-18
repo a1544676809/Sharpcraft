@@ -146,15 +146,43 @@ public sealed class BellMesherGoldenTests
 
         var geometry = mesher.Build(entities, Sprite());
 
-        // First vertex of the east face carries the unwrapped box UV: u1 and v0 of texOffs(0, 0), 6x7x6.
+        // task-215: source-frame UVs, verified keyed 1e-5 against bell-bone-raw-vectors.reference.txt
+        // (RawRenderUnitProbe, BELL layer). The legacy path wrapped these differently; raw uses the
+        // literal source cube UVs. First body vertex = texOffs(0,0) corner (12,0) on the 32px sheet.
         var (bodyU, bodyV) = VertexFieldReader.Uv(geometry.Vertices, 0);
-        Assert.Equal(18f / 32f, bodyU, 3);
-        Assert.Equal(6f / 32f, bodyV, 3);
+        Assert.Equal(12f / 32f, bodyU, 3);
+        Assert.Equal(0f, bodyV, 3);
 
-        // First vertex of the base's east face: texOffs(0, 13), 8x2x8.
+        // First base vertex = texOffs(0,13) corner (16,13) on the 32px sheet.
         var (baseU, baseV) = VertexFieldReader.Uv(geometry.Vertices, 24);
-        Assert.Equal(24f / 32f, baseU, 3);
-        Assert.Equal(21f / 32f, baseV, 3);
+        Assert.Equal(16f / 32f, baseU, 3);
+        Assert.Equal(13f / 32f, baseV, 3);
+    }
+
+    /// <summary>
+    /// task-215 review: BellMesher must carry each block's Sky/Block light, not the BuildModel sky:1/block:0
+    /// default, so night/cave bells are not lit as full sky light. This pins a non-default value to the
+    /// packed channel values the old AppendBox path produced (round(Sky/15*255) / round(Block/15*255)).
+    /// </summary>
+    [Fact]
+    public void BellVerticesCarryTheBlockPackedLight()
+    {
+        var mesher = new BellMesher();
+        byte sky = 6, block = 9;
+        BlockEntityRenderState[] entities = [new(0f, 0f, 0f, VanillaBlockEntityTypes.Bell, Sky: sky, Block: block)];
+
+        var geometry = mesher.Build(entities, Sprite());
+        var count = geometry.VertexFloats / ChunkMesher.FloatsPerVertex;
+        Assert.Equal(48, count);
+
+        var expectedSky = MathF.Round(sky / 15f * 255f) / 255f;
+        var expectedBlock = MathF.Round(block / 15f * 255f) / 255f;
+        for (var vertex = 0; vertex < count; vertex++)
+        {
+            var (gotSky, gotBlock) = VertexFieldReader.Light(geometry.Vertices, vertex);
+            Assert.Equal(expectedSky, gotSky, 5);
+            Assert.Equal(expectedBlock, gotBlock, 5);
+        }
     }
 
     /// <summary>The bell texture is packed in the block entity atlas and its rect is in the table.</summary>
