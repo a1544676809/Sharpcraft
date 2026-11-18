@@ -25,9 +25,9 @@ dotnet run --project tools/Sharpcraft.Equivalence.Audit -- --suite statematrix -
 * `SOURCE_CONSTRAINT`：公式/常量样本（`creeper-energy-swirl-uv.reference.txt`、`glint-texture-transform.reference.txt`）；key 形如 `millis|scale`。
 * `NO_SOURCE`：源有该 `type×state×layer` 行为但无样本，`strict=no`，**不得计入覆盖通过**，附优先级。
 * `UNKNOWN`：方块实体有生产 renderer 但源行为（静态/动态、是否需要 keyed 样本）无法从现有元数据确认；`strict=no`，不得默认当作 NO_SOURCE（Issue #219）。
-* **元数据驱动，不再交叉积**（Issue #219）：layer 由 `EntityModelDefinition.RenderLayers` 中 `Model != null` 的真实层决定（共享 `DefaultRenderLayers` 占位层 `Model==null` 不计）；state 由 `EntityModelResolver.TryResolve(type, baby:true)`（baby）、`CreeperModelDefinition.CreeperEntityTypeId`/`WitherBossModelDefinition.WitherEntityTypeId`（powered/energy）与 `StateLayerAffinity`（state→可影响 layer）决定。a `non-humanoid × elytra/armor/trim/glint`、`non-creeper/wither × powered/energy`、`no-baby × baby` 不再产生伪行。
+* **元数据驱动，不再交叉积、不再手写白名单**（Issue #219）：layer 由 `EntityModelDefinition.RenderLayers` 中 `Model != null` 的真实层决定（共享 `DefaultRenderLayers` 占位层 `Model==null` 不计）；`CapabilitiesFor(type)` 从 resolver/metadata 推导状态能力——baby 来自 `TryResolve(type, baby:true)`、pose 来自 `Parts.Count>0` 的实体几何、held/glint/energy/powered 来自层标记（`held/special` 层、`GlintScale`、`UvOffset` energy-swirl 层）；`AllowedCombinations(type)` 从每个层的标记推导允许的 `(state,layer)` 对（无手写 state→layer 表）。`SourceRelevant` 是对 allowed 集合的成员判断（非恒 true），不允许的组合在 builder 中被计算为 false 并从输出剔除；`IsSourceRelevant` 公开供测试复验。`non-humanoid × elytra/armor/trim/glint`、`non-creeper/wither × powered/energy`、`no-baby × baby` 不再产生伪行。
 * 行来自 `EntityModelResolver.Definitions` / `VanillaBlockEntityTypes` 的机器枚举，样本 key 来自文件解析；没有手写假路径。
-* 校验：`StateMatrixBaseline.Build` 对每条 strict 行检查文件与 key 存在，缺失即抛错；`StateMatrixBaselineTests` 复验无伪行、UNKNOWN 不算 NO_SOURCE、strict 行文件/key 真实。NO_SOURCE/UNKNOWN 行不得标 strict。
-* 修正后规模（Issue #219）：约 460 行，`SOURCE_SAMPLE≈136`/`SOURCE_CONSTRAINT=55`/`NO_SOURCE≈224`/`UNKNOWN=45`；真实缺口以 `pose/base` 为主。禁止用 golden hash 自证——`SOURCE_SAMPLE/CONSTRAINT` 必须指向真实源样本/公式文件。
+* 校验：`StateMatrixBaseline.Build` 对每条 strict 行检查文件与 key 存在，缺失即抛错；`StateMatrixBaselineTests` 以元数据驱动复验——每个真实 render layer 至少覆盖一次、每个可表达状态进入矩阵、无 allowed 集合外的行、`SourceRelevant` 来自成员判断、`UNKNOWN` 不是 `NO_SOURCE`、strict 行文件/key 真实。NO_SOURCE/UNKNOWN 行不得标 strict。
+* 修正后规模（Issue #219）：约 420 行，`SOURCE_SAMPLE≈136`/`SOURCE_CONSTRAINT≈40`/`NO_SOURCE≈199`/`UNKNOWN=45`；真实缺口以 `pose/base` 为主。禁止用 golden hash 自证——`SOURCE_SAMPLE/CONSTRAINT` 必须指向真实源样本/公式文件。
 
 **语义边界**：这是覆盖基线，不是全状态等效证明。它回答“哪些生产类型/状态/layer 有可核对源样本或公式约束，哪些没有”，不替代逐像素/逐顶点 strict 对拍；`NO_SOURCE` 明确表示未覆盖。

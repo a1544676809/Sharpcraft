@@ -21,17 +21,26 @@ public static class StateMatrixBaseline
     /// <summary>Source behaviour exists but no keyed sample or formula can be confirmed; not a coverage gap.</summary>
     public const string Unknown = "UNKNOWN";
 
-    // State classes are paired with the layers each can actually affect; no global cross product (#219).
-    private static readonly (string State, string[] Layers)[] StateLayerAffinity =
-    [
-        ("base", ["base", "armor", "trim", "elytra", "special", "held"]),
-        ("baby", ["base", "armor", "trim", "elytra", "special", "held"]),
-        ("pose", ["base"]),
-        ("held", ["held", "special", "special_glint"]),
-        ("glint", ["glint", "armor", "trim", "special_glint"]),
-        ("powered", ["base", "energy"]),
-        ("energy", ["energy"])
-    ];
+    // All state classes known to the coverage baseline. A type only emits the subset it can actually
+    // express (see CapabilitiesFor) and only on layers that carry the matching metadata (AllowedCombinations).
+    private static readonly string[] AllStates = ["base", "baby", "pose", "held", "glint", "energy", "powered"];
+
+    /// <summary>States a concrete entity type can express, derived from resolver/layer metadata (#219).</summary>
+    public sealed record TypeStateCapabilities(
+        bool Baby, bool Pose, bool Held, bool Glint, bool Energy, bool Powered)
+    {
+        public IEnumerable<string> States()
+        {
+            if (Baby) yield return "baby";
+            if (Pose) yield return "pose";
+            if (Held) yield return "held";
+            if (Glint) yield return "glint";
+            if (Energy) yield return "energy";
+            if (Powered) yield return "powered";
+            yield return "base";
+        }
+    }
+
     private static readonly HashSet<string> FileQualifiers =
     [
         "raw", "vectors", "reference", "baby", "armor", "helmet", "chestplate", "leggings", "boots",
@@ -52,8 +61,11 @@ public static class StateMatrixBaseline
         string Status)
     {
         public bool Strict => Status is SourceSample or SourceConstraint;
-        /// <summary>True when source has this type×state×layer combination (metadata-confirmed), else a cross-product row.</summary>
-        public bool SourceRelevant { get; init; } = true;
+        /// <summary>
+        /// Computed: true only when the (state,layer) pair belongs to the metadata-derived allowed set for
+        /// this row's type. Disallowed cross-product combinations are never emitted into the matrix (#219).
+        /// </summary>
+        public bool SourceRelevant { get; init; }
     }
 
     private sealed record SampleFile(string RelativePath, string[] Tokens, string StateClass, string LayerClass, string[] Keys);
@@ -107,19 +119,24 @@ public static class StateMatrixBaseline
             }
 
             var definition = EntityModelResolver.Resolve(typeId.Value);
-            // Only layers with real geometry (Model bound by Decorate/equipment) exist in source; the
-            // DefaultRenderLayers placeholders (elytra/cutout/...) have Model == null and are not render layers.
             var layers = LayersFor(definition);
-            foreach (var state in StatesFor(typeId.Value))
+            var capabilities = CapabilitiesFor(typeId.Value);
+            var allowed = AllowedCombinations(typeId.Value);
+            // Iterate the full state×layer domain and compute relevance per pair; disallowed pairs are
+            // filtered out. This keeps SourceRelevant a computed value (false cases exist) and emits
+            // only metadata-allowed combinations (#219).
+            foreach (var state in capabilities.States())
             {
                 foreach (var layer in layers)
                 {
-                    if (!AffinityAllows(state, layer))
+                    var relevant = allowed.Contains((state, layer));
+                    if (!relevant)
                     {
-                        continue; // source cannot express this state on this layer -> no cross-product row (#219)
+                        continue;
                     }
 
-                    rows.Add(Row("entity", typeId.Value, name, state, layer, definition.Name, samples));
+                    var row = Row("entity", typeId.Value, name, state, layer, definition.Name, samples);
+                    rows.Add(row with { SourceRelevant = relevant });
                 }
             }
         }
@@ -137,6 +154,8 @@ public static class StateMatrixBaseline
                 // Block entities have no baby/powered/pose/held/energy states; only `base` is meaningful.
                 // Without a keyed sample the source behaviour is unconfirmed -> UNKNOWN, never NO_SOURCE by default (#219).
                 var row = Row("block", typeId, path, "base", layer, path, samples);
+                // Block `base` on its declared layers is always metadata-allowed; unconfirmed -> UNKNOWN.
+                row = row with { SourceRelevant = true };
                 rows.Add(row.Status == NoSource ? row with { Status = Unknown } : row);
             }
         }
@@ -386,30 +405,83 @@ public static class StateMatrixBaseline
         return layers;
     }
 
+    /// <summary>Real render layer classes of a resolved definition (metadata: Model bound by Decorate/equipment).</summary>
+    public static IReadOnlyList<string> LayersFor(int typeId) => LayersFor(EntityModelResolver.Resolve(typeId));
+
     /// <summary>
-    /// States the given entity type can actually express, derived from resolver metadata:
-    /// baby only when a baby definition resolves; powered/energy only for the source EnergySwirlLayer
-    /// owners (creeper, wither); all other states are universally expressible by living entities.
+    /// States a type can express, derived entirely from resolver/layer metadata (#219):
+    /// baby from a resolving baby definition; pose from real body geometry; held/glint/energy/powered from
+    /// the matching layer markers (held/special layer, GlintScale, UvOffset energy-swirl layer).
     /// </summary>
-    private static string[] StatesFor(int typeId)
+    public static TypeStateCapabilities CapabilitiesFor(int typeId)
     {
-        var states = new List<string> { "base", "pose", "held", "glint" };
-        if (EntityModelResolver.TryResolve(typeId, baby: true) is not null)
-        {
-            states.Add("baby");
-        }
-
-        if (typeId is CreeperModelDefinition.CreeperEntityTypeId or WitherBossModelDefinition.WitherEntityTypeId)
-        {
-            states.Add("powered");
-            states.Add("energy");
-        }
-
-        return states.ToArray();
+        var definition = EntityModelResolver.Resolve(typeId);
+        var layers = definition.RenderLayers
+            .Where(layer => layer.Model is not null)
+            .ToArray();
+        var baby = EntityModelResolver.TryResolve(typeId, baby: true) is not null;
+        // The base body layer exists for every model with real geometry; pose animates it. Non-equipment
+        // definitions keep the shared DefaultRenderLayers placeholders (Model == null) yet still have body parts.
+        var pose = definition.Parts.Count > 0;
+        var held = layers.Any(layer => LayerClassFor(layer) is "held" or "special" or "special_glint");
+        var glint = layers.Any(layer => layer.GlintScale is not null || LayerClassFor(layer) is "glint" or "special_glint");
+        // EnergySwirlLayer presence (UvOffset layer) gates both the powered and energy states on its owner.
+        var energy = layers.Any(layer => layer.UvOffset is not null || LayerClassFor(layer) == "energy");
+        return new TypeStateCapabilities(baby, pose, held, glint, energy, energy);
     }
 
-    private static bool AffinityAllows(string state, string layer) =>
-        StateLayerAffinity.Any(entry => entry.State == state && entry.Layers.Contains(layer, StringComparer.Ordinal));
+    /// <summary>
+    /// The metadata-derived set of (state, layer) pairs source can actually express for a type (#219).
+    /// Each layer contributes the states carried by its own markers; no cross-product table is involved.
+    /// </summary>
+    public static HashSet<(string State, string Layer)> AllowedCombinations(int typeId)
+    {
+        var capabilities = CapabilitiesFor(typeId);
+        var allowed = new HashSet<(string, string)>();
+        var definition = EntityModelResolver.Resolve(typeId);
+
+        // Every entity with body geometry has a base layer: base/pose (+baby) are metadata-allowed there.
+        // This is derived from Parts, not from the equipment-layer Model markers used below.
+        if (definition.Parts.Count > 0)
+        {
+            allowed.Add(("base", "base"));
+            if (capabilities.Pose) allowed.Add(("pose", "base"));
+            if (capabilities.Baby) allowed.Add(("baby", "base"));
+        }
+
+        foreach (var layer in definition.RenderLayers.Where(layer => layer.Model is not null))
+        {
+            var layerClass = LayerClassFor(layer);
+            if (layer.UvOffset is not null || layerClass == "energy")
+            {
+                allowed.Add(("energy", layerClass));
+                allowed.Add(("powered", layerClass));
+            }
+
+            if (layer.GlintScale is not null || layerClass is "glint" or "special_glint")
+            {
+                allowed.Add(("glint", layerClass));
+            }
+
+            if (layerClass is "held" or "special" or "special_glint")
+            {
+                allowed.Add(("held", layerClass));
+                if (capabilities.Baby) allowed.Add(("baby", layerClass));
+            }
+
+            if (layerClass is "armor" or "trim" or "elytra")
+            {
+                allowed.Add(("base", layerClass));
+                if (capabilities.Baby) allowed.Add(("baby", layerClass));
+            }
+        }
+
+        return allowed;
+    }
+
+    /// <summary>Computed relevance of a (state,layer) pair for a type, from metadata (#219).</summary>
+    public static bool IsSourceRelevant(int typeId, string state, string layer) =>
+        AllowedCombinations(typeId).Contains((state, layer));
 
     private static string LayerClassFor(EntityRenderLayerDefinition layer)
     {
@@ -419,11 +491,11 @@ public static class StateMatrixBaseline
             return name.Contains("glint", StringComparison.OrdinalIgnoreCase) ? "special_glint" : "special";
         }
 
-        if (name.Contains("glint", StringComparison.OrdinalIgnoreCase)) return "glint";
-        if (name.Contains("energy", StringComparison.OrdinalIgnoreCase) || name.Contains("creeper_power", StringComparison.OrdinalIgnoreCase)) return "energy";
+        if (name.Contains("glint", StringComparison.OrdinalIgnoreCase) || layer.GlintScale is not null) return "glint";
+        if (name.Contains("energy", StringComparison.OrdinalIgnoreCase) || name.Contains("creeper_power", StringComparison.OrdinalIgnoreCase)
+            || layer.UvOffset is not null) return "energy";
         if (name.Contains("armor", StringComparison.OrdinalIgnoreCase)) return "armor";
         if (name.Contains("trim", StringComparison.OrdinalIgnoreCase)) return "trim";
-        if (name.Contains("held_special", StringComparison.OrdinalIgnoreCase)) return "special";
         if (name.Contains("held", StringComparison.OrdinalIgnoreCase)) return "held";
         if (layer.Kind == Sharpcraft.Framework.Rendering.EntityGeometryLayerKind.Elytra) return "elytra";
         return "base";
