@@ -41,12 +41,16 @@ public sealed partial class EntityModelMesher
     private readonly record struct LayerGroupKey(
         EntityModelDefinition Model,
         bool AllCubes,
-        Func<EntityRenderState, string?>? TextureSelector);
+        Func<EntityRenderState, string?>? TextureSelector,
+        float UvOffsetU,
+        float UvOffsetV);
 
     private sealed class LayerGroup
     {
         public EntityModelDefinition Model = null!;
         public EntityRenderLayerDefinition Layer = null!;
+        public float UvOffsetU;
+        public float UvOffsetV;
         public readonly List<int> EntityIndices = [];
     }
 
@@ -334,7 +338,8 @@ public sealed partial class EntityModelMesher
                 }
 
                 var effectiveModel = entityLayer.Model ?? model;
-                var key = new LayerGroupKey(effectiveModel, entityLayer.AllCubes, entityLayer.TextureSelector);
+                var uvOffset = entityLayer.UvOffset?.Invoke(entity) ?? (U: 0f, V: 0f);
+                var key = new LayerGroupKey(effectiveModel, entityLayer.AllCubes, entityLayer.TextureSelector, uvOffset.U, uvOffset.V);
                 if (activeGroup < 0 || !key.Equals(activeKey))
                 {
                     activeGroup = groupCount++;
@@ -347,6 +352,8 @@ public sealed partial class EntityModelMesher
                     var created = _layerGroups[activeGroup];
                     created.Model = effectiveModel;
                     created.Layer = entityLayer;
+                    created.UvOffsetU = uvOffset.U;
+                    created.UvOffsetV = uvOffset.V;
                     created.EntityIndices.Clear();
                 }
 
@@ -376,11 +383,12 @@ public sealed partial class EntityModelMesher
                     excludedPart,
                     group.Layer.UsesItemAtlas ? itemAtlas : skinAtlas,
                     variants,
-                    group.Layer.Kind == EntityGeometryLayerKind.Emissive,
+                    group.Layer.Kind == EntityGeometryLayerKind.Emissive && !group.Layer.AllCubes,
                     usePreparedPoses: false,
                     modelOverride: group.Model,
                     layerTextureSelector: group.Layer.TextureSelector,
                     poses: _groupPoses);
+                ApplyUvOffset(scratch, group.UvOffsetU, group.UvOffsetV);
                 AppendGeometry(target, scratch);
             }
 
@@ -391,6 +399,24 @@ public sealed partial class EntityModelMesher
         }
 
         return layers;
+    }
+
+    private static void ApplyUvOffset(DynamicGeometry geometry, float uOffset, float vOffset)
+    {
+        if (uOffset == 0f && vOffset == 0f)
+        {
+            return;
+        }
+
+        for (var offset = 0; offset + ChunkMesher.FloatsPerVertex <= geometry.VertexFloats; offset += ChunkMesher.FloatsPerVertex)
+        {
+            var packed = BitConverter.SingleToUInt32Bits(geometry.Vertices[offset + 4]);
+            var u = (float)BitConverter.UInt16BitsToHalf((ushort)(packed & 0xFFFF)) + uOffset;
+            var v = (float)BitConverter.UInt16BitsToHalf((ushort)(packed >> 16)) + vOffset;
+            geometry.Vertices[offset + 4] = BitConverter.UInt32BitsToSingle(
+                (uint)BitConverter.HalfToUInt16Bits((Half)u)
+                | ((uint)BitConverter.HalfToUInt16Bits((Half)v) << 16));
+        }
     }
 
     private static void AppendGeometry(DynamicGeometry target, DynamicGeometry source)

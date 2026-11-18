@@ -1,0 +1,11 @@
+# Sharpcraft reference sample — CreeperPowerLayer / EnergySwirlLayer UV offset
+# source: Minecraft 26.3 client EnergySwirlLayer.submit / CreeperPowerLayer
+# ref: ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/layers/EnergySwirlLayer.java:25-31
+# ref: ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/layers/CreeperPowerLayer.java:15-33
+# formula: u = (xOffset(t) % 1), v = (t * 0.01F % 1); Creeper xOffset(t) = t * 0.01F
+# texture: entity/creeper/creeper_armor; mesh: CREEPER_ARMOR grow=2; visible=isPowered
+# columns: ageInTicks	uOffset	vOffset
+0	0.000000000	0.000000000
+50	0.500000000	0.500000000
+100	0.000000000	0.000000000
+137	0.370000005	0.370000005

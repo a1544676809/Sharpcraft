@@ -857,8 +857,14 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 ### task-254 Creeper powered 状态 + armor production
 
 - **状态通道**：`Creeper.DATA_IS_POWERED` 为 Boolean synced accessor；继承链 `Entity 0-7 + LivingEntity 8-14 + Mob flags 15 + Creeper swell 16 / powered 17 / ignited 18`，Boolean serializer=8。`EntityVariantSpecs[32].PoweredAccessorIndex=17` → `EntityTracker.ApplyEntityData` 校验 serializer → `TrackedEntity.IsPowered` → `EntityRenderState.IsPowered`；非 Creeper 不受影响。
-- **armor**：production resolver 给 Creeper 挂 `creeper_power` 层，model 为 task-249 的 raw `CreeperArmorModelDefinition`，`VisibleWhen: state.IsPowered`；非 powered 不绘制，base creeper 几何/材质不变。Layer kind 采用现有 additive `Emissive` 路径（源 EnergySwirl 的 UV 滚动不在本任务范围）。
+- **armor**：production resolver 给 Creeper 挂 `creeper_power` 层，model 为 task-249 的 raw `CreeperArmorModelDefinition`，`VisibleWhen: state.IsPowered`；非 powered 不绘制，base creeper 几何/材质不变。Layer kind 采用现有 additive `Emissive` 路径；EnergySwirl 的每帧 UV 偏移由 task-269 接入。
 - **验收**：powered true/false tracker→render-state regression，layer 存在性 + VisibleWhen，144 顶点 raw 样本 strict 保持；full 3,702+、三门禁。
+
+### task-269 CreeperPowerLayer EnergySwirl UV 滚动
+
+- **源**：`EnergySwirlLayer` 以 `ageInTicks` 计算纹理偏移：`u = xOffset(t) % 1`，`v = t * 0.01F % 1`；`CreeperPowerLayer.xOffset(t) = t * 0.01F`，texture `entity/creeper/creeper_armor`，mesh `CREEPER_ARMOR` grow2，`visible = isPowered`。
+- **实现**：`EnergySwirlUv.Creeper(t)` 复刻源公式（C# `%` 保留被除数符号，负 tick 与 Java 余数一致）；`EntityRenderLayerDefinition.UvOffset` 按帧提供 layer UV 偏移，`EntityModelMesher` 在 build 后用 half-UV 重新打包偏移，几何仍 static、不烘焙缓存；分组键包含 offset，不同 tick 不合并。Creeper `creeper_power` 层只挂此 offset；glint 未改。
+- **验收**：`creeper-energy-swirl-uv.reference.txt` 记录 t={0,50,100,137} 的 u/v，production `ItemInHandMesher` 同路径的 `BuildLayers` 输出顶点 UV strict 1e-5（t=50 u=v=0.5），位置与 t=0 相同；负 tick `%` 单测。
 
 ### task-252 Horse / Nautilus / ArmorStand armor raw
 
