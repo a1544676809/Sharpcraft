@@ -555,7 +555,7 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **为什么**：陶片图案来自方块实体 NBT 的四个 sherd 物品与 26.3 图案资源映射；本切片先落地静态基底与几何，图案选择需要额外的物品组件与图案注册表解析。
 - **对等效性的影响**：任意有图案的陶罐会显示空白侧面；基底、四个侧面平面的位置、法线、朝向与 UV 与原版一致。
 - **状态**：受控偏差，计划由 T-47（#47 批次 1）后续陶片图案切片跟进。
-- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/DecoratedPotMesherGoldenTests.cs` 覆盖脖子两盒与 top/bottom 平面 world bounds、四个侧面在四个水平朝向下的位置/法线/UV、6 组 `FacingDegrees` 真值、单 pot 72 顶点 / 108 索引、双 pot 批量偏移、32/16 纹理归一化与注册表 `Handles(41)`；接入图案后需补 sherds 选择真值与单方块像素对比。
+- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/DecoratedPotMesherGoldenTests.cs` 覆盖脖子两盒与 top/bottom 平面 world bounds、四个侧面在四个水平朝向下的位置/法线/UV、6 组 `FacingDegrees` 真值、单 pot 72 顶点 / 108 索引、双 pot 批量偏移、32/16 纹理归一化与注册表 `Handles(41)`；接入图案后需补 sherds 选择真值与单方块像素对比。task-207 新增 `decorated-pot-base-raw-vectors.reference.txt`（96 行）与 `decorated-pot-sides-raw-vectors.reference.txt`（16 行）作为源真值；评估结论为 **raw 迁移 blocker**：side 源使用 `EnumSet.of(Direction.NORTH)` 每 cube 仅 1 面 4 顶点，现有 `EntityModelPart` 无 VisibleSides/面掩码，raw 固定 6 面 24 顶点，无法表达；custom mesher 保持并从源值核对（base 源 96 vs 当前 72，top/bottom 需完整 cube 面）。
 
 <!-- simplification:SIM-BE-POT-NO-PATTERNS task:T-47 -->
 
