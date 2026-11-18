@@ -153,6 +153,9 @@ public sealed class TrackedEntity
     /// </summary>
     public bool IsPowered { get; internal set; }
 
+    /// <summary>ThrownTrident.DATA_IS_FOIL is a synced boolean carried by the projectile.</summary>
+    public bool IsFoil { get; internal set; }
+
     /// <summary>Avatar DATA_PLAYER_MAIN_HAND (HumanooidArm id: LEFT=0, RIGHT=1); default RIGHT.</summary>
     public int MainArm { get; internal set; } = 1;
 
@@ -610,7 +613,8 @@ public readonly record struct EntityRenderState(
     bool IsSwinging = false,
     int HeldOnHeadItemId = -1,
     bool MainHandGlint = false,
-    bool OffHandGlint = false)
+    bool OffHandGlint = false,
+    bool IsFoil = false)
 {
     /// <summary>Equippable asset id for one equipment slot, when the item supplied one.</summary>
     public string? EquipmentAssetIdAt(int slot) =>
@@ -1159,6 +1163,20 @@ public sealed partial class EntityTracker
         }
 
         var applied = HandleAnimationData(entity, items);
+
+        // ThrownTrident carries ID_FOIL after Entity 0-7, AbstractArrow 8-10 and ID_LOYALTY 11.
+        if (entity.TypeId == Sharpcraft.Client.Render.ThrownTridentModelDefinition.EntityTypeId)
+        {
+            foreach (var item in items)
+            {
+                if (item.Index == Sharpcraft.Client.Render.ThrownTridentModelDefinition.FoilAccessorIndex
+                    && item.SerializerId == 8)
+                {
+                    entity.IsFoil = item.Value != 0;
+                    applied = true;
+                }
+            }
+        }
 
         // Item entities carry their stack in synced data. The accessor index is 8 because Entity itself defines eight
         // accessors (0-7) and ItemEntity extends Entity directly (docs/analysis/render/entity-variants.md 2.1).

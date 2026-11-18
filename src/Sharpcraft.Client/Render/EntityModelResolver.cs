@@ -33,6 +33,7 @@ public static partial class EntityModelResolver
 
     private static readonly Dictionary<int, EntityModelDefinition> Models = new()
     {        [EntityPlaceholderMesher.PlayerEntityTypeId] = PlayerModelDefinition.Definition,
+        [ThrownTridentModelDefinition.EntityTypeId] = ThrownTridentModelDefinition.Definition,
         [HumanoidMobModelDefinition.SkeletonEntityTypeId] = HumanoidMobModelDefinition.Skeleton,
         [HumanoidMobModelDefinition.StrayEntityTypeId] = HumanoidMobModelDefinition.Stray,
         [HumanoidMobModelDefinition.BoggedEntityTypeId] = HumanoidMobModelDefinition.Bogged,

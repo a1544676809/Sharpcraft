@@ -147,6 +147,7 @@ public sealed partial class EntityTracker
                 SwingAnimation: entity.Presentation.Swing.Animation(t),
                 IsAggressive: entity.Presentation.IsAggressive,
                 MainHandItemId: entity.EquipmentItemAt(0),
+                IsFoil: entity.IsFoil,
                 MainHandGlint: HasFoil(entity.EquipmentComponentsAt(0)),
                 ArmPose: entity.Animation is IEntityArmPoseAnimationState armPose ? armPose.ArmPose : 0,
                 IsUsingItem: entity.Presentation.IsUsingItem,

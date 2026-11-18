@@ -1,0 +1,5 @@
+# Sharpcraft reference sample — entity type registry
+# source: Minecraft 26.3 client BuiltInRegistries.ENTITY_TYPE
+# tool: ref://mc-26.3-analysis/vectors/EntityTypeRegistryProbe.java (SharedConstants.tryDetectVersion + Bootstrap.bootStrap)
+# columns: entity_type_id	numeric_id
+minecraft:trident	139

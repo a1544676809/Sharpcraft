@@ -35,6 +35,22 @@ public readonly record struct EntityModelTransform(
     public EntityModelTransform ForRawSourceFrame(float baselineWorld) =>
         this with { FlipRawSourceFrame = true, RawBaselineWorld = baselineWorld };
 
+    /// <summary>Reference <c>ThrownTridentRenderer.submit</c>: rotateY(yRot - 90), then rotateZ(xRot + 90), no raw-source flip.</summary>
+    public static EntityModelTransform ThrownTrident(Sharpcraft.Client.World.EntityRenderState state)
+    {
+        // Source uses column-vector PoseStack: M = Ry(yRot - 90) * Rz(xRot + 90). This record is row-vector, so the
+        // matrix factors reverse: p' = p * Rz * Ry.
+        var rotation = Matrix4x4.CreateRotationZ((state.Pitch + 90f) * (MathF.PI / 180f))
+            * Matrix4x4.CreateRotationY((state.Yaw - 90f) * (MathF.PI / 180f));
+        return new EntityModelTransform(
+            new Vector3(state.X, state.Y, state.Z),
+            YawDegrees: 0f,
+            PitchDegrees: 0f,
+            HasAttachRotation: true,
+            AttachRotation: Quaternion.CreateFromRotationMatrix(rotation),
+            AttachPivot: Vector3.Zero);
+    }
+
     /// <summary>The model-height baseline in pixels the reference renderer folds into the frame flip.</summary>
     public const float RawBaselinePx = 24f;
     public static EntityModelTransform From(Sharpcraft.Client.World.EntityRenderState state)
