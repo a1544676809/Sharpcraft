@@ -20,4 +20,5 @@ public sealed record EntityRenderLayerDefinition(
     Func<Sharpcraft.Client.World.EntityRenderState, bool>? VisibleWhen = null,
     bool AllCubes = false,
     bool UsesItemAtlas = false,
-    Func<Sharpcraft.Client.World.EntityRenderState, (float U, float V)>? UvOffset = null);
+    Func<Sharpcraft.Client.World.EntityRenderState, (float U, float V)>? UvOffset = null,
+    float? GlintScale = null);

@@ -446,7 +446,8 @@ public static partial class EntityModelResolver
                     glintTexture,
                     state => ResolveEquipmentFoil(state, slot) ? glintTexture : null,
                     state => ResolveEquipmentFoil(state, slot),
-                    AllCubes: true));
+                    AllCubes: true,
+                    GlintScale: GlintTextureTransform.ArmorScale));
             }
 
             if (typeId == 152 && EquipmentModelTrees.For(EquipmentAssetKind.WolfBody) is { } wolfArmor)

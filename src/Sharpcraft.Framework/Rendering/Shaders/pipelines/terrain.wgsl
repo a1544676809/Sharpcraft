@@ -350,27 +350,15 @@ fn fs_entity_emissive(input : VertexOutput) -> @location(0) vec4<f32> {
     return vec4<f32>(mix(sampled.rgb, fog.colour.rgb, fogged), sampled.a);
 }
 
-// Enchanted armor glint overlay. The reference samples the glint texture through a time-varying UV matrix
-// (TextureTransform.ARMOR_ENTITY_GLINT_TEXTURING): translate by (-offsetU, offsetV), rotate by 10 degrees, then scale
-// by 0.16. The lightmap padding slot carries the host glint clock in seconds so the pass needs no extra uniform.
+// Enchanted armor glint overlay. The CPU builds the reference TextureTransform.setupGlintTexturing UVs
+// (ARMOR_ENTITY_GLINT_TEXTURING, scale 0.16) once per frame; this shader only maps the wrapped tile UV into the
+// sprite rectangle. Keeping the matrix on the CPU makes the production layer geometry the source of truth.
 @fragment
 fn fs_entity_glint(input : VertexOutput) -> @location(0) vec4<f32> {
     let rectMin = input.spriteRect.xy;
     let rectMax = input.spriteRect.zw;
 
-    // Default options: glintSpeed = 0.5, glintStrength = 0.75 (Options.java).
-    let millis = floor(lightmap.padding * 1000.0 * 0.5 * 8.0);
-    let offsetU = (millis - floor(millis / 110000.0) * 110000.0) / 110000.0;
-    let offsetV = (millis - floor(millis / 30000.0) * 30000.0) / 30000.0;
-    let angle = 0.17453292; // pi / 18
-    let ca = cos(angle);
-    let sa = sin(angle);
-    let local = input.uv - floor(input.uv);
-    let rotated = vec2<f32>(
-        (ca * local.x) - (sa * local.y),
-        (sa * local.x) + (ca * local.y)) * 0.16;
-    let glintUv = rotated + vec2<f32>(-offsetU, offsetV);
-    let atlasUv = rectMin + fract(glintUv) * (rectMax - rectMin);
+    let atlasUv = rectMin + input.uv * (rectMax - rectMin);
     let gradientScale = rectMax - rectMin;
     let sampled = textureSampleGrad(
         atlasTexture,

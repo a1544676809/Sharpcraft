@@ -1,0 +1,20 @@
+# Sharpcraft reference sample — glint TextureTransform
+# source: Minecraft 26.3 client TextureTransform.setupGlintTexturing(scale)
+# ref: ref://mc-26.3-analysis/src/net/minecraft/client/renderer/rendertype/TextureTransform.java:30-38
+# millis=(long)(Util.getMillis()*glintSpeed*8), glintSpeed=0.5
+# o0=millis%110000/110000, o1=millis%30000/30000
+# M=T(-o0,o1,0)*Rz(pi/18)*S(scale); output=fract(M*uv), scale 8.0 item / 0.5 entity / 0.16 armor
+# columns: millis\tscale\tinU\tinV\toutU\toutV
+# negative millis uses Java % sign, matching C# remainder
+55000	8	0.25	0.75	0.427726440	0.089476207
+55000	0.5	0.25	0.75	0.557982903	0.224342263
+55000	0.16	0.25	0.75	0.518554529	0.958456191
+110000	8	0.25	0.75	0.927726440	0.922809540
+110000	0.5	0.25	0.75	0.057982903	0.057675596
+110000	0.16	0.25	0.75	0.018554529	0.791789524
+137500	8	0.25	0.75	0.677726440	0.839476207
+137500	0.5	0.25	0.75	0.807982903	0.974342263
+137500	0.16	0.25	0.75	0.768554529	0.708456191
+-55000	8	0.25	0.75	0.427726440	0.422809540
+-55000	0.5	0.25	0.75	0.557982903	0.557675596
+-55000	0.16	0.25	0.75	0.518554529	0.291789524

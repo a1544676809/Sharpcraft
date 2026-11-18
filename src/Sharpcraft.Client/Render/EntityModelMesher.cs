@@ -389,6 +389,11 @@ public sealed partial class EntityModelMesher
                     layerTextureSelector: group.Layer.TextureSelector,
                     poses: _groupPoses);
                 ApplyUvOffset(scratch, group.UvOffsetU, group.UvOffsetV);
+                if (group.Layer.GlintScale is { } glintScale)
+                {
+                    ApplyGlintUv(scratch, GlintClock.Millis, glintScale);
+                }
+
                 AppendGeometry(target, scratch);
             }
 
@@ -416,6 +421,20 @@ public sealed partial class EntityModelMesher
             geometry.Vertices[offset + 4] = BitConverter.UInt32BitsToSingle(
                 (uint)BitConverter.HalfToUInt16Bits((Half)u)
                 | ((uint)BitConverter.HalfToUInt16Bits((Half)v) << 16));
+        }
+    }
+
+    private static void ApplyGlintUv(DynamicGeometry geometry, long millis, float scale)
+    {
+        for (var offset = 0; offset + ChunkMesher.FloatsPerVertex <= geometry.VertexFloats; offset += ChunkMesher.FloatsPerVertex)
+        {
+            var packed = BitConverter.SingleToUInt32Bits(geometry.Vertices[offset + 4]);
+            var u = (float)BitConverter.UInt16BitsToHalf((ushort)(packed & 0xFFFF));
+            var v = (float)BitConverter.UInt16BitsToHalf((ushort)(packed >> 16));
+            var glint = GlintTextureTransform.Apply(u, v, millis, scale);
+            geometry.Vertices[offset + 4] = BitConverter.UInt32BitsToSingle(
+                (uint)BitConverter.HalfToUInt16Bits((Half)glint.U)
+                | ((uint)BitConverter.HalfToUInt16Bits((Half)glint.V) << 16));
         }
     }
 
