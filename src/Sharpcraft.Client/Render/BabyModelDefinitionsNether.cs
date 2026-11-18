@@ -9,28 +9,28 @@ public static class BabyModelDefinitionsNether
 {
     private static readonly VanillaMeshDefinition PiglinMesh = BuildPiglinMesh();
 
-    private static readonly EntityModelPart[] PiglinParts = [.. VanillaMeshBake.Bake(PiglinMesh, 0, 0)];
+    private static readonly EntityModelPart[] PiglinParts = [.. VanillaMeshBake.Bake(PiglinMesh, 0, 0, rawSourceFrame: true)];
 
     private static readonly CompiledEntityModel PiglinCompiled =
-        VanillaMeshBakery.Build(PiglinMesh, 64, 64);
+        VanillaMeshBakery.Build(PiglinMesh, 64, 64, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Piglin = new(
         "baby_piglin",
         64,
         64,
         PiglinParts,
-        PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         "entity/piglin/piglin_baby",
-        compiled: PiglinCompiled);
+        compiled: PiglinCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition ZombifiedPiglin = new(
         "baby_zombified_piglin",
         64,
         64,
         PiglinParts,
-        PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         "entity/piglin/zombified_piglin_baby",
-        compiled: PiglinCompiled);
+        compiled: PiglinCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     private static readonly VanillaMeshDefinition HoglinMesh = BuildHoglinMesh();
 
