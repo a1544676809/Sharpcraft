@@ -101,12 +101,12 @@ public sealed class PlayerArmorRawReferenceSampleTests
             Assert.Equal(48, armor.Compiled!.Cubes.Sum(cube => 24));
         }
 
-        // Drowned armor is still an unscaled legacy layer; Husk has its own raw scaled definition.
-        var drowned = EntityModelResolver.Resolve(Sharpcraft.Client.Render.HumanoidMobModelDefinition.DrownedEntityTypeId);
-        var drownedArmor = drowned.RenderLayers!.First(layer => layer.Name == "equipment_HumanoidArmor_5").Model!;
-        Assert.False(drownedArmor.RawSourceFrame);
-        Assert.Equal(24f, drownedArmor.BaselinePx);
-        Assert.NotNull(drownedArmor.FaceTransforms);
+        // Stray armor is still an unscaled legacy layer; Drowned/Husk have raw definitions.
+        var stray = EntityModelResolver.Resolve(Sharpcraft.Client.Render.HumanoidMobModelDefinition.StrayEntityTypeId);
+        var strayArmor = stray.RenderLayers!.First(layer => layer.Name == "equipment_HumanoidArmor_5").Model!;
+        Assert.False(strayArmor.RawSourceFrame);
+        Assert.Equal(24f, strayArmor.BaselinePx);
+        Assert.NotNull(strayArmor.FaceTransforms);
     }
 
     private static Row[] Load(string sampleFile)

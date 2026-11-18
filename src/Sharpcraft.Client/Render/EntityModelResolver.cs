@@ -304,7 +304,9 @@ public static partial class EntityModelResolver
                 var rawAdultHumanoidArmor = !baby && !piglin
                     && typeId is EntityPlaceholderMesher.PlayerEntityTypeId
                         or HumanoidMobModelDefinition.ZombieEntityTypeId
-                        or HumanoidMobModelDefinition.SkeletonEntityTypeId;
+                        or HumanoidMobModelDefinition.SkeletonEntityTypeId
+                        or HumanoidMobModelDefinition.DrownedEntityTypeId
+                        or HumanoidMobModelDefinition.BoggedEntityTypeId;
                 var rawBabyHumanoidArmor = baby && !piglin
                     && effectiveKind == EquipmentAssetKind.HumanoidArmorBaby;
                 var rawArmor = rawAdultHumanoidArmor
@@ -313,9 +315,11 @@ public static partial class EntityModelResolver
                         ? BabyHumanoidArmorModelDefinition.ForSlot(slot)
                         : typeId == HumanoidMobModelDefinition.HuskEntityTypeId
                             ? HuskArmorModelDefinition.ForSlot(slot)
-                            : piglin
-                                ? PiglinArmorModelDefinition.ForSlot(slot, baby)
-                                : null;
+                            : typeId == GiantModelDefinition.GiantEntityTypeId
+                                ? GiantArmorModelDefinition.ForSlot(slot)
+                                : piglin
+                                    ? PiglinArmorModelDefinition.ForSlot(slot, baby)
+                                    : null;
                 var layerModel = rawArmor is null
                     ? new EntityModelDefinition(
                         layerName,

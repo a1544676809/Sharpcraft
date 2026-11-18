@@ -818,6 +818,12 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 - **源公式**：HUSK_ARMOR 是共享 humanoid armor 经 MeshTransformer.scaling(1.0625)：root PartPose 缩放 1.0625 并平移 24.016*(1-1.0625) px；立方体/UV 不变。HuskArmorModelDefinition 将源公式静态烘焙为 pivot/cube 坐标缩放 + 根 yOffset（UV 维度保留原值），不依赖 non-unit node scale 路径。
 - **验收**：Husk 四 slot keyed 样本 48/72/72/48，位置 1e-5 + UV half；production resolver Husk raw layer（scale 1，baseline 0）；Drowned 等未缩放 humanoid 仍 legacy；adult/baby/piglin/材质层零回归；full 3,657+、三门禁。
+### task-247 Humanoid-derived armor sets raw
+
+- **复用**：`DROWNED_ARMOR`/`BOGGED_ARMOR`/`PARCHED_ARMOR` 均 `putFrom(humanoidArmor)`，`PLAYER_SLIM_ARMOR` 与 `PLAYER_ARMOR` 同 `playerArmor`，`DROWNED_BABY_ARMOR` 与 `humanoidBabyArmor` 同源；这些 set 直接复用现有 Player/Baby raw 定义，不复制 mesh。
+- **Giant**：`GIANT_ARMOR` = `humanoidArmor.map(layer -> layer.apply(MeshTransformer.scaling(6.0)))`；`GiantArmorModelDefinition` 静态烘焙 6× pivot/cube + 源 yOffset，UV 维度保持原值，sample strict 通过。
+- **验收**：Drowned adult/baby、Bogged、Parched、PlayerSlim、Giant 共 24 个 keyed 样本（48/72/72/48、baby 24/72/72/48、Giant 48/72/72/48）位置 1e-5 + UV half；resolver 覆盖 Drowned/Bogged/Giant/PlayerSlim，Parched armor 定义/样本就绪但当前 main 没有 Parched 实体类型，production 接入记为 blocker；其余 armor/材质层零回归；full 3,662+、三门禁。
+
 ### task-243 Piglin / baby piglin armor raw
 
 - **源证据**：`PIGLIN_ARMOR`/`PIGLIN_BRUTE_ARMOR`/`ZOMBIFIED_PIGLIN_ARMOR` 均 `putFrom(piglinArmor)`（`PiglinModel.createArmorMeshSet(INNER, 1.02)` + `removeEars` 空组）；`PIGLIN_BABY_ARMOR`/`ZOMBIFIED_PIGLIN_BABY_ARMOR` 均 `putFrom(piglinBabyArmor)`（`AbstractPiglinModel.createBabyArmorMeshSet(0.7,0.7, armOffset(0.5,-0.5,0))`）。鼻子 cube 不属于 armor mesh，猪灵耳朵是空组。
