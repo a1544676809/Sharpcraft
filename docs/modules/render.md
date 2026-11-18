@@ -824,6 +824,13 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **新增字段**：`MainArm`（Avatar `DATA_PLAYER_MAIN_HAND` accessor 15，HUMANOID_ARM serializer **42**，LEFT=0/RIGHT=1；非 Avatar 由 `IsLeftHanded` 派生）、`LeftTicksUsingItem`/`RightTicksUsingItem`（float；源 `HumanoidRenderState.ticksUsingItem(arm)` 派生，保留 partial tick）、`SwingDurationTicks`/`IsSwinging`（SwingDescription payload）、`HeldOnHeadItemId`（源 `AvatarRenderer` 仅在 `useItem.is(Items.SPYGLASS)` 时填 heldOnHead，其它 item -1）。
 - **验收**：默认值、Player main-arm metadata roundtrip、错误 index/serializer 不误写、using-item 分臂 ticks + heldOnHead、swing duration/type 测试；full 3,722+、三门禁。
 
+### task-268 humanoid held source-frame adapter
+
+- **实现**：新增 `HumanoidHeldHandFrame.Source`，按 `ItemInHandLayer.submitArmWithItem` 源链 `translateToHand(root→arm) → Rx(-90)·Ry(180) → T_off`（成人 `(±1,2,-10)/16`，baby `(0,1,-4.5)/16`）合成；left hand `tx/ry/rz` 取负由源 arm 数据自然给出。`SourceWorld` 再乘 `ReferenceFrame.Frame(modelScale)` 映射到 production raw 模型帧。
+- **接入**：`ItemInHandMesher` 对 `RawSourceFrame && HumanoidHeldHandFrame.IsHumanoid(typeId)` 使用 source frame 且跳过 legacy `AnchorCoreFor`；CopperGolem/non-humanoid 仍走 `LegacyHandWorldMatrix + anchor`。STAB/use/item display 顺序保持 `D · use · STAB · hand · entity`；trident/shield/banner special 图层不变。
+- **真值**：`humanoid-held-hand-source-vectors.reference.txt` 12 状态（right/left × rest/attack/use × adult/baby）；`HumanoidHeldHandSourceFrameTests` 对 rest/use 8 状态矩阵严格 1e-5 通过。
+- **blocker**：attack 4 状态仍未严格通过；源样本 attack 包含 `THROW_TRIDENT` 的 `setupAnim` 攻击臂/身体 pass，当前 source adapter 只重放 `THROW_TRIDENT` 基础臂姿态，差值集中在 body/arm attack 项。`R-026` 记录。
+
 ### task-261 trim/glint/crackiness 跟随 raw armor 几何
 
 - **审计**：`rawArmor` 已为 raw 时，trim/glint 仍用 `equipmentTree`（legacy 24px compiled）且 `baselinePx:24/rawSourceFrame:false`；wolf crackiness 仍用 `EquipmentModelTrees` 的 legacy wolf armor tree。结果材质层与 armor 层几何/基线不一致。
