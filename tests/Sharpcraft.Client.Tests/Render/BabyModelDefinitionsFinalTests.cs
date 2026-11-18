@@ -14,15 +14,15 @@ public sealed class BabyModelDefinitionsFinalTests
     {
         var expected = new[]
         {
-            LegacyModelPartFactory.FromVanilla("root", -0.5f, 28f, -0.5f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-            LegacyModelPartFactory.FromVanillaChild("shell", "root", 3f, -8f, -2f, -6f, -4f, -1f, 7f, 4f, 7f, 0, 0),
-            LegacyModelPartFactory.FromVanillaChild("shell_mid", "shell", 0f, 0f, 0f, -6f, 0f, -1f, 7f, 4f, 9f, 0, 11),
-            LegacyModelPartFactory.FromVanillaChild("shell_back", "shell", 0f, 0f, 0f, -6f, 0f, 5f, 7f, 4f, 0f, 23, 11),
-            LegacyModelPartFactory.FromVanillaChild("body", "root", 0.5f, -5f, 3f, -2.5f, -3.01f, -1f, 5f, 4f, 7f, 0, 24),
-            LegacyModelPartFactory.FromVanillaChild("body_back", "body", 0f, 0f, 0f, -2.5f, -3.01f, 4.1f, 5f, 4f, 0f, 0, 35),
-            LegacyModelPartFactory.FromVanillaChild("upper_mouth", "body", 0f, -2.01f, 3.9f, -2.5f, -1f, 0f, 5f, 2f, 2f, 24, 24, grow: -0.001f),
-            LegacyModelPartFactory.FromVanillaChild("inner_mouth", "body", 0f, -1.01f, 4.9f, -1.5f, -1f, -1f, 3f, 2f, 2f, 24, 32),
-            LegacyModelPartFactory.FromVanillaChild("lower_mouth", "body", 0f, -0.01f, 3.9f, -2.5f, -1f, 0f, 5f, 2f, 2f, 24, 28, grow: -0.001f)
+            RawModelPartFactory.FromVanilla("root", -0.5f, 28f, -0.5f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
+            RawModelPartFactory.FromVanillaChild("shell", "root", 3f, -8f, -2f, -6f, -4f, -1f, 7f, 4f, 7f, 0, 0),
+            RawModelPartFactory.FromVanillaChild("shell_mid", "shell", 0f, 0f, 0f, -6f, 0f, -1f, 7f, 4f, 9f, 0, 11),
+            RawModelPartFactory.FromVanillaChild("shell_back", "shell", 0f, 0f, 0f, -6f, 0f, 5f, 7f, 4f, 0f, 23, 11),
+            RawModelPartFactory.FromVanillaChild("body", "root", 0.5f, -5f, 3f, -2.5f, -3.01f, -1f, 5f, 4f, 7f, 0, 24),
+            RawModelPartFactory.FromVanillaChild("body_back", "body", 0f, 0f, 0f, -2.5f, -3.01f, 4.1f, 5f, 4f, 0f, 0, 35),
+            RawModelPartFactory.FromVanillaChild("upper_mouth", "body", 0f, -2.01f, 3.9f, -2.5f, -1f, 0f, 5f, 2f, 2f, 24, 24, grow: -0.001f),
+            RawModelPartFactory.FromVanillaChild("inner_mouth", "body", 0f, -1.01f, 4.9f, -1.5f, -1f, -1f, 3f, 2f, 2f, 24, 32),
+            RawModelPartFactory.FromVanillaChild("lower_mouth", "body", 0f, -0.01f, 3.9f, -2.5f, -1f, 0f, 5f, 2f, 2f, 24, 28, grow: -0.001f)
         };
         AssertPartsMatch(expected, BabyModelDefinitionsFinal.Nautilus.Parts);
     }
@@ -32,8 +32,8 @@ public sealed class BabyModelDefinitionsFinalTests
     {
         var expected = new List<EntityModelPart>
         {
-            LegacyModelPartFactory.FromVanilla("body", 0f, 16f, 0f, -8f, -8f, -8f, 16f, 16f, 16f, 0, 0),
-            LegacyModelPartFactory.FromVanillaChild("inner_body", "body", 0f, 8f, 0f, -8f, -16f, -8f, 16f, 16f, 16f, 0, 32, grow: -0.5f)
+            RawModelPartFactory.FromVanilla("body", 0f, 16f, 0f, -8f, -8f, -8f, 16f, 16f, 16f, 0, 0),
+            RawModelPartFactory.FromVanillaChild("inner_body", "body", 0f, 8f, 0f, -8f, -16f, -8f, 16f, 16f, 16f, 0, 32, grow: -0.5f)
         };
         (float X, float Y, float Z, float Length)[] tentacles =
         [
@@ -44,7 +44,7 @@ public sealed class BabyModelDefinitionsFinalTests
         for (var i = 0; i < tentacles.Length; i++)
         {
             var (x, y, z, length) = tentacles[i];
-            expected.Add(LegacyModelPartFactory.FromVanillaChild("tentacle" + i, "body", x, y, z, -1f, 0f, -1f, 2f, length, 2f, 0, 0));
+            expected.Add(RawModelPartFactory.FromVanillaChild("tentacle" + i, "body", x, y, z, -1f, 0f, -1f, 2f, length, 2f, 0, 0));
         }
 
         AssertPartsMatch([.. expected], BabyModelDefinitionsFinal.HappyGhast.Parts);
@@ -52,10 +52,15 @@ public sealed class BabyModelDefinitionsFinalTests
     }
 
     [Fact]
-    public void BabyGlowSquidSharesSquidParts()
+    public void BabyGlowSquidUsesDedicatedBabyMesh()
     {
-        Assert.Same(BabyModelDefinitionsAquatic.Squid.Parts, BabyModelDefinitionsFinal.GlowSquid.Parts);
+        Assert.NotSame(BabyModelDefinitionsAquatic.Squid.Parts, BabyModelDefinitionsFinal.GlowSquid.Parts);
+        Assert.True(BabyModelDefinitionsFinal.GlowSquid.RawSourceFrame);
         Assert.Equal("entity/squid/glow_squid_baby", BabyModelDefinitionsFinal.GlowSquid.TexturePath);
+        var body = Assert.Single(BabyModelDefinitionsFinal.GlowSquid.Parts, p => p.Name == "body");
+        Assert.Equal(8f, body.Width);
+        Assert.Equal(10f, body.Height);
+        Assert.Equal(8f, body.Depth);
     }
 
     private static void AssertPartsMatch(EntityModelPart[] expected, IReadOnlyList<EntityModelPart> actual)
