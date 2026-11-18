@@ -12,7 +12,7 @@ public static class CreeperModelDefinition
 {
     public const int CreeperEntityTypeId = 32;
 
-    private static readonly VanillaMeshDefinition CreeperMesh = BuildCreeperMesh();
+    private static readonly VanillaMeshDefinition CreeperMesh = BuildCreeperMesh(0f);
 
     /// <summary>
     /// Raw source-frame model: cube/pivot values are the reference y-down literals and the entity
@@ -28,21 +28,21 @@ public static class CreeperModelDefinition
         baselinePx: 0f,
         rawSourceFrame: true);
 
-    private static VanillaMeshDefinition BuildCreeperMesh()
+    internal static VanillaMeshDefinition BuildCreeperMesh(float grow)
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
         root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 6f, 0f),
-            new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f));
+            new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f, Grow: grow));
         root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, 6f, 0f),
-            new VanillaCubeDefinition("body", 16, 16, -4f, 0f, -2f, 8f, 12f, 4f));
+            new VanillaCubeDefinition("body", 16, 16, -4f, 0f, -2f, 8f, 12f, 4f, Grow: grow));
         root.AddOrReplaceChild("left_hind_leg", VanillaPartPose.Offset(2f, 18f, 4f),
-            new VanillaCubeDefinition("left_hind_leg", 0, 16, -2f, 0f, -2f, 4f, 6f, 4f));
+            new VanillaCubeDefinition("left_hind_leg", 0, 16, -2f, 0f, -2f, 4f, 6f, 4f, Grow: grow));
         root.AddOrReplaceChild("right_hind_leg", VanillaPartPose.Offset(-2f, 18f, 4f),
-            new VanillaCubeDefinition("right_hind_leg", 0, 16, -2f, 0f, -2f, 4f, 6f, 4f));
+            new VanillaCubeDefinition("right_hind_leg", 0, 16, -2f, 0f, -2f, 4f, 6f, 4f, Grow: grow));
         root.AddOrReplaceChild("left_front_leg", VanillaPartPose.Offset(2f, 18f, -4f),
-            new VanillaCubeDefinition("left_front_leg", 0, 16, -2f, 0f, -2f, 4f, 6f, 4f));
+            new VanillaCubeDefinition("left_front_leg", 0, 16, -2f, 0f, -2f, 4f, 6f, 4f, Grow: grow));
         root.AddOrReplaceChild("right_front_leg", VanillaPartPose.Offset(-2f, 18f, -4f),
-            new VanillaCubeDefinition("right_front_leg", 0, 16, -2f, 0f, -2f, 4f, 6f, 4f));
+            new VanillaCubeDefinition("right_front_leg", 0, 16, -2f, 0f, -2f, 4f, 6f, 4f, Grow: grow));
         return new VanillaMeshDefinition(root);
     }
 }
