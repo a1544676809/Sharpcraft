@@ -87,17 +87,16 @@ public sealed class ResolverRawFlagTests
             "right_arm");
         Assert.NotEqual(default(System.Numerics.Matrix4x4), hand);
 
-        // The body and the elytra wing layer both stay raw (task-167): the wing layer carries source
-        // bind pose/UV and uses baseline 0. Armor layers remain legacy models with their own legacy
-        // face calibration and 24 px baseline.
+        // The body, elytra wing layer and shared adult humanoid armor are all raw source-frame layers:
+        // they carry source bind pose/UV and baseline 0. Baby/piglin and scaled armor stay legacy.
         var elytra = Assert.Single(decorated.RenderLayers!, layer => layer.Name == "elytra").Model;
         Assert.NotNull(elytra);
         Assert.True(elytra.RawSourceFrame);
         Assert.Equal(0f, elytra.BaselinePx);
         var armor = decorated.RenderLayers!.First(layer => layer.Name.StartsWith("equipment_", StringComparison.Ordinal)).Model;
         Assert.NotNull(armor);
-        Assert.False(armor.RawSourceFrame);
-        Assert.NotNull(armor.FaceTransforms);
-        Assert.Equal(24f, armor.BaselinePx);
+        Assert.True(armor.RawSourceFrame);
+        Assert.True(armor.FaceTransforms is null || armor.FaceTransforms.Count == 0);
+        Assert.Equal(0f, armor.BaselinePx);
     }
 }

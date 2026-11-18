@@ -797,9 +797,15 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 ### task-236 Adult Player armor raw（本体，不含 trim/glint）
 
 - **源样本**：RawRenderUnitProbe/PlayerArmorRawProbe 采 PLAYER_ARMOR 四 slot：helmet 48（head+hat）、chestplate 72（body+双臂）、leggings 72（body+双腿）、boots 48（双腿）。head/chest/feet 用 outer grow 1.0px，leggings 用 inner grow 0.5px（legs 再 extend -0.1）。
-- **raw 定义**：PlayerArmorModelDefinition 四 slot 使用源 pivot/cube/UV，baselinePx:0、rawSourceFrame:true、sourceFrameBaselinePx:0、无 FaceTransforms；生产 resolver 仅对 adult Player 走 raw layer，其他 humanoid（Zombie 等）保持 legacy 24px/face transforms。
+- **raw 定义**：PlayerArmorModelDefinition 四 slot 使用源 pivot/cube/UV，baselinePx:0、rawSourceFrame:true、sourceFrameBaselinePx:0、无 FaceTransforms；生产 resolver 对 adult Player 走 raw layer，其他 humanoid（Husk 等 scaled/特殊源）保持 legacy 24px/face transforms。
 - **边界**：复用本体 raw 实体变换，不套 held-hand matrix；trim/glint/crackiness 材质层不混入本任务，baby/piglin 保持后续。
-- **验收**：PlayerArmorRawReferenceSampleTests 四 slot keyed 1e-5 + UV half；production raw flag/vertex count、Zombie legacy 回归、full 3,614+、三门禁。
+- **验收**：PlayerArmorRawReferenceSampleTests 四 slot keyed 1e-5 + UV half；production raw flag/vertex count、Husk legacy 回归、full 3,619+、三门禁。
+
+### task-238 Humanoid adult armor raw 扩展（Zombie/Skeleton）
+
+- **源证据**：`LayerDefinitions` 中 `ZOMBIE_ARMOR`、`SKELETON_ARMOR` 与 `PLAYER_ARMOR` 都来自同一个 `HumanoidModel.createArmorMeshSet(INNER, OUTER)`（player 仅额外附加空 overlay 组），逐 cube 的 pivot/cube/UV 相同；Zombie/Skeleton 没有独立 armor mesh。
+- **复用**：`ZOMBIE_ARMOR`/`SKELETON_ARMOR` 四 slot 新增 keyed 样本（48/72/72/48），与 player armor 12 个样本一起严格匹配同一 `PlayerArmorModelDefinition`，位置 1e-5 + UV half；production resolver 对 adult Player/Zombie/Skeleton 复用 raw 定义，不复制 mesh。
+- **边界**：baby/piglin armor、Husk 等 scaled/特殊 humanoid 仍 legacy；trim/glint/crackiness 材质层不变；legacy armor 零回归由 Husk + 全量测试覆盖。
 
 <!-- simplification:SIM-ENTITY-RAW-SCALE task:T-41 -->
 

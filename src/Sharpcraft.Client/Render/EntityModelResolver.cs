@@ -301,9 +301,11 @@ public static partial class EntityModelResolver
                     ? state => EntityModelResolver.ResolveEquipmentTexture(state, effectiveKind, slot)
                     : _ => fixedTexture;
                 var layerName = "equipment_" + effectiveKind + "_" + slot;
-                var rawArmor = !baby && !piglin && typeId == EntityPlaceholderMesher.PlayerEntityTypeId
-                    ? PlayerArmorModelDefinition.ForSlot(slot)
-                    : null;
+                var rawHumanoidArmor = !baby && !piglin
+                    && typeId is EntityPlaceholderMesher.PlayerEntityTypeId
+                        or HumanoidMobModelDefinition.ZombieEntityTypeId
+                        or HumanoidMobModelDefinition.SkeletonEntityTypeId;
+                var rawArmor = rawHumanoidArmor ? PlayerArmorModelDefinition.ForSlot(slot) : null;
                 var layerModel = rawArmor is null
                     ? new EntityModelDefinition(
                         layerName,
