@@ -87,6 +87,31 @@ public sealed class ItemGlintTests
     }
 
     [Fact]
+    public void OnlyTridentAndShieldSpecialRenderersHaveGlintCompanions()
+    {
+        // Source audit: only TridentSpecialRenderer and ShieldSpecialRenderer submit glint. The other eleven
+        // SpecialModelRenderer implementations accept hasFoil but make zero glint submissions, so the absence of
+        // banner/skull/chest/shulker glint layers is the reference behavior, not an unfinished blocker.
+        var layers = EntityModelResolver.Resolve(EntityPlaceholderMesher.PlayerEntityTypeId).RenderLayers!;
+        var glints = layers
+            .Where(layer => layer.Name.EndsWith("_glint", StringComparison.Ordinal))
+            .Select(layer => layer.Name)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+        Assert.Equal(
+            [
+                "held_special_shield_left_glint",
+                "held_special_shield_right_glint",
+                "held_special_trident_left_glint",
+                "held_special_trident_right_glint",
+            ],
+            glints);
+        Assert.DoesNotContain(layers, layer =>
+            layer.Name.EndsWith("_glint", StringComparison.Ordinal)
+            && !layer.Name.Contains("shield", StringComparison.Ordinal)
+            && !layer.Name.Contains("trident", StringComparison.Ordinal));
+    }
+    [Fact]
     public void SpecialFoilTridentAndShieldGetEntityScaleGlint()
     {
         var trident = EntityModelResolver.Items!.GetId(Identifier.Parse("minecraft:trident"));
