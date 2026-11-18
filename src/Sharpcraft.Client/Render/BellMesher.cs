@@ -3,6 +3,7 @@
 
 using System.Numerics;
 using Sharpcraft.Client.Assets;
+using Sharpcraft.Client.World;
 using Sharpcraft.Common.Reference;
 using Sharpcraft.Common.World;
 using Sharpcraft.Framework.Rendering;
@@ -10,63 +11,55 @@ using Sharpcraft.Framework.Rendering;
 namespace Sharpcraft.Client.Render;
 
 /// <summary>
-/// Builds the static bell geometry: a body hanging below the block's ceiling and a base above it.
+/// Draws the bell from its source-frame static model: a bell_body box hanging from the block ceiling
+/// and a bell_base child carried by the body. The source swing animation (tick / click-direction driven)
+/// is a renderer state rotation and is intentionally not part of the static model; see
+/// <c>SIM-BE-BELL-NO-SHAKE</c> in <c>docs/modules/render.md</c>.
 /// </summary>
 /// <remarks>
-/// Geometry follows the reference bell model. In that model's space, one block is sixteen units and
-/// the bell body spans five to eleven across, six to thirteen up and five to eleven deep; the base
-/// spans four to twelve across, four to six up and four to twelve deep. The reference's swing
-/// animation, driven by block entity ticks and click direction, is not wired yet; see
-/// <c>SIM-BE-BELL-NO-SHAKE</c> in <c>docs/modules/render.md</c>.
+/// The static body/base geometry is jar-verified keyed 1e-5 + UV half against
+/// <c>bell-bone-raw-vectors.reference.txt</c> (RawRenderUnitProbe, BELL layer). Source:
+/// <c>ref://mc-26.3-analysis/src/net/minecraft/client/model/object/bell/BellModel.java</c>.
 /// </remarks>
-[ReferenceClass("net.minecraft.client.renderer.blockentity.BellRenderer", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/BellRenderer.java", Status = ReferenceStatus.Partial, Note = "Static body and base boxes only; the shake animation driven by the block entity's ticks and click direction is not wired.")]
+[ReferenceClass("net.minecraft.client.renderer.blockentity.BellRenderer", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/BellRenderer.java", Status = ReferenceStatus.Partial, Note = "Static body and base boxes from the raw source-frame model; the shake animation driven by ticks and click direction is not wired.")]
 [Sharpcraft.Common.Diagnostics.Simplification("SIM-BE-BELL-NO-SHAKE", "T-47", Note = "Static bell geometry only; the reference's tick and click-direction driven shake animation is not wired.")]
 public sealed class BellMesher
 {
     /// <summary>One sixteenth of a block, the model's unit.</summary>
     public const float Pixel = 1f / 16f;
 
+    // Static-geometry constants retained for the golden-vector documentation tests. The model now
+    // owns the actual geometry; these describe the same jar source cube bounds.
     /// <summary>Body width, six pixels.</summary>
     public const float BodyWidth = 6f * Pixel;
-
     /// <summary>Body height, seven pixels.</summary>
     public const float BodyHeight = 7f * Pixel;
-
     /// <summary>Body depth, six pixels.</summary>
     public const float BodyDepth = 6f * Pixel;
-
     /// <summary>Body bottom above the block floor, six pixels.</summary>
     public const float BodyFeetY = 6f * Pixel;
-
     /// <summary>Base width, eight pixels.</summary>
     public const float BaseWidth = 8f * Pixel;
-
     /// <summary>Base height, two pixels.</summary>
     public const float BaseHeight = 2f * Pixel;
-
     /// <summary>Base depth, eight pixels.</summary>
     public const float BaseDepth = 8f * Pixel;
-
     /// <summary>Base bottom above the block floor, four pixels.</summary>
     public const float BaseFeetY = 4f * Pixel;
-
-    /// <summary>The bell texture is 32 by 32, not the 64 by 64 default block entity sheet size.</summary>
+    /// <summary>The bell texture is 32 by 32.</summary>
     public const int TextureSize = 32;
 
+    private readonly EntityModelMesher _mesher = new();
     private readonly DynamicGeometry _geometry = new();
 
     /// <summary>Entities drawn by the last call.</summary>
     public int LastEntityCount { get; private set; }
 
     /// <summary>Builds bell geometry for every bell in the span.</summary>
-    /// <param name="entities">Block entities in world space.</param>
-    /// <param name="sprite">Atlas rect used for the faces.</param>
     public DynamicGeometry Build(ReadOnlySpan<BlockEntityRenderState> entities, SpriteRect sprite) =>
         Build(entities, sprite, null);
 
     /// <summary>Builds bell geometry, resolving the sprite from the block entity atlas.</summary>
-    /// <param name="entities">Block entities in world space.</param>
-    /// <param name="atlas">Atlas that holds <see cref="ChestAtlas.BellTexture"/>.</param>
     public DynamicGeometry Build(ReadOnlySpan<BlockEntityRenderState> entities, ItemAtlas atlas) =>
         Build(entities, null, atlas);
 
@@ -76,99 +69,54 @@ public sealed class BellMesher
         ItemAtlas? atlas)
     {
         _geometry.Clear();
+        // Two boxes = 48 vertices / 72 indices per bell. Reserve the whole batch before appending:
+        // DynamicGeometry.Reserve does not copy existing content, so mid-loop growth would drop earlier bells.
+        _geometry.Reserve(entities.Length * 48 * ChunkMesher.FloatsPerVertex, entities.Length * 72);
         LastEntityCount = 0;
 
         var sprite = fallbackSprite;
         if (sprite is null)
         {
             if (atlas is null)
-            {
                 throw new InvalidOperationException("either a sprite or an atlas is required");
-            }
-
             sprite = ChestAtlas.SpriteForBell(atlas);
             if (sprite is null)
-            {
                 return _geometry;
-            }
         }
 
-        if (entities.Length == 0)
-        {
-            return _geometry;
-        }
-
-        const int boxesPerBell = 2;
-        const int verticesPerBox = 24;
-        const int indicesPerBox = 36;
-        _geometry.Reserve(
-            entities.Length * boxesPerBell * verticesPerBox * ChunkMesher.FloatsPerVertex,
-            entities.Length * boxesPerBell * indicesPerBox);
-
-        var vertexFloats = 0;
-        var indexCount = 0;
-
+        var definition = BellModelDefinition.Definition;
         for (var index = 0; index < entities.Length; index++)
         {
             var entity = entities[index];
             if (entity.TypeId != VanillaBlockEntityTypes.Bell)
-            {
                 continue;
-            }
 
-            var origin = new Vector3(entity.X, entity.Y, entity.Z);
-            var lightSky = entity.Sky / 15f;
-            var lightBlock = entity.Block / 15f;
-
-            // The body hangs below the block's ceiling: its bottom is six pixels up and it is seven tall.
-            EntityPlaceholderMesher.AppendBox(
-                _geometry,
-                origin + new Vector3(0.5f, BodyFeetY, 0.5f),
-                width: BodyWidth,
-                height: BodyHeight,
-                red: 1f,
-                green: 1f,
-                blue: 1f,
-                sprite: sprite,
-                ref vertexFloats,
-                ref indexCount,
-                depth: BodyDepth,
-                sky: lightSky,
-                block: lightBlock,
-                texU: 0,
-                texV: 0,
-                texDx: 6,
-                texDy: 7,
-                texDz: 6,
-                textureSize: TextureSize);
-
-            // The base caps the body: its bottom is four pixels up and it is two tall.
-            EntityPlaceholderMesher.AppendBox(
-                _geometry,
-                origin + new Vector3(0.5f, BaseFeetY, 0.5f),
-                width: BaseWidth,
-                height: BaseHeight,
-                red: 1f,
-                green: 1f,
-                blue: 1f,
-                sprite: sprite,
-                ref vertexFloats,
-                ref indexCount,
-                depth: BaseDepth,
-                sky: lightSky,
-                block: lightBlock,
-                texU: 0,
-                texV: 13,
-                texDx: 8,
-                texDy: 2,
-                texDz: 8,
-                textureSize: TextureSize);
-
+            // Static bind pose: the shake rotation is applied by the renderer state and is not wired.
+            var state = new EntityRenderState(
+                Id: index, TypeId: entity.TypeId,
+                X: entity.X, Y: entity.Y, Z: entity.Z,
+                Yaw: 180f, Pitch: 0f);
+            var built = _mesher.BuildModel(definition, [state], sprite, definition.TextureWidth, definition.TextureHeight,
+                modelScale: 1f);
+            AppendGeometry(_geometry, built);
             LastEntityCount++;
         }
 
-        _geometry.VertexFloats = vertexFloats;
-        _geometry.IndexCount = indexCount;
         return _geometry;
+    }
+
+    private static void AppendGeometry(DynamicGeometry target, DynamicGeometry source)
+    {
+        if (source.VertexFloats == 0)
+            return;
+        var vertexFloats = target.VertexFloats + source.VertexFloats;
+        var indexCount = target.IndexCount + source.IndexCount;
+        target.Reserve(vertexFloats, indexCount);
+        var vertexBase = (uint)(target.VertexFloats / ChunkMesher.FloatsPerVertex);
+        Array.Copy(source.Vertices, 0, target.Vertices, target.VertexFloats, source.VertexFloats);
+        for (var i = 0; i < source.IndexCount; i++)
+            target.Indices[target.IndexCount + i] = source.Indices[i] + vertexBase;
+        target.VertexFloats = vertexFloats;
+        target.IndexCount = indexCount;
     }
 }

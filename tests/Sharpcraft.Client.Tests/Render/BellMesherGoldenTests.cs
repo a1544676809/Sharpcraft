@@ -146,15 +146,17 @@ public sealed class BellMesherGoldenTests
 
         var geometry = mesher.Build(entities, Sprite());
 
-        // First vertex of the east face carries the unwrapped box UV: u1 and v0 of texOffs(0, 0), 6x7x6.
+        // task-215: source-frame UVs, verified keyed 1e-5 against bell-bone-raw-vectors.reference.txt
+        // (RawRenderUnitProbe, BELL layer). The legacy path wrapped these differently; raw uses the
+        // literal source cube UVs. First body vertex = texOffs(0,0) corner (12,0) on the 32px sheet.
         var (bodyU, bodyV) = VertexFieldReader.Uv(geometry.Vertices, 0);
-        Assert.Equal(18f / 32f, bodyU, 3);
-        Assert.Equal(6f / 32f, bodyV, 3);
+        Assert.Equal(12f / 32f, bodyU, 3);
+        Assert.Equal(0f, bodyV, 3);
 
-        // First vertex of the base's east face: texOffs(0, 13), 8x2x8.
+        // First base vertex = texOffs(0,13) corner (16,13) on the 32px sheet.
         var (baseU, baseV) = VertexFieldReader.Uv(geometry.Vertices, 24);
-        Assert.Equal(24f / 32f, baseU, 3);
-        Assert.Equal(21f / 32f, baseV, 3);
+        Assert.Equal(16f / 32f, baseU, 3);
+        Assert.Equal(13f / 32f, baseV, 3);
     }
 
     /// <summary>The bell texture is packed in the block entity atlas and its rect is in the table.</summary>

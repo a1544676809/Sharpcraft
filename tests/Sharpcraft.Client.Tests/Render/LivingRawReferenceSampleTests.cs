@@ -129,6 +129,8 @@ public sealed class LivingRawReferenceSampleTests
         { "enderman-raw-vectors.reference.txt", HumanoidMobModelDefinition.Enderman, 64, 32, "entity/enderman/enderman", 168, 48, 120, 0 },
         { "zombie-raw-vectors.reference.txt", HumanoidMobModelDefinition.Zombie, 64, 64, "entity/zombie/zombie", 168, 48, 120, 0 },
         // task-108 humanoid batch (total, mirror, checked, degenerate).
+        // task-215: bell static bind-pose geometry (shake stays in renderer state).
+        { "bell-bone-raw-vectors.reference.txt", BellModelDefinition.Definition, 32, 32, "entity/bell/bell_body", 48, 0, 48, 0 },
         // task-206: pattern overlays raw (base geometry replicated per state layer, keyed jar samples).
         { "special-banner-patterns-raw-vectors.reference.txt", SpecialItemModelDefinition.BannerFlagPatternsRight, 64, 64, "entity/banner/base", 144, 0, 144, 0 },
         { "special-shield-patterns-raw-vectors.reference.txt", SpecialItemModelDefinition.ShieldPatternsRight, 64, 64, "entity/shield/base", 288, 0, 288, 0 },
