@@ -169,6 +169,13 @@ public static partial class EntityModelResolver
             ? SpecialItemModelDefinition.DecoratedPotSideTexture
             : null;
 
+    /// <summary>Glint sampler for held special models that use the entity-scale glint pass.</summary>
+    public static string? ResolveHeldItemSpecialGlintTexture(EntityRenderState state, bool offhand = false) =>
+        (offhand ? state.OffHandGlint : state.MainHandGlint)
+        && ResolveHeldItemSpecial(state, offhand) is "minecraft:trident" or "minecraft:shield"
+            ? ItemInHandMesher.GlintTexture
+            : null;
+
     /// <summary>Decoded banner pattern layers for the item in one hand, or null when it carries none.</summary>
     public static IReadOnlyList<Sharpcraft.Common.Network.BannerPatternLayer>? ResolveHeldItemBannerPatterns(
         EntityRenderState state,
@@ -435,6 +442,32 @@ public static partial class EntityModelResolver
             state => ResolveHeldItemSpecial(state, offhand: true) == specialType,
             AllCubes: true,
             UsesItemAtlas: true));
+
+        // TridentSpecialRenderer/ShieldSpecialRenderer use RenderTypes.entitySolidGlint (entity scale 0.5), not the
+        // normal item glint scale. The glint layer reuses the same held model and only adds the texture transform.
+        const string glintTexture = "misc/enchanted_glint_item";
+        layers.Add(new EntityRenderLayerDefinition(
+            "held_special_" + name + "_right_glint",
+            EntityGeometryLayerKind.Glint,
+            order + 2,
+            right,
+            glintTexture,
+            state => state.MainHandGlint && ResolveHeldItemSpecial(state, offhand: false) == specialType ? glintTexture : null,
+            state => state.MainHandGlint && ResolveHeldItemSpecial(state, offhand: false) == specialType,
+            AllCubes: true,
+            UsesItemAtlas: true,
+            GlintScale: GlintTextureTransform.EntityScale));
+        layers.Add(new EntityRenderLayerDefinition(
+            "held_special_" + name + "_left_glint",
+            EntityGeometryLayerKind.Glint,
+            order + 3,
+            left,
+            glintTexture,
+            state => state.OffHandGlint && ResolveHeldItemSpecial(state, offhand: true) == specialType ? glintTexture : null,
+            state => state.OffHandGlint && ResolveHeldItemSpecial(state, offhand: true) == specialType,
+            AllCubes: true,
+            UsesItemAtlas: true,
+            GlintScale: GlintTextureTransform.EntityScale));
     }
 
     private static void AddSpecialHeadLayers(List<EntityRenderLayerDefinition> layers)

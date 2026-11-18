@@ -840,13 +840,21 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **限制/blocker**：task-270 当时只有 **armor glint production 层**（`glint_HumanoidArmor_*`）；item glint 已由 task-271 接入 held item production。entity glint 仍只有 scale 0.5 helper + 源样本，**没有 entity glint production 层可接线**，不能声称 glint 全部完成。
 
 ### task-271 held item glint 生产层
+### task-272 special held foil glint
+
+- **源**：held trident/shield 由 `TridentSpecialRenderer` / `ShieldSpecialRenderer` 提交，glint 用 `RenderTypes.entitySolidGlint`，即 **entity glint scale 0.5**，不是 normal item 的 8.0；glint sampler 为 `misc/enchanted_glint_item`。
+- **实现**：`AddSpecialHandLayers` 为 trident/shield 的 left/right special 层各追加 companion `held_special_*_glint`，复用同一 `EntityModelDefinition` 几何，`VisibleWhen` 取对应手 `MainHandGlint/OffHandGlint`，`GlintScale=EntityScale`，纹理 selector 为 glint 纹理；`ResolveHeldItemSpecialGlintTexture` 预置 atlas sprite；不复制几何/不烘焙。
+- **验收**：`ItemGlintTests.SpecialFoilTridentAndShieldGetEntityScaleGlint` 固定 millis=55000，production `EntityModelMesher.BuildLayers` 的 trident right / shield left glint 层 UV = base UV 经 scale 0.5 矩阵，位置与 base 完全一致；非 foil 无 glint；item scale 8.0 路径不混用。
+- **未改**：normal item glint / armor / entity glint 路径；EnergySwirl。
+- **限制/blocker**：thrown trident 实体当前不存在，无该生产路径；其它 special held item（banner/skull/chest/shulker 等）glint companion 未实现，后续任务见 `R-037`。
+
 
 - **foil 依据**：`ItemComponentInfo.GlintOverride ?? ItemComponentInfo.HasEnchantments`（`ItemStack.hasFoil()` 同序；override=false 压过 enchantment）；`EntityTracker.Interpolate` 填 `EntityRenderState.MainHandGlint/OffHandGlint`，不按 item id 猜。
 - **glint pass**：`ItemInHandMesher` 对 foil hand 复用**同一批 `ItemModelQuad`** 追加 `_glint` geometry，纹理 `misc/enchanted_glint_item`，scale `8.0`，`GlintTextureTransform` + `GlintClock` 变换 half-UV；不复制模型/不烘焙，非 foil 不生成 glint layer。
 - **atlas**：`ResolveTextures` 为 foil hand 追加 glint 纹理，glint layer 使用 item atlas、`EntityGeometryLayerKind.Glint`。
 - **验收**：`ItemGlintTests` 固定 millis=55000 的 production `ItemInHandMesher.Build` glint UV = base UV 经 item scale 源矩阵且位置与 base 相同；非 foil 无 glint layer；tracker foil 由 enchantment/override 驱动。
 - **未改**：entity/armor glint 路径、EnergySwirl、其它材质。
-- **限制/blocker（special foil）**：本任务只覆盖 **normal held item foil**（`ItemInHandMesher` 的 item model quads）。trident/shield/banner 等 special held item 走 `held_special*` 特殊层，**special foil glint 未接入**（源 `ITEM_*_GLINT_SPECIAL` / special foil 路径未实现）；`ItemGlintTests.SpecialFoilItemsDoNotGetGlintYet` 明确断言当前不生成 glint，后续任务见 `R-037`。
+- **special foil 后续**：trident/shield 的 held special foil glint 已由 task-272 接入（`held_special_*_glint`，entity scale 0.5）；其它 special held item（banner/skull/chest/shulker 等）仍无 glint companion，见 `R-037`。
 
 ### task-261 trim/glint/crackiness 跟随 raw armor 几何
 

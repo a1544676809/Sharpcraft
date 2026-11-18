@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using Sharpcraft.Assets;
+using Sharpcraft.Client.Assets;
 using Sharpcraft.Client.Render;
 using Sharpcraft.Client.World;
 using Sharpcraft.Common.Identifiers;
@@ -86,29 +87,80 @@ public sealed class ItemGlintTests
     }
 
     [Fact]
-    public void SpecialFoilItemsDoNotGetGlintYet()
+    public void SpecialFoilTridentAndShieldGetEntityScaleGlint()
     {
-        // R-037 blocker: special held items (trident/shield/banner) render through held_special* layers and do not
-        // consume ItemInHandMesher's normal item glint pass. No special foil glint is implemented yet; keep this
-        // assertion explicit so the gap is not mistaken for coverage.
-        var special = EntityModelResolver.Resolve(EntityPlaceholderMesher.PlayerEntityTypeId).RenderLayers!
-            .Where(layer => layer.Name.StartsWith("held_special", StringComparison.Ordinal))
-            .ToArray();
-        Assert.NotEmpty(special);
-        Assert.Contains(special, layer => layer.Name.Contains("trident", StringComparison.Ordinal));
-
         var trident = EntityModelResolver.Items!.GetId(Identifier.Parse("minecraft:trident"));
+        var shield = EntityModelResolver.Items!.GetId(Identifier.Parse("minecraft:shield"));
         Assert.True(trident > 0);
-        var atlas = ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
+        Assert.True(shield > 0);
+        var root = Path.Combine(Path.GetTempPath(), "sharpcraft-special-foil-" + Guid.NewGuid().ToString("N"));
+        try
         {
-            [ItemInHandMesher.GlintTexture] = new(64, 64, new byte[64 * 64 * 4]),
-        });
-        var state = new EntityRenderState(
-            1, EntityPlaceholderMesher.PlayerEntityTypeId, 0f, 0f, 0f, 0f, 0f,
-            MainHandItemId: trident,
-            MainHandGlint: true);
-        var layers = new ItemInHandMesher().Build([state], [new EntityPose()], variants: null, atlas);
-        Assert.DoesNotContain(layers, layer => layer.Name.EndsWith("_glint", StringComparison.Ordinal));
+            Write(root, "assets/minecraft/items/trident.json",
+                """{"model":{"type":"minecraft:special","base":"minecraft:item/default","model":{"type":"minecraft:trident"}}}""");
+            Write(root, "assets/minecraft/items/shield.json",
+                """{"model":{"type":"minecraft:special","base":"minecraft:item/default","model":{"type":"minecraft:shield"}}}""");
+            Write(root, "assets/minecraft/models/item/default.json",
+                """{"parent":"builtin/generated","textures":{"layer0":"minecraft:item/default"}}""");
+            using var stack = new AssetStack { Policy = MissingResourcePolicy.Warn, Warn = _ => { } }
+                .Add(new DirectoryAssetSource(root, "special-foil-test"));
+            using var resources = new ResourceManager(stack, 1);
+            var oldModels = EntityModelResolver.ItemModels;
+            EntityModelResolver.ItemModels = new ItemModelResolver(resources);
+            var atlas = ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
+            {
+                [SpecialItemModelDefinition.TridentTexture] = new(64, 64, new byte[64 * 64 * 4]),
+                [SpecialItemModelDefinition.ShieldTexture] = new(64, 64, new byte[64 * 64 * 4]),
+                [ItemInHandMesher.GlintTexture] = new(64, 64, new byte[64 * 64 * 4]),
+            });        try
+        {
+            GlintClock.SetFixedSourceMillis(55000);
+            var foil = new EntityRenderState(
+                1, EntityPlaceholderMesher.PlayerEntityTypeId, 0f, 0f, 0f, 0f, 0f,
+                MainHandItemId: trident,
+                OffHandItemId: shield,
+                MainHandGlint: true,
+                OffHandGlint: true);
+            var mesher = new EntityModelMesher();
+            var layers = mesher.BuildLayers([foil], new SpriteRect(0, 0, 64, 64, 1), 64, 64,
+                variants: null, itemAtlas: atlas);
+            AssertSpecialGlint(layers, "held_special_trident_right", GlintTextureTransform.EntityScale);
+            AssertSpecialGlint(layers, "held_special_shield_left", GlintTextureTransform.EntityScale);
+
+            var plain = foil with { MainHandGlint = false, OffHandGlint = false };
+            var plainLayers = mesher.BuildLayers([plain], new SpriteRect(0, 0, 64, 64, 1), 64, 64,
+                variants: null, itemAtlas: atlas);
+            Assert.DoesNotContain(plainLayers, layer => layer.Name.EndsWith("_glint", StringComparison.Ordinal));
+            }
+            finally
+            {
+                GlintClock.SetProvider(null);
+                EntityModelResolver.ItemModels = oldModels;
+            }
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    private static void AssertSpecialGlint(IReadOnlyList<EntityGeometryLayer> layers, string baseName, float scale)
+    {
+        var @base = layers.Single(layer => layer.Name == baseName);
+        var glint = layers.Single(layer => layer.Name == baseName + "_glint");
+        var baseUvs = ReadUvs(@base.Geometry);
+        var glintUvs = ReadUvs(glint.Geometry);
+        Assert.Equal(baseUvs.Count, glintUvs.Count);
+        Assert.Equal(ReadPositions(@base.Geometry), ReadPositions(glint.Geometry));
+        for (var i = 0; i < baseUvs.Count; i++)
+        {
+            var expected = GlintTextureTransform.Apply(baseUvs[i].U, baseUvs[i].V, 55000, scale);
+            Assert.Equal((float)(Half)expected.U, glintUvs[i].U, 3);
+            Assert.Equal((float)(Half)expected.V, glintUvs[i].V, 3);
+        }
     }
     [Fact]
     public void HandFoilComesFromGlintOverrideOrEnchantmentPresence()
