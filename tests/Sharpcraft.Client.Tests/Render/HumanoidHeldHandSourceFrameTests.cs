@@ -19,7 +19,7 @@ public sealed class HumanoidHeldHandSourceFrameTests
         AppContext.BaseDirectory, "Repro", "Data", "humanoid-held-hand-source-vectors.reference.txt");
 
     [Fact]
-    public void EverySourceStateMatchesTheJarHandFrame()
+    public void RestAndUseSourceFramesMatchTheJarHandFrame()
     {
         var lines = File.ReadAllLines(SamplePath);
         var matrices = lines.Where(line => line.StartsWith("#MATRIX ", StringComparison.Ordinal))
@@ -27,6 +27,8 @@ public sealed class HumanoidHeldHandSourceFrameTests
         Assert.Equal(12, matrices.Count);
 
         var definition = EntityModelResolver.Resolve(EntityPlaceholderMesher.PlayerEntityTypeId);
+        var checkedStates = 0;
+        var skippedAttackStates = 0;
         foreach (var (state, expected) in matrices)
         {
             var parts = state.Split('_');
@@ -37,8 +39,11 @@ public sealed class HumanoidHeldHandSourceFrameTests
             {
                 // Blocker: the jar attack sample includes the THROW_TRIDENT setupAnim attack pass, which this
                 // source-frame adapter deliberately does not re-run; attack matrices are tracked in R-026.
+                skippedAttackStates++;
                 continue;
             }
+
+            checkedStates++;
             var frame = default(EntityAnimationFrame) with
             {
                 TypeId = EntityPlaceholderMesher.PlayerEntityTypeId,
@@ -64,6 +69,9 @@ public sealed class HumanoidHeldHandSourceFrameTests
 
             AssertMatrix(expected, source, state);
         }
+
+        Assert.Equal(8, checkedStates);
+        Assert.Equal(4, skippedAttackStates);
     }
 
     private static HumanoidArmPose PoseFor(string motion) => motion switch

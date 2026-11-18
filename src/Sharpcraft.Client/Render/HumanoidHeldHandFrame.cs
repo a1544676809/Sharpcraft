@@ -47,7 +47,7 @@ public static class HumanoidHeldHandFrame
         EntityPose? pose,
         bool offhand,
         bool baby) =>
-        Source(definition, armName, pose, offhand, baby) * ReferenceFrame.Frame(baby ? 0.5f : 0.9f);
+        Source(definition, armName, pose, offhand, baby) * Matrix4x4.CreateScale(baby ? 0.5f : 0.9f);
 
     /// <summary>Source hand frame for the given raw humanoid part, including T_off but excluding STAB/use/item display.</summary>
     public static Matrix4x4 Source(
