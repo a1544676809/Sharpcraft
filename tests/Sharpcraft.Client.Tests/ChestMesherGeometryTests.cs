@@ -152,7 +152,8 @@ public sealed class ChestMesherGeometryTests
         BlockEntityRenderState[] entities = [new(0f, 0f, 0f, VanillaBlockEntityTypes.Chest, ChestType: chestType)];
         var geometry = mesher.Build(entities, new SpriteRect(0, 0, 16, 16, 1));
 
-        return Extent(geometry.Vertices, 24 * part, 24);
+        var perBox = chestType == 0 ? 24 : 20;
+        return Extent(geometry.Vertices, perBox * part, perBox);
     }
 
     /// <summary>
