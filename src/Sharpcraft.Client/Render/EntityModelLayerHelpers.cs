@@ -426,7 +426,7 @@ public static class EntityModelLayerHelpers
         var modelHeight = bodyCube.Value.Bottom + bodyCube.Value.Height;
         var wingPivotZ = bodyCube.Value.CentreZ + 2f;
         // Raw source layer is already in the entity-model frame; WingsLayer only adds translate(0,0,0.125).
-        var wings = TranslateElytraPivots(BuildElytraSourceLayer(baby), 0f, 2f);
+        var wings = TranslateElytraPivots(BuildElytraSourceLayer(baby), baby ? -30f : -24f, 2f);
         return WithElytraSelectors(wings, baby);
     }
 
@@ -528,7 +528,9 @@ public static class EntityModelLayerHelpers
                 rotationSelector: state => source.Name == "right_wing"
                     ? new Vector3(-state.ElytraRotX, state.ElytraRotY, -state.ElytraRotZ)
                     : new Vector3(-state.ElytraRotX, -state.ElytraRotY, state.ElytraRotZ),
-                yOffsetSelector: state => state.IsCrouching ? (baby ? -1.5f : -3f) : 0f,
+                // Source setupAnim sets wing y=3 px; raw NodeFrame applies the pivot offset through the node
+                // scale (adult 1 -> factor 2, baby 0.5 -> factor 1.5), so divide to keep the source 3/1.5 px drop.
+                yOffsetSelector: state => state.IsCrouching ? (baby ? 1f : 1.5f) : 0f,
                 poseSource: source.Name,
                 scaleX: source.ScaleX,
                 scaleY: source.ScaleY,

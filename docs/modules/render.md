@@ -789,7 +789,7 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 - **根因**：旧 elytra 设备层仍走 legacy BuildElytraWings（baseline 24、face transforms、flattened 旧 pivot/UV），源 ElytraModel.createLayer 的 raw pivot(±5,0,0)、xRot ±π/12、zRot ∓π/12、10×20×2 grow1 及 UV 未按 raw NodeFrame 叠层；adult/baby 差异来自 baseline/layer yOffset 与 cube UV。
 - **修复**：EntityModelLayerHelpers.BuildElytraSourceLayer 用 raw DSL 构造源层，WithElytraSelectors 保留节点 scale/parent，WingsLayer translate(0,0,2px) 由 raw pivots 外置；resolver elytra layer aselinePx:0、awSourceFrame:true、sourceFrameBaselinePx:0。
-- **验收**：ElytraRawSampleTests adult/baby 各 48 行 keyed 1e-5 + UV half；ElytraWingGeometryTests/ResolverRawFlagTests 源几何与 flag 更新；full + 三门禁通过。
+- **验收**：ElytraRawSampleTests adult/baby 各 48 行 keyed 1e-5 + UV half；ElytraWingGeometryTests 保留原精确 golden：逐翼绝对 world min/max、逐面四角 UV、baby y 1.492..12.492px、crouch adult 3px / baby 1.5px、standing 左右翼前后关系，无排序/无上界替代。production layer 对齐源 raw：adult y −24px、baby −30.004px（24 + 12.008×0.5）、z +2px WingsLayer，crouch 位移按 1/(1+node scale) 归一回源 3/1.5px；full 3,614 + 三门禁通过。
 
 <!-- simplification:SIM-ENTITY-RAW-SCALE task:T-41 -->
 
