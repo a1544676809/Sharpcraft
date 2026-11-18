@@ -18,27 +18,27 @@ public static class BabyModelDefinitionsOdd
         ["body", "right_leg", "left_leg", "bristle0", "bristle1", "bristle2"]);
 
     private static readonly VanillaMeshDefinition SniffletMesh = BuildSniffletMesh();
-    private static readonly EntityModelPart[] SniffletParts = [.. VanillaMeshBake.Bake(SniffletMesh, 0, 0)];
+    private static readonly EntityModelPart[] SniffletParts = [.. VanillaMeshBake.Bake(SniffletMesh, 0, 0, rawSourceFrame: true)];
 
     private static readonly VanillaMeshDefinition ArmadilloMesh = BuildArmadilloMesh();
     private static readonly EntityModelPart[] ArmadilloParts = BuildArmadilloParts();
 
-    private static readonly CompiledEntityModel StriderCompiled = VanillaMeshBakery.Build(StriderMesh, 32, 32);
-    private static readonly CompiledEntityModel SniffletCompiled = VanillaMeshBakery.Build(SniffletMesh, 128, 128);
+    private static readonly CompiledEntityModel StriderCompiled = VanillaMeshBakery.Build(StriderMesh, 32, 32, rawSourceFrame: true);
+    private static readonly CompiledEntityModel SniffletCompiled = VanillaMeshBakery.Build(SniffletMesh, 128, 128, rawSourceFrame: true);
     private static readonly CompiledEntityModel ArmadilloCompiled = VanillaMeshBakery.Build(ArmadilloMesh, 64, 64, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Strider = new(
-        "baby_strider", 32, 32, StriderParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/strider/strider_baby",
-        compiled: StriderCompiled);
+        "baby_strider", 32, 32, StriderParts, faceTransforms: null, "entity/strider/strider_baby",
+        compiled: StriderCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Husk = new(
         "baby_husk", 64, 64, BabyModelDefinitionsHumanoid.Zombie.Parts,
-        PlayerModelDefinition.DefaultFaceTransforms, "entity/zombie/husk_baby",
-        compiled: BabyModelDefinitionsHumanoid.Zombie.Compiled);
+        faceTransforms: null, "entity/zombie/husk_baby",
+        compiled: BabyModelDefinitionsHumanoid.Zombie.Compiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Snifflet = new(
-        "baby_sniffer", 128, 128, SniffletParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/sniffer/snifflet",
-        compiled: SniffletCompiled);
+        "baby_sniffer", 128, 128, SniffletParts, faceTransforms: null, "entity/sniffer/snifflet",
+        compiled: SniffletCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Armadillo = new(
         "baby_armadillo", 64, 64, ArmadilloParts, faceTransforms: null, "entity/armadillo/armadillo_baby",
@@ -56,7 +56,7 @@ public static class BabyModelDefinitionsOdd
     private static EntityModelPart[] BuildParts(VanillaMeshDefinition mesh, string[] order)
     {
         var byName = new Dictionary<string, EntityModelPart>(StringComparer.Ordinal);
-        foreach (var part in VanillaMeshBake.Bake(mesh, 0, 0))
+        foreach (var part in VanillaMeshBake.Bake(mesh, 0, 0, rawSourceFrame: true))
         {
             byName[part.Name] = part;
         }

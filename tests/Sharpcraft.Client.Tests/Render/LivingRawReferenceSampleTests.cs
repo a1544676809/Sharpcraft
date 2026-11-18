@@ -129,6 +129,15 @@ public sealed class LivingRawReferenceSampleTests
         { "enderman-raw-vectors.reference.txt", HumanoidMobModelDefinition.Enderman, 64, 32, "entity/enderman/enderman", 168, 48, 120, 0 },
         { "zombie-raw-vectors.reference.txt", HumanoidMobModelDefinition.Zombie, 64, 64, "entity/zombie/zombie", 168, 48, 120, 0 },
         // task-108 humanoid batch (total, mirror, checked, degenerate).
+        // task-189: baby Odd 3 raw (distinct Baby*Model geometry).
+        { "baby-husk-raw-vectors.reference.txt", BabyModelDefinitionsOdd.Husk, 64, 64, "entity/zombie/husk_baby", 168, 0, 168, 0 },
+        { "baby-sniffer-raw-vectors.reference.txt", BabyModelDefinitionsOdd.Snifflet, 128, 128, "entity/sniffer/snifflet", 360, 0, 312, 48 },
+        { "baby-strider-raw-vectors.reference.txt", BabyModelDefinitionsOdd.Strider, 32, 32, "entity/strider/strider_baby", 144, 0, 72, 72 },
+        // task-189: baby humanoid 4 raw (distinct Baby*Model geometry).
+        { "baby-zombie-raw-vectors.reference.txt", BabyModelDefinitionsHumanoid.Zombie, 64, 64, "entity/zombie/zombie_baby", 168, 0, 168, 0 },
+        { "baby-drowned-raw-vectors.reference.txt", BabyModelDefinitionsHumanoid.Drowned, 64, 64, "entity/zombie/drowned_baby", 168, 0, 168, 0 },
+        { "baby-zombie-villager-raw-vectors.reference.txt", BabyModelDefinitionsHumanoid.ZombieVillager, 64, 64, "entity/zombie_villager/zombie_villager_baby", 240, 0, 240, 0 },
+        { "baby-villager-raw-vectors.reference.txt", BabyModelDefinitionsHumanoid.Villager, 64, 64, "entity/villager/villager_baby", 264, 0, 264, 0 },
         // task-173: ZombieVillager raw (multi-cube head/nose, hat_rim, body outer).
         { "zombie-villager-raw-vectors.reference.txt", ZombieVillagerModelDefinition.Definition, 64, 64, "entity/zombie_villager/zombie_villager", 240, 48, 192, 0 },
         // task-165: Strider raw (6 zero-height bristles degenerate, 3 right-bristle Mirror).
@@ -538,6 +547,18 @@ public sealed class LivingRawReferenceSampleTests
                 flatName = cube == 0 ? "head" : "nose"; break;
             case "/body" when definition.Name == "zombie_villager":
                 flatName = cube == 0 ? "body" : "body_outer"; break;
+            // task-189: baby_sniffer source /bone/body has 3 cubes (body,body_outer,body_bottom); /head 2 (head,head_flat).
+            case "/bone/body" when definition.Name == "baby_sniffer":
+                flatName = cube switch { 0 => "body", 1 => "body_main", _ => "body_flat" }; break;
+            case "/bone/body/head" when definition.Name == "baby_sniffer":
+                flatName = cube == 0 ? "head" : "head_flat"; break;
+            // task-189: baby humanoid /head has 2 cubes (head,head_overlay); baby_zombie_villager /body has 2 (body,body_overlay).
+            case "/head" when definition.Name is "baby_zombie" or "baby_drowned" or "baby_husk":
+                flatName = cube == 0 ? "head" : "head_overlay"; break;
+            case "/body" when definition.Name == "baby_zombie_villager":
+                flatName = cube == 0 ? "body" : "body_overlay"; break;
+            case "/arms/right_hand" when definition.Name == "baby_villager":
+                flatName = cube == 0 ? "right_hand" : "right_hand_2"; break;
             // task-185: piglin source /head has 4 cubes (head,nose,nostril_right,nostril_left).
             case "/head" when definition.Name is "piglin" or "piglin_brute" or "zombified_piglin":
                 flatName = cube switch { 0 => "head", 1 => "head_nose", 2 => "head_nostril_right", _ => "head_nostril_left" }; break;
