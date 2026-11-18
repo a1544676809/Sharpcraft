@@ -18,8 +18,20 @@ public static class StateMatrixBaseline
     public const string SourceSample = "SOURCE_SAMPLE";
     public const string SourceConstraint = "SOURCE_CONSTRAINT";
     public const string NoSource = "NO_SOURCE";
+    /// <summary>Source behaviour exists but no keyed sample or formula can be confirmed; not a coverage gap.</summary>
+    public const string Unknown = "UNKNOWN";
 
-    private static readonly string[] StateClasses = ["base", "baby", "powered", "pose", "held", "glint", "energy"];
+    // State classes are paired with the layers each can actually affect; no global cross product (#219).
+    private static readonly (string State, string[] Layers)[] StateLayerAffinity =
+    [
+        ("base", ["base", "armor", "trim", "elytra", "special", "held"]),
+        ("baby", ["base", "armor", "trim", "elytra", "special", "held"]),
+        ("pose", ["base"]),
+        ("held", ["held", "special", "special_glint"]),
+        ("glint", ["glint", "armor", "trim", "special_glint"]),
+        ("powered", ["base", "energy"]),
+        ("energy", ["energy"])
+    ];
     private static readonly HashSet<string> FileQualifiers =
     [
         "raw", "vectors", "reference", "baby", "armor", "helmet", "chestplate", "leggings", "boots",
@@ -40,6 +52,8 @@ public static class StateMatrixBaseline
         string Status)
     {
         public bool Strict => Status is SourceSample or SourceConstraint;
+        /// <summary>True when source has this type×state×layer combination (metadata-confirmed), else a cross-product row.</summary>
+        public bool SourceRelevant { get; init; } = true;
     }
 
     private sealed record SampleFile(string RelativePath, string[] Tokens, string StateClass, string LayerClass, string[] Keys);
@@ -93,14 +107,18 @@ public static class StateMatrixBaseline
             }
 
             var definition = EntityModelResolver.Resolve(typeId.Value);
-            var layers = new[] { "base" }
-                .Concat(definition.RenderLayers.Select(layer => LayerClassFor(layer)))
-                .Distinct(StringComparer.Ordinal)
-                .OrderBy(layer => layer, StringComparer.Ordinal);
-            foreach (var state in StateClasses)
+            // Only layers with real geometry (Model bound by Decorate/equipment) exist in source; the
+            // DefaultRenderLayers placeholders (elytra/cutout/...) have Model == null and are not render layers.
+            var layers = LayersFor(definition);
+            foreach (var state in StatesFor(typeId.Value))
             {
                 foreach (var layer in layers)
                 {
+                    if (!AffinityAllows(state, layer))
+                    {
+                        continue; // source cannot express this state on this layer -> no cross-product row (#219)
+                    }
+
                     rows.Add(Row("entity", typeId.Value, name, state, layer, definition.Name, samples));
                 }
             }
@@ -116,7 +134,10 @@ public static class StateMatrixBaseline
 
             foreach (var layer in BlockLayerClasses(typeId))
             {
-                rows.Add(Row("block", typeId, path, "base", layer, path, samples));
+                // Block entities have no baby/powered/pose/held/energy states; only `base` is meaningful.
+                // Without a keyed sample the source behaviour is unconfirmed -> UNKNOWN, never NO_SOURCE by default (#219).
+                var row = Row("block", typeId, path, "base", layer, path, samples);
+                rows.Add(row.Status == NoSource ? row with { Status = Unknown } : row);
             }
         }
 
@@ -348,6 +369,47 @@ public static class StateMatrixBaseline
 
         return new SampleFile(relative, tokens, state, layer, keys.ToArray());
     }
+
+    /// <summary>
+    /// Real render layers of a definition: `base` plus every layer with bound geometry. The shared
+    /// DefaultRenderLayers placeholders have Model == null and are not actual source render layers (#219).
+    /// </summary>
+    private static string[] LayersFor(EntityModelDefinition definition)
+    {
+        var layers = new[] { "base" }
+            .Concat(definition.RenderLayers
+                .Where(layer => layer.Model is not null)
+                .Select(LayerClassFor))
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(layer => layer, StringComparer.Ordinal)
+            .ToArray();
+        return layers;
+    }
+
+    /// <summary>
+    /// States the given entity type can actually express, derived from resolver metadata:
+    /// baby only when a baby definition resolves; powered/energy only for the source EnergySwirlLayer
+    /// owners (creeper, wither); all other states are universally expressible by living entities.
+    /// </summary>
+    private static string[] StatesFor(int typeId)
+    {
+        var states = new List<string> { "base", "pose", "held", "glint" };
+        if (EntityModelResolver.TryResolve(typeId, baby: true) is not null)
+        {
+            states.Add("baby");
+        }
+
+        if (typeId is CreeperModelDefinition.CreeperEntityTypeId or WitherBossModelDefinition.WitherEntityTypeId)
+        {
+            states.Add("powered");
+            states.Add("energy");
+        }
+
+        return states.ToArray();
+    }
+
+    private static bool AffinityAllows(string state, string layer) =>
+        StateLayerAffinity.Any(entry => entry.State == state && entry.Layers.Contains(layer, StringComparer.Ordinal));
 
     private static string LayerClassFor(EntityRenderLayerDefinition layer)
     {

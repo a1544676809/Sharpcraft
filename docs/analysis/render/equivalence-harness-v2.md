@@ -19,12 +19,15 @@
 dotnet run --project tools/Sharpcraft.Equivalence.Audit -- --suite statematrix --out <output.tsv>
 ```
 
-输出 `type_kind	type_id	type_name	state_class	layer_class	definition_or_layer	sample_file	sample_key	status	strict`，并在文件尾与 stdout 输出三态 counts 和每层 counts。
+输出 `type_kind	type_id	type_name	state_class	layer_class	definition_or_layer	sample_file	sample_key	status	strict`，并在文件尾与 stdout 输出各态 counts 和每层 counts。
 
 * `SOURCE_SAMPLE`：`tests/Sharpcraft.Client.Tests/Repro/Data/*.reference.txt` 有对应源样本；`sample_file` 是真实相对路径，`sample_key` 是该文件真实存在的数据 key（rig 层名/状态名）。
 * `SOURCE_CONSTRAINT`：公式/常量样本（`creeper-energy-swirl-uv.reference.txt`、`glint-texture-transform.reference.txt`）；key 形如 `millis|scale`。
-* `NO_SOURCE`：无对应源样本，`strict=no`，**不得计入覆盖通过**。
+* `NO_SOURCE`：源有该 `type×state×layer` 行为但无样本，`strict=no`，**不得计入覆盖通过**，附优先级。
+* `UNKNOWN`：方块实体有生产 renderer 但源行为（静态/动态、是否需要 keyed 样本）无法从现有元数据确认；`strict=no`，不得默认当作 NO_SOURCE（Issue #219）。
+* **元数据驱动，不再交叉积**（Issue #219）：layer 由 `EntityModelDefinition.RenderLayers` 中 `Model != null` 的真实层决定（共享 `DefaultRenderLayers` 占位层 `Model==null` 不计）；state 由 `EntityModelResolver.TryResolve(type, baby:true)`（baby）、`CreeperModelDefinition.CreeperEntityTypeId`/`WitherBossModelDefinition.WitherEntityTypeId`（powered/energy）与 `StateLayerAffinity`（state→可影响 layer）决定。a `non-humanoid × elytra/armor/trim/glint`、`non-creeper/wither × powered/energy`、`no-baby × baby` 不再产生伪行。
 * 行来自 `EntityModelResolver.Definitions` / `VanillaBlockEntityTypes` 的机器枚举，样本 key 来自文件解析；没有手写假路径。
-* 校验：`StateMatrixBaseline.Build` 对每条 strict 行检查文件与 key 存在，缺失即抛错；`StateMatrixBaselineTests` 在架构测试中复验。NO_SOURCE 行不得标 strict。
+* 校验：`StateMatrixBaseline.Build` 对每条 strict 行检查文件与 key 存在，缺失即抛错；`StateMatrixBaselineTests` 复验无伪行、UNKNOWN 不算 NO_SOURCE、strict 行文件/key 真实。NO_SOURCE/UNKNOWN 行不得标 strict。
+* 修正后规模（Issue #219）：约 460 行，`SOURCE_SAMPLE≈136`/`SOURCE_CONSTRAINT=55`/`NO_SOURCE≈224`/`UNKNOWN=45`；真实缺口以 `pose/base` 为主。禁止用 golden hash 自证——`SOURCE_SAMPLE/CONSTRAINT` 必须指向真实源样本/公式文件。
 
 **语义边界**：这是覆盖基线，不是全状态等效证明。它回答“哪些生产类型/状态/layer 有可核对源样本或公式约束，哪些没有”，不替代逐像素/逐顶点 strict 对拍；`NO_SOURCE` 明确表示未覆盖。

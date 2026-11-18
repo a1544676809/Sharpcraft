@@ -842,10 +842,11 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 ### task-273 state matrix 覆盖基线
 
 - **工具**：`tools/Sharpcraft.Equivalence.Audit --suite statematrix`，输出 type/state/layer/sample/status TSV 与三态/每层 counts。
-- **行**：`EntityModelResolver.Definitions` 与 `VanillaBlockEntityTypes` 机器枚举 × state 类（base/baby/powered/pose/held/glint/energy）× layer 类（base/armor/trim/glint/special/…）。
-- **状态**：`SOURCE_SAMPLE` 引用真实 Repro/Data 文件与 key；`SOURCE_CONSTRAINT` 引用 energy/glint 公式样本；`NO_SOURCE` 明确未覆盖且不标 strict。
-- **校验**：`StateMatrixBaseline.Build` 自检 strict 行文件/key 存在；`StateMatrixBaselineTests` 架构测试复验；禁止 golden hash 自证。
-- **语义**：覆盖基线，不是全状态等效证明；`NO_SOURCE` 不计入覆盖通过。
+- **行**（Issue #219 修正）：`EntityModelResolver.Definitions` / `VanillaBlockEntityTypes` 机器枚举，layer 由真实 `RenderLayers`（`Model != null`）决定、state 由 resolver 元数据（`TryResolve(type,baby:true)`、creeper/wither powered/energy、`StateLayerAffinity`）决定——不再全局交叉积；非 humanoid×elytra/armor/trim/glint、非 creeper/wither×powered/energy、无 baby×baby 等伪行已删除。block 只用 `base` state。
+- **四态**：`SOURCE_SAMPLE` 引用真实 Repro/Data 文件与 key；`SOURCE_CONSTRAINT` 引用 energy/glint 公式样本；`NO_SOURCE`（A 类真实缺口，源有行为无样本）明确未覆盖且不标 strict；`UNKNOWN`（C 类，方块实体有 renderer 但源行为无法确认）不默认当 NO_SOURCE。
+- **A/B/C 分类**：B 伪行从矩阵移除；A 真实缺口保留并按优先级输出（当前以 `pose/base` 动画逐顶点样本为主）；C 标 UNKNOWN 待逐 renderer 判定。
+- **校验**：`StateMatrixBaseline.Build` 自检 strict 行文件/key 存在；`StateMatrixBaselineTests` 复验无伪行、UNKNOWN 不算 NO_SOURCE、strict 行文件/key 真实；禁止 golden hash 自证。
+- **语义**：覆盖基线，不是全状态等效证明；`NO_SOURCE`/`UNKNOWN` 不计入覆盖通过。修正后约 460 行（原 1,880），NO_SOURCE≈224、UNKNOWN=45。
 
 ### task-271 held item glint 生产层
 ### task-272 special held foil glint
