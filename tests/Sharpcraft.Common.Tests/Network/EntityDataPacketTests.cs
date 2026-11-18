@@ -79,6 +79,19 @@ public sealed class EntityDataPacketTests
     }
 
     [Fact]
+    public void HumanoidArmSerializerDecodesEnumId()
+    {
+        var body = Body(
+            b => { Item(b, 15, 42); b.AddRange(VarInt(0)); });
+        var items = Read(body, out _, out var complete, out var status);
+        Assert.Equal(DecodeStatus.Success, status);
+        Assert.True(complete);
+        var item = Assert.Single(items);
+        Assert.Equal(42, item.SerializerId);
+        Assert.Equal(0, item.Value);
+    }
+
+    [Fact]
     public void ItemStackSerializerDecodesAndTheScanContinues()
     {
         // item entity: index 8 is ITEM_STACK(7) = Optional<ItemStack>; a following BOOLEAN must still decode, which is

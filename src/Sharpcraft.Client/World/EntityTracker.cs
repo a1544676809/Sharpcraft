@@ -153,6 +153,9 @@ public sealed class TrackedEntity
     /// </summary>
     public bool IsPowered { get; internal set; }
 
+    /// <summary>Avatar DATA_PLAYER_MAIN_HAND (HumanooidArm id: LEFT=0, RIGHT=1); default RIGHT.</summary>
+    public int MainArm { get; internal set; } = 1;
+
     /// <summary>ArmorStand DATA_CLIENT_FLAGS byte (marker/small/show-arms/show-base-plate bits).</summary>
     public int ArmorStandFlags { get; internal set; }
 
@@ -599,7 +602,13 @@ public readonly record struct EntityRenderState(
     Vector3 LeftArmPose = default,
     Vector3 RightArmPose = default,
     Vector3 LeftLegPose = default,
-    Vector3 RightLegPose = default)
+    Vector3 RightLegPose = default,
+    int MainArm = 1,
+    int LeftTicksUsingItem = 0,
+    int RightTicksUsingItem = 0,
+    float SwingDurationTicks = 0f,
+    bool IsSwinging = false,
+    int HeldOnHeadItemId = -1)
 {
     /// <summary>Equippable asset id for one equipment slot, when the item supplied one.</summary>
     public string? EquipmentAssetIdAt(int slot) =>
@@ -1196,6 +1205,11 @@ public sealed partial class EntityTracker
             else if (spec.AngerAccessorIndex >= 0 && item.Index == spec.AngerAccessorIndex && item.LongValue != EntityDataItem.NotALong)
             {
                 entity.AngerEndTime = item.LongValue;
+                applied = true;
+            }
+            else if (spec.MainArmAccessorIndex >= 0 && item.Index == spec.MainArmAccessorIndex && item.SerializerId == 42)
+            {
+                entity.MainArm = item.Value == 0 ? 0 : 1;
                 applied = true;
             }
             else if (spec.ArmorStandFlagsAccessorIndex >= 0 && item.Index == spec.ArmorStandFlagsAccessorIndex && item.SerializerId == 0)
