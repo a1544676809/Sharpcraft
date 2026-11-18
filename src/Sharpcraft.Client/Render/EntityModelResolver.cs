@@ -631,7 +631,8 @@ public static partial class EntityModelResolver
                 "entity/creeper/creeper_armor",
                 static _ => "entity/creeper/creeper_armor",
                 static state => state.IsPowered,
-                AllCubes: true));
+                AllCubes: true,
+                UvOffset: state => EnergySwirlUv.Creeper(state.AgeInTicks)));
             renderLayers = poweredLayers;
         }
 
