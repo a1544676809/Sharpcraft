@@ -569,6 +569,15 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 <!-- simplification:SIM-BE-POT-NO-WOBBLE task:T-47 -->
 
+### task-211 ShulkerBoxMesher raw 评估（blocker）
+
+- **源 probe**：SHULKER_BOX bind pose **48 行**（lid/base 各 24）；lid cube (-8,-16,-8,16,12,16) texOffs(0,0)，base cube (-8,-8,-8,16,8,16) texOffs(0,28)。
+- **运行时状态**：源 ShulkerBoxModel.setupAnim(progress) 将 lid 设为 y = 24 - progress*8 并绕 Y 旋转 270*progress°；外层还按 Direction 施加 modelTransform（0.9995 scale + 方向旋转 + y/z 翻转）。
+- **结论**：静态 bind 几何本身可表达，但 openness 连续 progress 与朝向矩阵是运行时状态，现有 EntityModelDefinition 只能静态烘焙，不能无损表达；按任务口径保持 ShulkerBoxMesher custom mesher，登记 blocker，不拟合、不改状态语义。
+- **证据**：tests/Sharpcraft.Client.Tests/Repro/Data/shulker-box-raw-vectors.reference.txt。
+
+<!-- simplification:SIM-BE-POT-NO-WOBBLE task:T-47 -->
+
 ### SIM-BE-LECTERN-STATE：讲台书页状态固定
 
 - **简化了什么**：`LecternRenderer` 使用参考讲台固定的 `BOOK_STATE = BookModel.State.forAnimation(0, 0.1, 0.9, 1.2)`，不读取 `LecternBlockEntity` 的逐页状态，也不播放书页翻页/打开进度动画。
