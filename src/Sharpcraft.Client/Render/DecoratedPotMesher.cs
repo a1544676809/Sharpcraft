@@ -84,6 +84,8 @@ public sealed class DecoratedPotMesher
     /// <summary>Side planes span the full block height, sixteen pixels.</summary>
     public const float SidePlaneHeight = 16f * Pixel;
 
+    private readonly EntityModelMesher _baseMesher = new();
+    private readonly EntityModelMesher _sidesMesher = new();
     private readonly DynamicGeometry _geometry = new();
 
     /// <summary>Entities drawn by the last call.</summary>
@@ -134,16 +136,14 @@ public sealed class DecoratedPotMesher
             return _geometry;
         }
 
-        const int boxesPerPot = 2;
-        const int quadsPerPot = 6;
-        const int verticesPerBox = 24;
-        const int verticesPerQuad = 4;
-        const int indicesPerBox = 36;
-        const int indicesPerQuad = 6;
+        // task-221: geometry now comes from the raw source-frame models (base 96 verts via
+        // VisibleSides-free full cubes, sides 16 verts via four NORTH-only cubes). Pattern/sprite
+        // selection, facing and wobble stay in this renderer's state shell.
         _geometry.Reserve(
-            entities.Length * ((boxesPerPot * verticesPerBox) + (quadsPerPot * verticesPerQuad)) * ChunkMesher.FloatsPerVertex,
-            entities.Length * ((boxesPerPot * indicesPerBox) + (quadsPerPot * indicesPerQuad)));
-
+            entities.Length * 112 * ChunkMesher.FloatsPerVertex,
+            entities.Length * (96 + 16) / 4 * 6);
+        _geometry.VertexFloats = 0;
+        _geometry.IndexCount = 0;
         var vertexFloats = 0;
         var indexCount = 0;
 
@@ -156,71 +156,10 @@ public sealed class DecoratedPotMesher
             }
 
             var entityStart = vertexFloats;
-            var lightSky = entity.Sky / 15f;
-            var lightBlock = entity.Block / 15f;
-
-            // The neck's part pose is offset (0, 37, 16) pixels and rotated pi around X. The boxes are
-            // built in the part's local pixel space and the transform applies the pose.
-            var neckTransform = new EntityModelTransform(
-                Translation: new Vector3(0f, NeckPoseY, NeckPoseZ),
-                YawDegrees: 0f,
-                PitchDegrees: 180f);
-
-            EntityPlaceholderMesher.AppendBox(
-                _geometry,
-                new Vector3(0.5f, NeckRingFeetY, 0.5f),
-                width: NeckRingWidth,
-                height: NeckRingHeight,
-                red: 1f,
-                green: 1f,
-                blue: 1f,
-                sprite: resolvedBase,
-                ref vertexFloats,
-                ref indexCount,
-                depth: NeckRingDepth,
-                entityTransform: neckTransform,
-                sky: lightSky,
-                block: lightBlock,
-                texU: 0,
-                texV: 0,
-                texDx: 8,
-                texDy: 3,
-                texDz: 8,
-                textureSize: BaseTextureSize);
-
-            EntityPlaceholderMesher.AppendBox(
-                _geometry,
-                new Vector3(0.5f, NeckRimFeetY, 0.5f),
-                width: NeckRimWidth,
-                height: NeckRimHeight,
-                red: 1f,
-                green: 1f,
-                blue: 1f,
-                sprite: resolvedBase,
-                ref vertexFloats,
-                ref indexCount,
-                depth: NeckRimDepth,
-                entityTransform: neckTransform,
-                sky: lightSky,
-                block: lightBlock,
-                texU: 0,
-                texV: 5,
-                texDx: 6,
-                texDy: 1,
-                texDz: 6,
-                textureSize: BaseTextureSize);
-
-            // Top and bottom are flat planes: one outward-facing quad each. Their UVs are the reference
-            // zero-height cube's UP and DOWN rectangles (texOffs(-14, 13)).
-            AppendTopAndBottom(resolvedBase, ref vertexFloats, ref indexCount, lightSky, lightBlock);
-
-            // The four sides are the reference's 14 by 16 pixel planes under their part poses; the
-            // blank side texture is 16 by 16, so its UV rectangle is 1..15 by 0..16 pixels.
-            AppendSide(resolvedSide, new Vector3(15f * Pixel, 16f * Pixel, 1f * Pixel), 0f, 0f, 180f, ref vertexFloats, ref indexCount, lightSky, lightBlock);
-            AppendSide(resolvedSide, new Vector3(1f * Pixel, 16f * Pixel, 1f * Pixel), 0f, -90f, 180f, ref vertexFloats, ref indexCount, lightSky, lightBlock);
-            AppendSide(resolvedSide, new Vector3(15f * Pixel, 16f * Pixel, 15f * Pixel), 0f, 90f, 180f, ref vertexFloats, ref indexCount, lightSky, lightBlock);
-            AppendSide(resolvedSide, new Vector3(1f * Pixel, 16f * Pixel, 15f * Pixel), 180f, 0f, 0f, ref vertexFloats, ref indexCount, lightSky, lightBlock);
-
+            // Static raw geometry is cached once; per-block sprites, light and facing are applied while
+            // copying, so the steady-state rebuild allocates nothing.
+            AppendRaw(DecoratedPotModelDefinition.Base, 32, resolvedBase, entity, ref vertexFloats, ref indexCount);
+            AppendRaw(DecoratedPotModelDefinition.Sides, 16, resolvedSide, entity, ref vertexFloats, ref indexCount);
             ApplyFacing(entityStart, vertexFloats, entity);
             LastEntityCount++;
         }
@@ -228,6 +167,76 @@ public sealed class DecoratedPotMesher
         _geometry.VertexFloats = vertexFloats;
         _geometry.IndexCount = indexCount;
         return _geometry;
+    }
+
+    private sealed record RawPotMesh(float[] Vertices, uint[] Indices);
+
+    private static readonly Dictionary<EntityModelDefinition, RawPotMesh> RawCache = [];
+
+    private static RawPotMesh RawMesh(EntityModelDefinition definition, int textureSize)
+    {
+        lock (RawCache)
+        {
+            if (RawCache.TryGetValue(definition, out var cached))
+            {
+                return cached;
+            }
+
+            var sprite = new SpriteRect(0, 0, textureSize, textureSize, 1) { U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f };
+            var geometry = new EntityModelMesher().BuildModel(
+                definition,
+                new Sharpcraft.Client.World.EntityRenderState(1, 0, 0f, 0f, 0f, 180f, 0f),
+                sprite,
+                textureSize,
+                textureSize,
+                modelScale: 1f);
+            var vertices = new float[geometry.VertexFloats];
+            Array.Copy(geometry.Vertices, vertices, vertices.Length);
+            var indices = new uint[geometry.IndexCount];
+            Array.Copy(geometry.Indices, indices, indices.Length);
+            var result = new RawPotMesh(vertices, indices);
+            RawCache[definition] = result;
+            return result;
+        }
+    }
+
+    private void AppendRaw(
+        EntityModelDefinition definition,
+        int textureSize,
+        SpriteRect sprite,
+        BlockEntityRenderState entity,
+        ref int vertexFloats,
+        ref int indexCount)
+    {
+        var raw = RawMesh(definition, textureSize);
+        var baseVertex = (uint)(vertexFloats / ChunkMesher.FloatsPerVertex);
+        var vertexCount = raw.Vertices.Length / ChunkMesher.FloatsPerVertex;
+        for (var i = 0; i < vertexCount; i++)
+        {
+            var offset = i * ChunkMesher.FloatsPerVertex;
+            var packedUv = BitConverter.SingleToUInt32Bits(raw.Vertices[offset + 4]);
+            var u = (float)BitConverter.UInt16BitsToHalf((ushort)(packedUv & 0xFFFF));
+            var v = (float)BitConverter.UInt16BitsToHalf((ushort)(packedUv >> 16));
+            TerrainVertexWriter.Write(
+                _geometry.Vertices,
+                ref vertexFloats,
+                raw.Vertices[offset],
+                raw.Vertices[offset + 1],
+                raw.Vertices[offset + 2],
+                1f,
+                1f,
+                1f,
+                u,
+                v,
+                sprite,
+                entity.Sky / 15f,
+                entity.Block / 15f);
+        }
+
+        for (var i = 0; i < raw.Indices.Length; i++)
+        {
+            _geometry.Indices[indexCount++] = baseVertex + raw.Indices[i];
+        }
     }
 
     /// <summary>The two flat cap planes at the pot's bottom and top.</summary>
