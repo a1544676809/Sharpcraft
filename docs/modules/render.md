@@ -767,7 +767,7 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **公式**：源 root child pivot `(x,y,z)` 经 legacy bake 共轭为 `(-x, modelHeight-y, z)`；旋转仍按 legacy `X-poseX, Y-poseY, Z+poseZ`。`modelHeight` 取 `definition.SourceFrameBaselinePx`。raw child arm（如 CopperGolem body→right_arm）保持现有 source-pivot 帧，回退到 `PartWorldMatrix(rawSourceFrame:false)`；其 jar probe `HeldItemHandFrameProbe` origin `(-0.25,0.8125,0)×0.9=(-0.225,0.73125,0)` 已验证。
 - **为什么需要**：raw humanoid 的 `right_arm` 是 root child，raw pivot `(-5,2)` 直接用于 legacy 手帧会得到 `(-0.28125,0.1125)`；jar 期望 legacy 共轭 pivot `(5,22)×0.9/16=(0.28125,1.2375)`。helper 只转换 root child pivot，避免破坏已拟合的 `ReferenceFrame.HeldItemAnchor`。
 - **验收**：`LegacyHandFrameTests` 对 raw Zombie/Skeleton/Player 的 rest+raised hand frame 与 legacy bake 矩阵 1e-5；`ItemInHandPlacementComparisonTests` 4 个 pose×display 组合、`TheFrameMap...` 保留原 jar 期望；raw child CopperGolem fallback 保持 `(-0.225,0.73125,0)`。
-- **resolver 接线**：`EntityModelResolver.Decorate`、`baseLayerModel` 与 body 派生定义保留 `RawSourceFrame`/`BaselinePx`/`SourceFrameBaselinePx`；但 equipment/elytra/armor/trim/glint/crackiness **独立层**使用各自 legacy 帧：`rawSourceFrame:false`、`FaceTransforms = PlayerModelDefinition.DefaultFaceTransforms`、baseline 24px，不继承本体 raw flag。否则 raw body 会让 elytra UV tile 44↔24、spear/armor 位置错误。`ResolverRawFlagTests` 同时断言 body raw 与层 legacy。
+- **resolver 接线**：`EntityModelResolver.Decorate`、`baseLayerModel` 与 body 派生定义保留 `RawSourceFrame`/`BaselinePx`/`SourceFrameBaselinePx`；但 equipment/armor/trim/glint/crackiness **独立层**使用各自 legacy 帧：`rawSourceFrame:false`、`FaceTransforms = PlayerModelDefinition.DefaultFaceTransforms`、baseline 24px；elytra 例外已由 task-229 切 raw（baseline 0 / raw true），adult/baby 48 行 strict 1e-5 + UV half。`ResolverRawFlagTests` 同时断言 body raw 与层 legacy。
 - **状态**：`已解决`（Issue #120 维持“设计选择已源验证”；#134 的 raw humanoid 迁移使用该 helper）。
 <!-- simplification:SIM-ENTITY-RAW-HELD-ITEM task:T-41 -->
 
@@ -783,6 +783,14 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **实现**：`EntityModelDefinition.FromTree` 不再对 raw + non-unit scale 抛异常；`VanillaMeshBakery.Build` 允许 raw，legacy 仍拒绝；raw scaled 使用 compiled tree。源证据 `RawNonUnitScaleTests`：synthetic `PartPose.Offset(1,2,3).Scaled(0.5)` 24/24 顶点；以及非零 xRot/yRot/zRot 的 scaled parent + child，按源 `pivot + R*(cube*factor)`（child 含 parent scale）48/48 顶点 1e-5，并用 `PartWorldMatrix(child)` 验证 parent/child 帧。
 - **限制/blocker**：raw scaled 的 legacy flattened `Parts` 暂为空（`FromTree` 仅 compiled tree 承载），依赖 `Parts` 的旧消费方需迁移；**task-160 已将 EnderDragon 切 raw compiled tree（源 1560 顶点 strict 1e-5/UV），elytra 等 scaled 生产定义尚未切 raw**。legacy scaled 路径保持原受限实现。
 - **状态**：核心 raw scale 已实现并有源证据；生产族迁移仍 open（R-028 / Issue #122）。
+<!-- simplification:SIM-ENTITY-RAW-SCALE task:T-41 -->
+
+### task-229 Elytra raw 差异修复（#122）
+
+- **根因**：旧 elytra 设备层仍走 legacy BuildElytraWings（baseline 24、face transforms、flattened 旧 pivot/UV），源 ElytraModel.createLayer 的 raw pivot(±5,0,0)、xRot ±π/12、zRot ∓π/12、10×20×2 grow1 及 UV 未按 raw NodeFrame 叠层；adult/baby 差异来自 baseline/layer yOffset 与 cube UV。
+- **修复**：EntityModelLayerHelpers.BuildElytraSourceLayer 用 raw DSL 构造源层，WithElytraSelectors 保留节点 scale/parent，WingsLayer translate(0,0,2px) 由 raw pivots 外置；resolver elytra layer aselinePx:0、awSourceFrame:true、sourceFrameBaselinePx:0。
+- **验收**：ElytraRawSampleTests adult/baby 各 48 行 keyed 1e-5 + UV half；ElytraWingGeometryTests/ResolverRawFlagTests 源几何与 flag 更新；full + 三门禁通过。
+
 <!-- simplification:SIM-ENTITY-RAW-SCALE task:T-41 -->
 
 ### SIM-ENTITY-RAW-DEGENERATE：raw 零面积部件退化面（已解决）

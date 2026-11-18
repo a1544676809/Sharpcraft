@@ -425,10 +425,86 @@ public static class EntityModelLayerHelpers
 
         var modelHeight = bodyCube.Value.Bottom + bodyCube.Value.Height;
         var wingPivotZ = bodyCube.Value.CentreZ + 2f;
-        var wings = baby
-            ? VanillaMeshBakery.Build(BuildBabyElytraWingsMesh(wingPivotZ), 64, 32)
-            : VanillaMeshBakery.Build(BuildElytraWingsMesh(modelHeight, wingPivotZ, string.Empty), 64, 32);
+        // Raw source layer is already in the entity-model frame; WingsLayer only adds translate(0,0,0.125).
+        var wings = TranslateElytraPivots(BuildElytraSourceLayer(baby), 0f, 2f);
         return WithElytraSelectors(wings, baby);
+    }
+
+    /// <summary>
+    /// Raw source-frame Elytra layer (`ElytraModel.createLayer`): 10x20x2 boxes at tex 22,0 with uniform grow 1,
+    /// bind pose xRot ±π/12 and zRot ∓π/12, and UV/exact cube geometry from ModelPart.Cube. Baby is the source layer
+    /// after `MeshTransformer.scaling(0.5)` (pivot offsets/scales halved, y +12.008, cube dims unchanged, node scale 0.5).
+    /// </summary>
+    internal static CompiledEntityModel BuildElytraSourceLayer(bool baby)
+    {
+        var mesh = baby ? BuildBabyElytraSourceMesh() : BuildElytraSourceMesh();
+        return VanillaMeshBakery.Build(mesh, 64, 32, modelHeight: 0f, rawSourceFrame: true);
+    }
+
+    private static VanillaMeshDefinition BuildElytraSourceMesh()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        root.AddOrReplaceChild("left_wing",
+            VanillaPartPose.OffsetAndRotation(5f, 0f, 0f, MathF.PI / 12f, 0f, -MathF.PI / 12f),
+            new VanillaCubeDefinition("left_wing", 22, 0, -10f, 0f, 0f, 10f, 20f, 2f,
+                Grow: 1f, Kind: EntityGeometryLayerKind.Elytra));
+        root.AddOrReplaceChild("right_wing",
+            VanillaPartPose.OffsetAndRotation(-5f, 0f, 0f, MathF.PI / 12f, 0f, MathF.PI / 12f),
+            new VanillaCubeDefinition("right_wing", 22, 0, 0f, 0f, 0f, 10f, 20f, 2f,
+                Mirror: true, Grow: 1f, Kind: EntityGeometryLayerKind.Elytra));
+        return new VanillaMeshDefinition(root);
+    }
+
+    private static VanillaMeshDefinition BuildBabyElytraSourceMesh()
+    {
+        const float factor = 0.5f;
+        const float yOffset = 12.008f;
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        root.AddOrReplaceChild("left_wing",
+            new VanillaPartPose(5f * factor, yOffset, 0f, MathF.PI / 12f, 0f, -MathF.PI / 12f,
+                factor, factor, factor),
+            new VanillaCubeDefinition("left_wing", 22, 0, -10f, 0f, 0f, 10f, 20f, 2f,
+                Grow: 1f, Kind: EntityGeometryLayerKind.Elytra));
+        root.AddOrReplaceChild("right_wing",
+            new VanillaPartPose(-5f * factor, yOffset, 0f, MathF.PI / 12f, 0f, MathF.PI / 12f,
+                factor, factor, factor),
+            new VanillaCubeDefinition("right_wing", 22, 0, 0f, 0f, 0f, 10f, 20f, 2f,
+                Mirror: true, Grow: 1f, Kind: EntityGeometryLayerKind.Elytra));
+        return new VanillaMeshDefinition(root);
+    }
+
+    private static CompiledEntityModel TranslateElytraPivots(CompiledEntityModel model, float y, float z)
+    {
+        EntityModelPartNode Clone(EntityModelPartNode source, string? parent)
+        {
+            var children = source.ChildArray.Select(child => Clone(child, source.Name)).ToArray();
+            return new EntityModelPartNode(
+                source.Name, parent,
+                source.PivotX, source.PivotY + y, source.PivotZ + z,
+                source.RotationX, source.RotationY, source.RotationZ,
+                source.Cubes, children,
+                scaleX: source.ScaleX, scaleY: source.ScaleY, scaleZ: source.ScaleZ);
+        }
+
+        var children = model.Root.ChildArray.Select(child => Clone(child, null)).ToArray();
+        var parts = new List<EntityModelPartNode>();
+        var cubes = new List<EntityModelCube>();
+        void Collect(EntityModelPartNode node)
+        {
+            parts.Add(node);
+            cubes.AddRange(node.Cubes);
+            foreach (var child in node.ChildArray)
+            {
+                Collect(child);
+            }
+        }
+        foreach (var child in children)
+        {
+            Collect(child);
+        }
+        var root = new EntityModelPartNode(
+            model.Root.Name, null, 0f, 0f, 0f, 0f, 0f, 0f, [], children);
+        return new CompiledEntityModel(root, parts, cubes);
     }
 
     private static CompiledEntityModel WithElytraSelectors(CompiledEntityModel wings, bool baby)
@@ -453,13 +529,16 @@ public static class EntityModelLayerHelpers
                     ? new Vector3(-state.ElytraRotX, state.ElytraRotY, -state.ElytraRotZ)
                     : new Vector3(-state.ElytraRotX, -state.ElytraRotY, state.ElytraRotZ),
                 yOffsetSelector: state => state.IsCrouching ? (baby ? -1.5f : -3f) : 0f,
-                poseSource: source.Name);
+                poseSource: source.Name,
+                scaleX: source.ScaleX,
+                scaleY: source.ScaleY,
+                scaleZ: source.ScaleZ);
             parts.Add(node);
             cubes.AddRange(source.Cubes);
             return node;
         }
 
-        var children = wings.Root.Children.Select(child => Clone(child, null)).ToArray();
+        var children = wings.Root.Children.Select(child => Clone(child, wings.Root.Name)).ToArray();
         var root = new EntityModelPartNode(
             wings.Root.Name, null, 0f, 0f, 0f, 0f, 0f, 0f, [], children);
         return new CompiledEntityModel(root, parts, cubes);

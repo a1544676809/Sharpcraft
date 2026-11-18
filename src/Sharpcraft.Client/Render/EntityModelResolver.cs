@@ -441,9 +441,9 @@ public static partial class EntityModelResolver
                     textureSelector: state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4),
                     additionalTexturePaths: ["entity/equipment/wings/elytra"],
                     compiled: elytraCompiled,
-                    baselinePx: 24f,
-                    rawSourceFrame: false,
-                    sourceFrameBaselinePx: 24f);
+                    baselinePx: 0f,
+                    rawSourceFrame: true,
+                    sourceFrameBaselinePx: 0f);
                 customLayers.Add(new EntityRenderLayerDefinition(
                     "elytra",
                     EntityGeometryLayerKind.Elytra,

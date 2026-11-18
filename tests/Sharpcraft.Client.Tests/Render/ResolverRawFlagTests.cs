@@ -87,14 +87,13 @@ public sealed class ResolverRawFlagTests
             "right_arm");
         Assert.NotEqual(default(System.Numerics.Matrix4x4), hand);
 
-        // The body stays raw, but independent equipment/elytra/armor layers are still legacy models
-        // with their own legacy face calibration and 24 px baseline; inheriting the body's raw flag or
-        // null FaceTransforms is what broke elytra UV tiles and spear placement.
+        // The body and the elytra wing layer both stay raw (task-167): the wing layer carries source
+        // bind pose/UV and uses baseline 0. Armor layers remain legacy models with their own legacy
+        // face calibration and 24 px baseline.
         var elytra = Assert.Single(decorated.RenderLayers!, layer => layer.Name == "elytra").Model;
         Assert.NotNull(elytra);
-        Assert.False(elytra.RawSourceFrame);
-        Assert.NotNull(elytra.FaceTransforms);
-        Assert.Equal(24f, elytra.BaselinePx);
+        Assert.True(elytra.RawSourceFrame);
+        Assert.Equal(0f, elytra.BaselinePx);
         var armor = decorated.RenderLayers!.First(layer => layer.Name.StartsWith("equipment_", StringComparison.Ordinal)).Model;
         Assert.NotNull(armor);
         Assert.False(armor.RawSourceFrame);
