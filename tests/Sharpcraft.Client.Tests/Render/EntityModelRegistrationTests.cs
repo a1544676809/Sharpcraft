@@ -277,7 +277,10 @@ public sealed class EntityModelRegistrationTests
         Assert.Equal("giant", definition.Name);
         Assert.Equal(6f, definition.Scale);
         Assert.Equal("entity/zombie/zombie", definition.TexturePath);
-        Assert.Equal(HumanoidMobModelDefinition.Zombie.Parts.Count, definition.Parts.Count);
+        // Armor layers append equipment parts; the body geometry must remain the zombie geometry.
+        Assert.Equal(
+            HumanoidMobModelDefinition.Zombie.Parts.Count,
+            definition.Parts.Count(part => !part.Name.StartsWith("equipment_", StringComparison.Ordinal)));
     }
 
     [Fact]
