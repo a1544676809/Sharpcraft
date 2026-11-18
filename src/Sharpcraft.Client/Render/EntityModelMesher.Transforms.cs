@@ -288,6 +288,12 @@ public sealed partial class EntityModelMesher
             return EntityModelResolver.ResolvePlayerModel(slim: true);
         }
 
+        if (entity.IsSmall && entity.TypeId == ArmorStandModelDefinition.ArmorStandEntityTypeId)
+        {
+            return EntityModelResolver.TryResolveVariant(ArmorStandModelDefinition.ArmorStandEntityTypeId, "small")
+                ?? EntityModelResolver.Resolve(entity.TypeId, entity.IsBaby);
+        }
+
         return variants is null
             ? EntityModelResolver.Resolve(entity.TypeId, entity.IsBaby)
             : variants.Resolve(entity.TypeId, entity.VariantId, entity.IsBaby);

@@ -62,6 +62,23 @@ public sealed class EntityDataPacketTests
     }
 
     [Fact]
+    public void RotationsSerializerDecodesThreeFloats()
+    {
+        var body = Body(
+            b => { Item(b, 16, 9); Float(b, 10f); Float(b, 20f); Float(b, 30f); });
+        var items = Read(body, out var entityId, out var complete, out var status);
+        Assert.Equal(DecodeStatus.Success, status);
+        Assert.True(complete);
+        Assert.Equal(42, entityId);
+        var item = Assert.Single(items);
+        Assert.Equal(9, item.SerializerId);
+        Assert.True(item.HasRotations);
+        Assert.Equal(10f, item.RotationX);
+        Assert.Equal(20f, item.RotationY);
+        Assert.Equal(30f, item.RotationZ);
+    }
+
+    [Fact]
     public void ItemStackSerializerDecodesAndTheScanContinues()
     {
         // item entity: index 8 is ITEM_STACK(7) = Optional<ItemStack>; a following BOOLEAN must still decode, which is

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
+using System.Numerics;
 using System.Runtime.InteropServices;
 using Sharpcraft.AuthLib;
 using Sharpcraft.Client.Render;
@@ -151,6 +152,17 @@ public sealed class TrackedEntity
     /// ref://mc-26.3-analysis/src/net/minecraft/world/entity/monster/Creeper.java
     /// </summary>
     public bool IsPowered { get; internal set; }
+
+    /// <summary>ArmorStand DATA_CLIENT_FLAGS byte (marker/small/show-arms/show-base-plate bits).</summary>
+    public int ArmorStandFlags { get; internal set; }
+
+    /// <summary>ArmorStand six synced rotations, in source degrees (defaults match ArmorStand.DEFAULT_*_POSE).</summary>
+    public Vector3 HeadPose { get; internal set; }
+    public Vector3 BodyPose { get; internal set; }
+    public Vector3 LeftArmPose { get; internal set; } = new(-10f, 0f, -10f);
+    public Vector3 RightArmPose { get; internal set; } = new(-15f, 0f, 10f);
+    public Vector3 LeftLegPose { get; internal set; } = new(-1f, 0f, -1f);
+    public Vector3 RightLegPose { get; internal set; } = new(1f, 0f, 1f);
 
     /// <summary>Raw dye id of a tamed cat/wolf collar, or -1 when unknown.</summary>
     public int CollarColor { get; internal set; } = -1;
@@ -578,7 +590,16 @@ public readonly record struct EntityRenderState(
     bool DragonIsSitting = false,
     double DragonDistanceToEgg = 0,
     bool IsHoldingPotion = false,
-    bool IsPowered = false)
+    bool IsPowered = false,
+    bool IsSmall = false,
+    bool ShowArms = false,
+    bool ShowBasePlate = true,
+    Vector3 HeadPose = default,
+    Vector3 BodyPose = default,
+    Vector3 LeftArmPose = default,
+    Vector3 RightArmPose = default,
+    Vector3 LeftLegPose = default,
+    Vector3 RightLegPose = default)
 {
     /// <summary>Equippable asset id for one equipment slot, when the item supplied one.</summary>
     public string? EquipmentAssetIdAt(int slot) =>
@@ -1175,6 +1196,30 @@ public sealed partial class EntityTracker
             else if (spec.AngerAccessorIndex >= 0 && item.Index == spec.AngerAccessorIndex && item.LongValue != EntityDataItem.NotALong)
             {
                 entity.AngerEndTime = item.LongValue;
+                applied = true;
+            }
+            else if (spec.ArmorStandFlagsAccessorIndex >= 0 && item.Index == spec.ArmorStandFlagsAccessorIndex && item.SerializerId == 0)
+            {
+                entity.ArmorStandFlags = item.Value;
+                applied = true;
+            }
+            else if (spec.ArmorStandPoseAccessorIndex >= 0
+                && item.Index >= spec.ArmorStandPoseAccessorIndex
+                && item.Index < spec.ArmorStandPoseAccessorIndex + 6
+                && item.SerializerId == 9
+                && item.HasRotations)
+            {
+                var pose = new Vector3(item.RotationX, item.RotationY, item.RotationZ);
+                switch (item.Index - spec.ArmorStandPoseAccessorIndex)
+                {
+                    case 0: entity.HeadPose = pose; break;
+                    case 1: entity.BodyPose = pose; break;
+                    case 2: entity.LeftArmPose = pose; break;
+                    case 3: entity.RightArmPose = pose; break;
+                    case 4: entity.LeftLegPose = pose; break;
+                    default: entity.RightLegPose = pose; break;
+                }
+
                 applied = true;
             }
             else if (spec.PoweredAccessorIndex >= 0 && item.Index == spec.PoweredAccessorIndex && item.SerializerId == 8)

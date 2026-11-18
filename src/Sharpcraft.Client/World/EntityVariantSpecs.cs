@@ -26,6 +26,8 @@ namespace Sharpcraft.Client.World;
 /// <param name="ColdMask">Flag bit that means "cold" (Strider suffocating boolean at 19).</param>
 /// <param name="ChargingMask">Flag bit that means charging (Vex flag bit 0).</param>
 /// <param name="PoweredAccessorIndex">Boolean accessor carrying creeper powered state (Creeper DATA_IS_POWERED), or -1.</param>
+/// <param name="ArmorStandFlagsAccessorIndex">Byte accessor carrying ArmorStand DATA_CLIENT_FLAGS, or -1.</param>
+/// <param name="ArmorStandPoseAccessorIndex">First of six consecutive ROTATIONS accessors (head/body/left_arm/right_arm/left_leg/right_leg), or -1.</param>
 /// <param name="ShellHideStates">True when the integer value is an Armadillo state whose ROLLING/SCARED/UNROLLING phase hides the body in the shell.</param>
 public readonly record struct EntityVariantSpec(
     int AccessorIndex,
@@ -44,7 +46,9 @@ public readonly record struct EntityVariantSpec(
     Func<int, string>? KeySelector = null,
     int CollarAccessorIndex = -1,
     int MarkingsShift = -1,
-    int PoweredAccessorIndex = -1);
+    int PoweredAccessorIndex = -1,
+    int ArmorStandFlagsAccessorIndex = -1,
+    int ArmorStandPoseAccessorIndex = -1);
 
 /// <summary>
 /// Answering "which synced-data field is the variant" for the entity types this client renders with variants.
@@ -106,6 +110,11 @@ public static class EntityVariantSpecs
 
         // Parched: no synced variant/state fields; explicit default entry keeps the new type routed.
         [98] = new(-1, null, ["default"], "default"),
+
+        // ArmorStand: Entity 0-7 + LivingEntity 8-14, then ArmorStand DATA_CLIENT_FLAGS 15 (Byte),
+        // DATA_HEAD_POSE 16 / BODY 17 / LEFT_ARM 18 / RIGHT_ARM 19 / LEFT_LEG 20 / RIGHT_LEG 21 (ROTATIONS, id 9).
+        // ref://mc-26.3-analysis/src/net/minecraft/world/entity/decoration/ArmorStand.java
+        [5] = new(-1, null, ["default"], "default", ArmorStandFlagsAccessorIndex: 15, ArmorStandPoseAccessorIndex: 16),
 
         // Vex: byte flags at 16 (no AgeableMob in the chain), charging bit 0.
         [142] = new(-1, null, ["default"], "default", FlagsAccessorIndex: 16, ChargingMask: 1),

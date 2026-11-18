@@ -14,10 +14,13 @@ namespace Sharpcraft.Common.Network;
 /// <param name="Value">
 /// Decoded integer value for the byte/integer serializers; <see cref="NotAnInteger"/> for every other serializer.
 /// </param>
-public readonly record struct EntityDataItem(int Index, int SerializerId, int Value, long LongValue = long.MinValue, float FloatValue = float.NaN, int ItemId = -1, int ItemCount = 0)
+public readonly record struct EntityDataItem(int Index, int SerializerId, int Value, long LongValue = long.MinValue, float FloatValue = float.NaN, int ItemId = -1, int ItemCount = 0, float RotationX = float.NaN, float RotationY = float.NaN, float RotationZ = float.NaN)
 {
     /// <summary>Sentinel stored in <see cref="Value"/> when the serializer does not carry an integer.</summary>
     public const int NotAnInteger = int.MinValue;
+
+    /// <summary>True when the ROTATIONS serializer supplied all three angles.</summary>
+    public bool HasRotations => !float.IsNaN(RotationX) && !float.IsNaN(RotationY) && !float.IsNaN(RotationZ);
 
     /// <summary>Sentinel stored in <see cref="LongValue"/> when the serializer does not carry a long.</summary>
     public const long NotALong = long.MinValue;
@@ -102,7 +105,7 @@ public static class EntityDataPackets
                 return status;
             }
 
-            status = TryReadValue(ref reader, serializerId, out var value, out var longValue, out var floatValue, out var itemId, out var itemCount, out var unsupported);
+            status = TryReadValue(ref reader, serializerId, out var value, out var longValue, out var floatValue, out var itemId, out var itemCount, out var rotationX, out var rotationY, out var rotationZ, out var unsupported);
             if (unsupported)
             {
                 // Everything after this item is unreadable without the codec; stop and let the caller fall back.
@@ -116,7 +119,7 @@ public static class EntityDataPackets
 
             if (count < items.Length)
             {
-                items[count++] = new EntityDataItem(rawIndex, serializerId, value, longValue, floatValue, itemId, itemCount);
+                items[count++] = new EntityDataItem(rawIndex, serializerId, value, longValue, floatValue, itemId, itemCount, rotationX, rotationY, rotationZ);
             }
             else
             {
@@ -132,13 +135,14 @@ public static class EntityDataPackets
     /// The ids follow the static registration order in <c>EntityDataSerializers</c>. Only the byte/integer family
     /// returns a value; everything else is skipped so the scan can continue to a later index.
     /// </remarks>
-    private static DecodeStatus TryReadValue(ref PayloadReader reader, int serializerId, out int value, out long longValue, out float floatValue, out int itemId, out int itemCount, out bool unsupported)
+    private static DecodeStatus TryReadValue(ref PayloadReader reader, int serializerId, out int value, out long longValue, out float floatValue, out int itemId, out int itemCount, out float rotationX, out float rotationY, out float rotationZ, out bool unsupported)
     {
         value = EntityDataItem.NotAnInteger;
         longValue = EntityDataItem.NotALong;
         floatValue = float.NaN;
         itemId = -1;
         itemCount = 0;
+        rotationX = rotationY = rotationZ = float.NaN;
         unsupported = false;
         DecodeStatus status;
 
@@ -216,8 +220,13 @@ public static class EntityDataPackets
                 value = flag ? 1 : 0;
                 return status;
 
-            case 9: // ROTATIONS: three floats
-                return SkipBytes(ref reader, 12);
+            case 9: // ROTATIONS: three floats (Vector3f payload)
+                status = reader.TryReadFloat(out rotationX);
+                if (status != DecodeStatus.Success) return status;
+                status = reader.TryReadFloat(out rotationY);
+                if (status != DecodeStatus.Success) return status;
+                status = reader.TryReadFloat(out rotationZ);
+                return status;
 
             case 10: // BLOCK_POS: packed long
                 return SkipBytes(ref reader, 8);

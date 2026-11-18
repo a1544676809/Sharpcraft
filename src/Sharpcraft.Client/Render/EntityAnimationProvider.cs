@@ -98,6 +98,7 @@ public static class EntityAnimationRegistry
         new SkeletonAnimationProvider(HumanoidMobModelDefinition.BoggedEntityTypeId),
         new SkeletonAnimationProvider(HumanoidMobModelDefinition.WitherSkeletonEntityTypeId),
         new SkeletonAnimationProvider(ParchedModelDefinition.ParchedEntityTypeId),
+        new ArmorStandAnimationProvider(),
         new VillagerAnimationProvider(VillagerModelDefinition.VillagerEntityTypeId),
         new ChickenAnimationProvider(ChickenModelDefinition.ChickenEntityTypeId),
         new SquidAnimationProvider(SquidModelDefinition.SquidEntityTypeId),
