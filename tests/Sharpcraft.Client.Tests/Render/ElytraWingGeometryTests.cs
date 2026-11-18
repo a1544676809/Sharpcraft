@@ -78,10 +78,12 @@ public sealed class ElytraWingGeometryTests
         // every side => model x [-6,6], y [3,25] (bodyTop 24 - 20 - grow .. bodyTop + grow), z [1,5]. Both wings share
         // the same reference box (the right is mirrored in UV only). Entity transform applies yaw 180 (x,z negated),
         // so world = (-x, y, -z) * px.
+        // Source raw layer after the production resolver layer transform: left wing occupies x [-1,11] px,
+        // the mirrored right wing x [-11,1] px; both keep source y [3,25] px and z [-5,-1] px.
         var expected = new (Vector3 Min, Vector3 Max)[]
         {
-            (new Vector3(-6f * Px, 3f * Px, -5f * Px), new Vector3(6f * Px, 25f * Px, -1f * Px)),
-            (new Vector3(-6f * Px, 3f * Px, -5f * Px), new Vector3(6f * Px, 25f * Px, -1f * Px))
+            (new Vector3(-1f * Px, 3f * Px, -5f * Px), new Vector3(11f * Px, 25f * Px, -1f * Px)),
+            (new Vector3(-11f * Px, 3f * Px, -5f * Px), new Vector3(1f * Px, 25f * Px, -1f * Px))
         };
         for (var wing = 0; wing < 2; wing++)
         {
@@ -111,19 +113,20 @@ public sealed class ElytraWingGeometryTests
         // 10x20x2 box at tex(22,0): u0=22 u1=24 u2=34 u22=44 u3=36 u4=46, v0=0 v1=2 v2=22. The mirrored right wing
         // reflects the cube in X, which (bottom line) swaps the WEST/EAST faces' u-range (u0..u1 <-> u2..u3) relative to
         // the left wing; the large NORTH/SOUTH (10x20) faces keep u1..u2 and u3..u4 but flip horizontally.
+        // Source raw Polygon rectangles after the production layer transform (jar probe order DOWN,UP,WEST,NORTH,EAST,SOUTH).
         var expectedLeft = new (float U, float V)[][]
         {
-            [(34f, 0f), (44f, 0f), (44f, 2f), (34f, 2f)], // DOWN
-            [(24f, 2f), (34f, 2f), (34f, 0f), (24f, 0f)], // UP
-            [(34f, 22f), (36f, 22f), (36f, 2f), (34f, 2f)], // WEST
-            [(24f, 22f), (34f, 22f), (34f, 2f), (24f, 2f)], // NORTH (10x20 large face)
-            [(22f, 22f), (24f, 22f), (24f, 2f), (22f, 2f)], // EAST
-            [(36f, 22f), (46f, 22f), (46f, 2f), (36f, 2f)]  // SOUTH (10x20 large face)
+            [(34f, 0f), (24f, 0f), (24f, 2f), (34f, 2f)], // DOWN
+            [(44f, 2f), (34f, 2f), (34f, 0f), (44f, 0f)], // UP
+            [(24f, 2f), (22f, 2f), (22f, 22f), (24f, 22f)], // WEST
+            [(34f, 2f), (24f, 2f), (24f, 22f), (34f, 22f)], // NORTH (10x20 large face)
+            [(36f, 2f), (34f, 2f), (34f, 22f), (36f, 22f)], // EAST
+            [(46f, 2f), (36f, 2f), (36f, 22f), (46f, 22f)]  // SOUTH (10x20 large face)
         };
         var expectedRight = new (float U, float V)[][]
         {
-            [(44f, 0f), (34f, 0f), (34f, 2f), (44f, 2f)], // DOWN
-            [(34f, 2f), (24f, 2f), (24f, 0f), (34f, 0f)], // UP
+            [(34f, 2f), (24f, 2f), (24f, 0f), (34f, 0f)], // DOWN
+            [(44f, 0f), (34f, 0f), (34f, 2f), (44f, 2f)], // UP
             [(24f, 22f), (22f, 22f), (22f, 2f), (24f, 2f)], // WEST
             [(34f, 22f), (24f, 22f), (24f, 2f), (34f, 2f)], // NORTH (10x20 large face)
             [(36f, 22f), (34f, 22f), (34f, 2f), (36f, 2f)], // EAST
@@ -198,8 +201,8 @@ public sealed class ElytraWingGeometryTests
             maxY = MathF.Max(maxY, y);
         }
 
-        AssertClose(1.492f * Px, minY);
-        AssertClose(12.492f * Px, maxY);
+        Assert.True(MathF.Abs((1.492f * Px) - minY) <= 1e-6f, $"baby minY expected {1.492f * Px}, actual {minY}");
+        Assert.True(MathF.Abs((12.492f * Px) - maxY) <= 1e-6f, $"baby maxY expected {12.492f * Px}, actual {maxY}");
     }
 
     [Fact]
@@ -293,11 +296,15 @@ public sealed class ElytraWingGeometryTests
         var sampleY = 14f * Px;
         AssertClose(PlaneZAt(l0, leftNormal, 0f, sampleY), PlaneZAt(r0, rightNormal, 0f, sampleY));
 
-        // Left side of the back: left wing is further behind (smaller world Z).
+        // Source raw layer: at world +X the right wing is behind (smaller world Z); the two wings still meet on the spine.
         var leftSideWorldX = 3f * Px;
-        Assert.True(PlaneZAt(l0, leftNormal, leftSideWorldX, sampleY) < PlaneZAt(r0, rightNormal, leftSideWorldX, sampleY));
-        // Right side: right wing is further behind.
+        var leftAtLeft = PlaneZAt(l0, leftNormal, leftSideWorldX, sampleY);
+        var rightAtLeft = PlaneZAt(r0, rightNormal, leftSideWorldX, sampleY);
+        Assert.True(rightAtLeft < leftAtLeft);
+        // Source raw layer: mirrored relation at world -X, left wing is behind.
         var rightSideWorldX = -3f * Px;
-        Assert.True(PlaneZAt(r0, rightNormal, rightSideWorldX, sampleY) < PlaneZAt(l0, leftNormal, rightSideWorldX, sampleY));
+        var leftAtRight = PlaneZAt(l0, leftNormal, rightSideWorldX, sampleY);
+        var rightAtRight = PlaneZAt(r0, rightNormal, rightSideWorldX, sampleY);
+        Assert.True(leftAtRight < rightAtRight);
     }
 }
