@@ -29,12 +29,12 @@ public static class PlayerArmorModelDefinition
         _ => throw new ArgumentOutOfRangeException(nameof(slot))
     };
 
-    internal static VanillaMeshDefinition CreateMesh(int slot)
+    internal static VanillaMeshDefinition CreateMesh(int slot, float headY = 0f, float legY = 12f)
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
         if (slot == 5)
         {
-            var head = root.AddOrReplaceChild("head", VanillaPartPose.Zero,
+            var head = root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, headY, 0f),
                 new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f, Grow: Outer));
             head.AddOrReplaceChild("hat", VanillaPartPose.Zero,
                 new VanillaCubeDefinition("hat", 32, 0, -4f, -8f, -4f, 8f, 8f, 8f, Grow: Outer + 0.5f));
@@ -52,9 +52,9 @@ public static class PlayerArmorModelDefinition
         {
             var grow = slot == 3 ? Inner : Outer;
             var legGrow = grow - 0.1f;
-            root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(1.9f, 12f, 0f),
+            root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(1.9f, legY, 0f),
                 new VanillaCubeDefinition("left_leg", 0, 16, -2f, 0f, -2f, 4f, 12f, 4f, Mirror: true, Grow: legGrow));
-            root.AddOrReplaceChild("right_leg", VanillaPartPose.Offset(-1.9f, 12f, 0f),
+            root.AddOrReplaceChild("right_leg", VanillaPartPose.Offset(-1.9f, legY, 0f),
                 new VanillaCubeDefinition("right_leg", 0, 16, -2f, 0f, -2f, 4f, 12f, 4f, Grow: legGrow));
             if (slot == 3)
             {

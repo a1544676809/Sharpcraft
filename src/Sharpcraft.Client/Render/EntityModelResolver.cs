@@ -320,9 +320,20 @@ public static partial class EntityModelResolver
                                 : typeId == WolfModelDefinition.WolfEntityTypeId
                                     && effectiveKind == EquipmentAssetKind.WolfBody
                                     ? WolfArmorModelDefinition.Definition
-                                    : piglin
-                                        ? PiglinArmorModelDefinition.ForSlot(slot, baby)
-                                        : null;
+                                    : typeId == HorseModelDefinition.HorseEntityTypeId
+                                        && effectiveKind == EquipmentAssetKind.HorseBody
+                                        ? HorseArmorModelDefinition.Living
+                                        : (typeId is HorseModelDefinition.ZombieHorseEntityTypeId
+                                                or HorseModelDefinition.SkeletonHorseEntityTypeId)
+                                            && effectiveKind == EquipmentAssetKind.HorseBody
+                                            ? HorseArmorModelDefinition.Undead
+                                            : (typeId is NautilusModelDefinition.NautilusEntityTypeId
+                                                    or ZombieNautilusModelDefinition.ZombieNautilusEntityTypeId)
+                                                && effectiveKind == EquipmentAssetKind.NautilusBody
+                                                ? NautilusArmorModelDefinition.Definition
+                                                : piglin
+                                                    ? PiglinArmorModelDefinition.ForSlot(slot, baby)
+                                                    : null;
                 var layerModel = rawArmor is null
                     ? new EntityModelDefinition(
                         layerName,

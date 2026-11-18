@@ -27,7 +27,7 @@ public static class NautilusModelDefinition
     /// Reference <c>NautilusModel.createBodyMesh</c>. The shell is one three-cube part and the body one two-cube part;
     /// the saddle layer replaces the shell with a single inflated cube.
     /// </summary>
-    internal static VanillaMeshDefinition BuildBodyMesh(float shellGrow, bool saddleShell = false)
+    internal static VanillaMeshDefinition BuildBodyMesh(float shellGrow, bool saddleShell = false, float? flatShellGrow = null)
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
         var rootPart = root.AddOrReplaceChild("root", VanillaPartPose.Offset(0f, 29f, -6f),
@@ -42,7 +42,7 @@ public static class NautilusModelDefinition
             rootPart.AddOrReplaceChild("shell", VanillaPartPose.Offset(0f, -13f, 5f),
                 new VanillaCubeDefinition("shell", 0, 0, -7f, -10f, -7f, 14f, 10f, 16f, Grow: shellGrow),
                 new VanillaCubeDefinition("shell_mid", 0, 26, -7f, 0f, -7f, 14f, 8f, 20f, Grow: shellGrow),
-                new VanillaCubeDefinition("shell_back", 48, 26, -7f, 0f, 6f, 14f, 8f, 0f, Grow: shellGrow));
+                new VanillaCubeDefinition("shell_back", 48, 26, -7f, 0f, 6f, 14f, 8f, 0f, Grow: flatShellGrow ?? shellGrow));
         }
 
         rootPart.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, -8.5f, 12.3f),
