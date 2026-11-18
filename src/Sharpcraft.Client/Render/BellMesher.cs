@@ -98,12 +98,39 @@ public sealed class BellMesher
                 Yaw: 180f, Pitch: 0f);
             var built = _mesher.BuildModel(definition, [state], sprite, definition.TextureWidth, definition.TextureHeight,
                 modelScale: 1f);
+            // BuildModel's WriteVertex fixes sky:1 / block:0. Restore this block's packed light, matching
+            // the old AppendBox path (sky = Sky/15, block = Block/15) so night/cave lighting is preserved.
+            ApplyLight(built, entity.Sky, entity.Block);
             AppendGeometry(_geometry, built);
             LastEntityCount++;
         }
 
         return _geometry;
     }
+
+    /// <summary>
+    /// Overwrites the packed light bytes of every vertex with this block's sky/block levels. BuildModel
+    /// writes sky:1/block:0; the light layout packs sky in bits 16-23 and block in bits 24-31 of the
+    /// sprite word (TerrainVertexWriter), so only those two bytes change -- sprite id (bits 0-15) stays.
+    /// </summary>
+    private static void ApplyLight(DynamicGeometry geometry, byte sky, byte block)
+    {
+        var skyChannel = Channel(sky / 15f);
+        var blockChannel = Channel(block / 15f);
+        var count = geometry.VertexFloats / ChunkMesher.FloatsPerVertex;
+        for (var vertex = 0; vertex < count; vertex++)
+        {
+            var index = (vertex * ChunkMesher.FloatsPerVertex) + 5;
+            var packed = BitConverter.SingleToUInt32Bits(geometry.Vertices[index]);
+            packed &= 0x0000FFFFu; // clear sky + block, keep sprite id
+            packed |= (uint)skyChannel << 16;
+            packed |= (uint)blockChannel << 24;
+            geometry.Vertices[index] = BitConverter.UInt32BitsToSingle(packed);
+        }
+    }
+
+    private static int Channel(float value) =>
+        (int)Math.Clamp(MathF.Round(value * 255f), 0f, 255f);
 
     private static void AppendGeometry(DynamicGeometry target, DynamicGeometry source)
     {

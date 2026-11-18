@@ -159,6 +159,32 @@ public sealed class BellMesherGoldenTests
         Assert.Equal(13f / 32f, baseV, 3);
     }
 
+    /// <summary>
+    /// task-215 review: BellMesher must carry each block's Sky/Block light, not the BuildModel sky:1/block:0
+    /// default, so night/cave bells are not lit as full sky light. This pins a non-default value to the
+    /// packed channel values the old AppendBox path produced (round(Sky/15*255) / round(Block/15*255)).
+    /// </summary>
+    [Fact]
+    public void BellVerticesCarryTheBlockPackedLight()
+    {
+        var mesher = new BellMesher();
+        byte sky = 6, block = 9;
+        BlockEntityRenderState[] entities = [new(0f, 0f, 0f, VanillaBlockEntityTypes.Bell, Sky: sky, Block: block)];
+
+        var geometry = mesher.Build(entities, Sprite());
+        var count = geometry.VertexFloats / ChunkMesher.FloatsPerVertex;
+        Assert.Equal(48, count);
+
+        var expectedSky = MathF.Round(sky / 15f * 255f) / 255f;
+        var expectedBlock = MathF.Round(block / 15f * 255f) / 255f;
+        for (var vertex = 0; vertex < count; vertex++)
+        {
+            var (gotSky, gotBlock) = VertexFieldReader.Light(geometry.Vertices, vertex);
+            Assert.Equal(expectedSky, gotSky, 5);
+            Assert.Equal(expectedBlock, gotBlock, 5);
+        }
+    }
+
     /// <summary>The bell texture is packed in the block entity atlas and its rect is in the table.</summary>
     [Fact]
     public void TheBellTextureIsPartOfTheBlockEntityAtlas()
