@@ -665,7 +665,7 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **为什么**：本切片已补齐所有已知的 skull 头型；后续只保留动画/皮肤缓存等独立简化。
 - **对等效性的影响**：七种支持头型的方块头/墙头静态外观按源模型；无剩余因头型缺失导致的不可见分支。
 - **状态**：已验证，无剩余变体（Issue #75、#77、#79、#81）。
-- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/SkullRendererTests.cs` 覆盖七种头型的 ground/wall、Player head+hat、Piglin head 与 Dragon 7-box 最终顶点/UV。
+- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/SkullRendererTests.cs` 覆盖七种头型的 ground/wall、Player head+hat、Piglin head 与 Dragon 7-box 最终顶点/UV。task-203 已将 Dragon skull 切 raw：`DragonHeadModel` 6 个 head box + jaw、`PartPose.scaled(0.75)` 几何、预缩放 UV 维度 pin；`dragon-skull` jar 样本 168 行 strict 1e-5 + UV half（48 mirror/120 checked/0 degenerate）通过。
 
 <!-- simplification:SIM-BE-SKULL-VARIANTS task:T-47 -->
 

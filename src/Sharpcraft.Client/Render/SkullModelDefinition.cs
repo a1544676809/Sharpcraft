@@ -78,7 +78,8 @@ public static class SkullModelDefinition
         VanillaMeshBakery.Build(PlayerMesh, 64, 64, modelHeight: 0f, texturePath: DefaultPlayerSkinTexture, rawSourceFrame: true);
 
     private static readonly EntityModelPart[] DragonParts =
-        [.. VanillaMeshBake.Bake(DragonMesh, 256, 256, modelHeight: 0f)];
+        VanillaMeshBake.Bake(DragonMesh, 256, 256, modelHeight: 0f, rawSourceFrame: true)
+            .Select(PinDragonUv).ToArray();
 
     /// <summary>
     /// Baked head definition shared by the four mob skull types, in the raw source y-down frame.
@@ -115,8 +116,9 @@ public static class SkullModelDefinition
         textureWidth: 256,
         textureHeight: 256,
         parts: DragonParts,
-        faceTransforms: PlayerModelDefinition.DefaultFaceTransforms,
-        texturePath: DragonTexture)
+        faceTransforms: null,
+        texturePath: DragonTexture,
+        baselinePx: 0f, rawSourceFrame: true)
     {
         // Source head pose uses PartPose.scaled(0.75); the generic scaled bake emits absolute source-frame
         // cuboids, so the outer skull pose applies without a renderer-local part matrix.
@@ -180,6 +182,18 @@ public static class SkullModelDefinition
                 Overlays: [new("hat", 0.25f, 32, 0)]));
         return new VanillaMeshDefinition(root);
     }
+
+    private static EntityModelPart PinDragonUv(EntityModelPart part) => part.Name switch
+    {
+        // The source head pose is PartPose.scaled(0.75): positions/sizes are scaled, but Cube UV polygons keep
+        // the pre-scale cube dimensions (DragonHeadModel.createHeadLayer addBox literals).
+        "head" => VanillaMeshBake.PinUvDimensions(part, 12, 5, 16),
+        "upper_head" => VanillaMeshBake.PinUvDimensions(part, 16, 16, 16),
+        "scale_left" or "scale_right" => VanillaMeshBake.PinUvDimensions(part, 2, 4, 6),
+        "nostril_left" or "nostril_right" => VanillaMeshBake.PinUvDimensions(part, 2, 2, 4),
+        "jaw" => VanillaMeshBake.PinUvDimensions(part, 12, 4, 16),
+        _ => part
+    };
 
     private static VanillaMeshDefinition BuildDragonSkullMesh()
     {

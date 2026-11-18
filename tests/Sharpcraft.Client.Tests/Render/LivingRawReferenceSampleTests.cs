@@ -177,6 +177,8 @@ public sealed class LivingRawReferenceSampleTests
         { "baby-happy-ghast-raw-vectors.reference.txt", BabyModelDefinitionsFinal.HappyGhast, 64, 64, "entity/ghast/happy_ghast_baby", 264, 0, 264, 0 },
         { "baby-nautilus-raw-vectors.reference.txt", BabyModelDefinitionsFinal.Nautilus, 64, 64, "entity/nautilus/nautilus_baby", 192, 0, 192, 0 },
         { "baby-glow-squid-raw-vectors.reference.txt", BabyModelDefinitionsFinal.GlowSquid, 32, 32, "entity/squid/glow_squid_baby", 216, 0, 216, 0 },
+        // task-203 dragon skull: six scaled head boxes + parented jaw.
+        { "dragon-skull-raw-vectors.reference.txt", SkullModelDefinition.DragonDefinition, 256, 256, "entity/enderdragon/dragon", 168, 48, 120, 0 },
         // task-150: Armadillo raw (multi-cube body/head, rolled cube).
         { "armadillo-raw-vectors.reference.txt", ArmadilloModelDefinition.Definition, 64, 64, "entity/armadillo/armadillo", 264, 0, 216, 48 },
         // task-150: Ravager raw (multi-cube head, source Mirror on right_horn + left legs, body +PI/2).
@@ -509,6 +511,17 @@ public sealed class LivingRawReferenceSampleTests
                 flatName = cube switch { 0 => "shell", 1 => "shell_mid", _ => "shell_back" }; break;
             case "/root/body" when definition.Name == "baby_nautilus":
                 flatName = cube == 0 ? "body" : "body_back"; break;
+            case "/head" when definition.Name == "dragon_skull":
+                flatName = cube switch
+                {
+                    0 => "head",
+                    1 => "upper_head",
+                    2 => "scale_left",
+                    3 => "nostril_left",
+                    4 => "scale_right",
+                    _ => "nostril_right"
+                };
+                break;
             case "/head" when definition.Name.StartsWith("baby_cow", StringComparison.Ordinal):
                 flatName = cube switch { 0 => "head", 1 => "ear_right", 2 => "ear_left", _ => "snout" }; break;
             case "/body" when definition.Name.StartsWith("baby_chicken", StringComparison.Ordinal):

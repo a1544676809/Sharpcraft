@@ -71,11 +71,11 @@ public sealed class SkullRendererTests
         Assert.Equal(0.875f, bounds.Max.X, 3);
         Assert.Equal(0.9369f, bounds.Max.Y, 3);
         Assert.Equal(0.7813f, bounds.Max.Z, 3);
-        AssertVertex(geometry, 0, 0.21875f, 0.42125f, 0.125f, 0.76953f, 0.17188f);
-        AssertVertex(geometry, 1, 0.78125f, 0.42125f, 0.125f, 0.80469f, 0.17188f);
-        AssertVertex(geometry, 2, 0.78125f, 0.42125f, -0.625f, 0.80469f, 0.21875f);
-        AssertVertex(geometry, 4, 0.21875f, 0.18688f, -0.625f, 0.73438f, 0.21875f);
-        AssertVertex(geometry, 8, 0.78125f, 0.42125f, -0.625f, 0.76953f, 0.2334f);
+        AssertVertex(geometry, 0, 0.21875f, 0.42125f, 0.125f, 0.79688f, 0.17188f);
+        AssertVertex(geometry, 1, 0.78125f, 0.42125f, 0.125f, 0.75f, 0.17188f);
+        AssertVertex(geometry, 2, 0.78125f, 0.42125f, -0.625f, 0.75f, 0.23438f);
+        AssertVertex(geometry, 4, 0.21875f, 0.18688f, -0.625f, 0.84375f, 0.23438f);
+        AssertVertex(geometry, 8, 0.78125f, 0.42125f, -0.625f, 0.75f, 0.23438f);
     }
 
     [Fact]
@@ -307,9 +307,9 @@ public sealed class SkullRendererTests
         Assert.Equal(40, mesher.LastEntityCount);
         Assert.Equal(6720, geometry.VertexFloats / ChunkMesher.FloatsPerVertex);
         Assert.Equal(10080, geometry.IndexCount);
-        AssertVertex(geometry, 0, 0.21875f, 0.42125f, 0.125f, 0.76953f, 0.17188f);
-        AssertVertex(geometry, 168, 1.21875f, 0.42125f, 0.125f, 0.76953f, 0.17188f);
-        AssertVertex(geometry, 3360, 20.21875f, 0.42125f, 0.125f, 0.76953f, 0.17188f);
+        AssertVertex(geometry, 0, 0.21875f, 0.42125f, 0.125f, 0.79688f, 0.17188f);
+        AssertVertex(geometry, 168, 1.21875f, 0.42125f, 0.125f, 0.79688f, 0.17188f);
+        AssertVertex(geometry, 3360, 20.21875f, 0.42125f, 0.125f, 0.79688f, 0.17188f);
     }
 
     [Theory]
