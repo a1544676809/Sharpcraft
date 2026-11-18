@@ -61,10 +61,9 @@ public sealed class EntityModelBakeStabilityTests
         // Refreshed for the Witch raw migration (task-178) on the 420e7d4c baseline.
         // Refreshed for the Piglin×3 raw migrations (task-185).
         // Refreshed for the 7 baby raw migrations (task-189) + task-190 baby batch (9 families).
-        // Refreshed for the task-199 final baby raw migration (happy ghast/nautilus/glow squid).
-        System.Console.WriteLine($"HASHAL|flat={Hash(flat)}|tree={Hash(tree)}");
-        Assert.Equal("91c39bab76d796cd1501ef82b397bfd7a9d1ff1b9ecdff50761f80421c40fcf1", Hash(flat));
-        Assert.Equal("0c91dd2abb64192a08c2162b0f3f3286ec63adad746e99b122c8e728419df0f6", Hash(tree));
+        // Refreshed for task-198/199 full 22-baby raw set on the c2a1a549 baseline.
+        Assert.Equal("5429449aad11c6658ce5d6f1d59d3093fd30337bac1b45b5d0de29691cc25658", Hash(flat));
+        Assert.Equal("490b1cfd2a2f817088f221726144eecd2c905dd1201be61ecc708b8a0bc0988e", Hash(tree));
     }
 
     private static void AppendPart(StringBuilder builder, EntityModelPart part)
