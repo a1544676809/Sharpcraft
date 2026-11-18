@@ -68,14 +68,19 @@ public sealed class ItemInHandMesher
                 }
 
                 var armName = offhand ? "left_arm" : "right_arm";
-                var handFrame = model.RawSourceFrame
-                    ? EntityModelMesher.LegacyHandWorldMatrix(model, entity, armName, pose)
-                    : EntityModelMesher.PartWorldMatrix(model, entity, armName, pose);
+                var humanoidSource = HumanoidHeldHandFrame.IsHumanoid(entity.TypeId);
+                var handFrame = humanoidSource
+                    ? HumanoidHeldHandFrame.SourceWorld(model, armName, pose, offhand, entity.IsBaby)
+                    : model.RawSourceFrame
+                        ? EntityModelMesher.LegacyHandWorldMatrix(model, entity, armName, pose)
+                        : EntityModelMesher.PartWorldMatrix(model, entity, armName, pose);
                 var stab = IsStabSwingOnHand(entity, offhand)
                     ? SpearAnimations.ThirdPersonAttackItemMatrix(entity.SwingAnimation, jetForward: 0f)
                     : System.Numerics.Matrix4x4.Identity;
                 var useItem = SpearUseItemFor(entity, offhand);
-                var anchor = EntityModelResolver.AnchorCoreFor(offhand, entity.IsBaby);
+                var anchor = humanoidSource
+                    ? System.Numerics.Matrix4x4.Identity
+                    : EntityModelResolver.AnchorCoreFor(offhand, entity.IsBaby);
 
                 // A composite item submits every member, each under its own item-model transformation. Reference order
                 // with row vectors: the member transform applies first, then the item display transform, the use-item

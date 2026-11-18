@@ -294,6 +294,12 @@ public sealed partial class EntityModelMesher
                 ?? EntityModelResolver.Resolve(entity.TypeId, entity.IsBaby);
         }
 
+        if (entity.IsBaby && entity.TypeId == EntityPlaceholderMesher.PlayerEntityTypeId)
+        {
+            // The player model has no separate baby mesh; the sample's baby humanoid uses the same source parts.
+            return EntityModelResolver.Resolve(EntityPlaceholderMesher.PlayerEntityTypeId);
+        }
+
         return variants is null
             ? EntityModelResolver.Resolve(entity.TypeId, entity.IsBaby)
             : variants.Resolve(entity.TypeId, entity.VariantId, entity.IsBaby);

@@ -89,6 +89,20 @@ public sealed class ItemInHandPlacementComparisonTests
     private static EntityRenderState Entity() =>
         new(1, HumanoidMobModelDefinition.ZombieEntityTypeId, 0f, 0f, 0f, 0f, 0f);
 
+    [Fact]
+    public void HumanoidHeldRoutingUsesSourceFrameAndCopperGolemStaysLegacy()
+    {
+        Assert.True(HumanoidHeldHandFrame.IsHumanoid(EntityPlaceholderMesher.PlayerEntityTypeId));
+        Assert.True(HumanoidHeldHandFrame.IsHumanoid(HumanoidMobModelDefinition.ZombieEntityTypeId));
+        Assert.False(HumanoidHeldHandFrame.IsHumanoid(CopperGolemModelDefinition.CopperGolemEntityTypeId));
+
+        var definition = EntityModelResolver.Resolve(EntityPlaceholderMesher.PlayerEntityTypeId);
+        var source = HumanoidHeldHandFrame.SourceWorld(definition, "right_arm", pose: null, offhand: false, baby: false);
+        var legacy = EntityModelResolver.AnchorCoreFor(offhand: false, baby: false)
+            * EntityModelMesher.LegacyHandWorldMatrix(definition, Entity(), "right_arm");
+        Assert.NotEqual(source.Translation, legacy.Translation);
+    }
+
     private static ItemModelResolution Model(ItemDisplayTransform display) =>
         new(
             "minecraft:item/probe",
