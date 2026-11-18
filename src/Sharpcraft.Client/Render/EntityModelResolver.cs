@@ -317,9 +317,12 @@ public static partial class EntityModelResolver
                             ? HuskArmorModelDefinition.ForSlot(slot)
                             : typeId == GiantModelDefinition.GiantEntityTypeId
                                 ? GiantArmorModelDefinition.ForSlot(slot)
-                                : piglin
-                                    ? PiglinArmorModelDefinition.ForSlot(slot, baby)
-                                    : null;
+                                : typeId == WolfModelDefinition.WolfEntityTypeId
+                                    && effectiveKind == EquipmentAssetKind.WolfBody
+                                    ? WolfArmorModelDefinition.Definition
+                                    : piglin
+                                        ? PiglinArmorModelDefinition.ForSlot(slot, baby)
+                                        : null;
                 var layerModel = rawArmor is null
                     ? new EntityModelDefinition(
                         layerName,

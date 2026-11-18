@@ -818,6 +818,12 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 - **源公式**：HUSK_ARMOR 是共享 humanoid armor 经 MeshTransformer.scaling(1.0625)：root PartPose 缩放 1.0625 并平移 24.016*(1-1.0625) px；立方体/UV 不变。HuskArmorModelDefinition 将源公式静态烘焙为 pivot/cube 坐标缩放 + 根 yOffset（UV 维度保留原值），不依赖 non-unit node scale 路径。
 - **验收**：Husk 四 slot keyed 样本 48/72/72/48，位置 1e-5 + UV half；production resolver Husk raw layer（scale 1，baseline 0）；Drowned 等未缩放 humanoid 仍 legacy；adult/baby/piglin/材质层零回归；full 3,657+、三门禁。
+### task-249 Creeper / Wolf armor raw
+
+- **Creeper**：`CREEPER_ARMOR` = `CreeperModel.createBodyLayer(new CubeDeformation(2.0F))`，是 charged-creeper 全身 overlay，不是四 slot 装备；`CreeperArmorModelDefinition` 复用 creeper body/head/legs grow2 raw 树，keyed 样本 144 顶点 strict 1e-5 + UV half。production 接入 blocker：当前 main 没有 creeper `DATA_IS_POWERED`/`CreeperPowerLayer` 状态，无法按源条件挂层。
+- **Wolf**：`WOLF_ARMOR` = `AdultWolfModel.createBodyLayer(new CubeDeformation(0.2F))`，`WolfArmorModelDefinition` 复用 adult wolf 全身 grow0.2 raw 树，keyed 样本 264 顶点 strict；resolver type 152 的 `WolfBody` 层走 raw，crackiness 材质 overlay 保持 legacy；humanoid/其他 armor 与材质层零回归。
+- **验收**：full 3,687+、三门禁。
+
 ### task-247 Humanoid-derived armor sets raw
 
 - **复用**：`DROWNED_ARMOR`/`BOGGED_ARMOR`/`PARCHED_ARMOR` 均 `putFrom(humanoidArmor)`，`PLAYER_SLIM_ARMOR` 与 `PLAYER_ARMOR` 同 `playerArmor`，`DROWNED_BABY_ARMOR` 与 `humanoidBabyArmor` 同源；这些 set 直接复用现有 Player/Baby raw 定义，不复制 mesh。
