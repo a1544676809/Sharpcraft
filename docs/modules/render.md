@@ -841,7 +841,7 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 ### task-274 thrown trident 实体与 glint
 
-- **registry**：Java probe `BuiltInRegistries.ENTITY_TYPE.getId(EntityTypes.TRIDENT)` = **139**（不是猜的字段顺序）。
+- **registry**：`tools/Sharpcraft.Equivalence.Audit/truth/EntityTypeRegistryProbe.java` 真实 `BuiltInRegistries.ENTITY_TYPE.getId(EntityTypes.TRIDENT)` = **139**；样本 `entity-type-registry.reference.txt`，测试从该 probe 输出读取 id 后与常量比对，不只消费常量。
 - **模型**：`ThrownTridentModelDefinition` 复用源 `TridentModel` raw 32×32（`SpecialItemModelDefinition.Trident`，120 顶点/24 cube/96 面）；base cutout + `trident_glint` 层。
 - **变换**：`EntityModelTransform.ThrownTrident` 按源 `ThrownTridentRenderer`：`rotateY(yRot-90)`、`rotateZ(xRot+90)`，不做 living-entity raw flip；实体位置 `(X,Y,Z)`，模型像素按 production `ModelScale`。
 - **glint**：`trident_glint` 与 base 共用同一几何，纹理 `misc/enchanted_glint_item`，`VisibleWhen=state.IsFoil`，`GlintScale=EntityScale(0.5)`，复用 `GlintTextureTransform`/`GlintClock`；固定 millis=55000 production 测试。

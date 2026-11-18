@@ -25,7 +25,11 @@ public sealed class ThrownTridentTests
     [Fact]
     public void RegistryTypeIdAndFoilMetadataAreWired()
     {
-        Assert.Equal(139, ThrownTridentModelDefinition.EntityTypeId);
+        var registryProbe = Path.Combine(AppContext.BaseDirectory, "Repro", "Data", "entity-type-registry.reference.txt");
+        var registryRow = File.ReadAllLines(registryProbe).Single(line => line.StartsWith("minecraft:trident", StringComparison.Ordinal));
+        var registryId = int.Parse(registryRow.Split('	')[1], CultureInfo.InvariantCulture);
+        Assert.Equal(139, registryId);
+        Assert.True(ThrownTridentModelDefinition.EntityTypeId == registryId);
         var tracker = new EntityTracker();
         Assert.True(tracker.Add(new AddedEntity(7, Guid.Empty, 139, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)));
         Assert.True(tracker.ApplyEntityData(7, [new EntityDataItem(12, 8, 1)]));
@@ -53,29 +57,48 @@ public sealed class ThrownTridentTests
             var baseLayer = layers.Single(layer => layer.Name == "cutout");
             var glint = layers.Single(layer => layer.Name == "trident_glint");
             var sample = ReadSample();
-            var expected = sample
-                .Select(vertex => SourceWorld(vertex.X, vertex.Y, vertex.Z, state))
-                .ToArray();
-            var actualPositions = ReadPositions(baseLayer.Geometry);
-            Assert.Equal(expected.Length, actualPositions.Count);
-            AssertVertexSet(expected, actualPositions);
+            var basePositions = ReadPositions(baseLayer.Geometry);
             var baseUvs = ReadUvs(baseLayer.Geometry);
+            Assert.Equal(sample.Count, basePositions.Count);
             Assert.Equal(sample.Count, baseUvs.Count);
-            var sampleUvs = sample.Select(v => (v.U, v.V)).OrderBy(v => v.U).ThenBy(v => v.V).ToArray();
-            var actualUvs = baseUvs.OrderBy(v => v.U).ThenBy(v => v.V).ToArray();
-            for (var i = 0; i < sampleUvs.Length; i++)
+            var keyToIndex = new Dictionary<string, int>(StringComparer.Ordinal);
+            var used = new bool[basePositions.Count];
+            foreach (var vertex in sample)
             {
-                Assert.True(MathF.Abs(sampleUvs[i].U - actualUvs[i].U) <= 0.001f, $"U i={i} sample={sampleUvs[i].U} actual={actualUvs[i].U}");
-                Assert.True(MathF.Abs(sampleUvs[i].V - actualUvs[i].V) <= 0.001f, $"V i={i} sample={sampleUvs[i].V} actual={actualUvs[i].V}");
+                var expectedPosition = SourceWorld(vertex.X, vertex.Y, vertex.Z, state);
+                var index = -1;
+                for (var candidate = 0; candidate < basePositions.Count; candidate++)
+                {
+                    if (used[candidate]
+                        || Vector3.Distance(expectedPosition, basePositions[candidate]) > 1e-5f
+                        || MathF.Abs(vertex.U - baseUvs[candidate].U) > 0.001f
+                        || MathF.Abs(vertex.V - baseUvs[candidate].V) > 0.001f)
+                    {
+                        continue;
+                    }
+
+                    index = candidate;
+                    break;
+                }
+
+                Assert.True(index >= 0, $"no base vertex for key {vertex.Key}");
+                used[index] = true;
+                keyToIndex.Add(vertex.Key, index);
             }
-            AssertVertexSet(ReadPositions(baseLayer.Geometry), ReadPositions(glint.Geometry));
+
+            Assert.Equal(sample.Count, keyToIndex.Count);
+            var glintPositions = ReadPositions(glint.Geometry);
             var glintUvs = ReadUvs(glint.Geometry);
-            for (var i = 0; i < glintUvs.Count; i++)
+            Assert.Equal(basePositions.Count, glintPositions.Count);
+            foreach (var vertex in sample)
             {
-                var (u, v) = VertexFieldReader.Uv(baseLayer.Geometry.Vertices, i);
-                var expectedUv = GlintTextureTransform.Apply(u, v, 55000, GlintTextureTransform.EntityScale);
-                Assert.Equal((float)(Half)expectedUv.U, glintUvs[i].U, 3);
-                Assert.Equal((float)(Half)expectedUv.V, glintUvs[i].V, 3);
+                var index = keyToIndex[vertex.Key];
+                Assert.True(Vector3.Distance(basePositions[index], glintPositions[index]) <= 1e-5f,
+                    $"position mismatch for key {vertex.Key}");
+                var expectedUv = GlintTextureTransform.Apply(
+                    vertex.U, vertex.V, 55000, GlintTextureTransform.EntityScale);
+                Assert.Equal((float)(Half)expectedUv.U, glintUvs[index].U, 3);
+                Assert.Equal((float)(Half)expectedUv.V, glintUvs[index].V, 3);
             }
 
             var plain = state with { IsFoil = false };
@@ -89,6 +112,35 @@ public sealed class ThrownTridentTests
         }
     }
 
+    [Fact]
+    public void ModelGeometryMatchesSampleKeysInOrder()
+    {
+        var atlas = ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
+        {
+            [SpecialItemModelDefinition.TridentTexture] = new(32, 32, new byte[32 * 32 * 4]),
+            [ItemInHandMesher.GlintTexture] = new(64, 64, new byte[64 * 64 * 4]),
+        });
+        var state = new EntityRenderState(1, ThrownTridentModelDefinition.EntityTypeId, 0.5f, 1.25f, -0.75f, 45f, 30f);
+        var sample = ReadSample();
+        foreach (var cube in sample.GroupBy(vertex => vertex.Part.Split('/').Last()))
+        {
+            var rows = cube.ToArray();
+            var geometry = new EntityModelMesher().BuildInto(
+                new DynamicGeometry(), null, [state], new SpriteRect(0, 0, 32, 32, 1), 32, 32,
+                skinAtlas: atlas, onlyPart: cube.Key, modelOverride: ThrownTridentModelDefinition.Definition);
+            var actualPositions = ReadPositions(geometry);
+            var actualUvs = ReadUvs(geometry);
+            Assert.Equal(rows.Length, actualPositions.Count);
+            for (var i = 0; i < rows.Length; i++)
+            {
+                var expected = SourceWorld(rows[i].X, rows[i].Y, rows[i].Z, state);
+                Assert.True(Vector3.Distance(expected, actualPositions[i]) <= 1e-5f,
+                    $"cube={cube.Key} key={rows[i].Key} expected={expected} actual={actualPositions[i]}");
+                Assert.True(MathF.Abs(rows[i].U - actualUvs[i].U) <= 0.001f, $"U cube={cube.Key} key={rows[i].Key}");
+                Assert.True(MathF.Abs(rows[i].V - actualUvs[i].V) <= 0.001f, $"V cube={cube.Key} key={rows[i].Key}");
+            }
+        }
+    }
     private static Vector3 SourceWorld(float x, float y, float z, EntityRenderState state)
     {
         var degrees = MathF.PI / 180f;
@@ -99,29 +151,21 @@ public sealed class ThrownTridentTests
             + new Vector3(state.X, state.Y, state.Z);
     }
 
-    private static void AssertVertexSet(IReadOnlyList<Vector3> expected, IReadOnlyList<Vector3> actual)
-    {
-        Assert.Equal(expected.Count, actual.Count);
-        var unmatched = actual.ToList();
-        foreach (var point in expected)
-        {
-            var index = unmatched.FindIndex(candidate => Vector3.Distance(candidate, point) <= 1e-5f);
-            Assert.True(index >= 0, $"missing expected vertex {point} actual0={actual[0]} actual1={actual[1]}");
-            unmatched.RemoveAt(index);
-        }
-    }
+    private sealed record SampleVertex(string Key, string Part, float X, float Y, float Z, float U, float V);
 
-    private static List<(float X, float Y, float Z, float U, float V)> ReadSample() =>
+    private static List<SampleVertex> ReadSample() =>
         File.ReadAllLines(SamplePath)
             .Where(line => line.Length > 0 && line[0] != '#')
             .Select(line => line.Split('\t'))
             .Where(parts => parts.Length >= 10)
-            .Select(parts => (
-                X: float.Parse(parts[5], CultureInfo.InvariantCulture),
-                Y: float.Parse(parts[6], CultureInfo.InvariantCulture),
-                Z: float.Parse(parts[7], CultureInfo.InvariantCulture),
-                U: float.Parse(parts[8], CultureInfo.InvariantCulture),
-                V: float.Parse(parts[9], CultureInfo.InvariantCulture)))
+            .Select(parts => new SampleVertex(
+                string.Join('|', parts[0], parts[1], parts[2], parts[3], parts[4]),
+                parts[1],
+                float.Parse(parts[5], CultureInfo.InvariantCulture),
+                float.Parse(parts[6], CultureInfo.InvariantCulture),
+                float.Parse(parts[7], CultureInfo.InvariantCulture),
+                float.Parse(parts[8], CultureInfo.InvariantCulture),
+                float.Parse(parts[9], CultureInfo.InvariantCulture)))
             .ToList();
 
     private static List<Vector3> ReadPositions(DynamicGeometry geometry)
