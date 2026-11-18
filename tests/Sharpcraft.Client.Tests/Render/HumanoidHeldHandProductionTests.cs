@@ -22,7 +22,7 @@ public sealed class HumanoidHeldHandProductionTests
         AppContext.BaseDirectory, "Repro", "Data", "humanoid-held-hand-source-vectors.reference.txt");
 
     [Fact]
-    public void RestAndUseMesherVerticesMatchTheJarSample()
+    public void AllMesherVerticesMatchTheJarSample()
     {
         var vertices = ParseVertices();
         var matrices = ParseMatrices();
