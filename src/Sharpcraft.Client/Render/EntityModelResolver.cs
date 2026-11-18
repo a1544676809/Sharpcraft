@@ -311,7 +311,9 @@ public static partial class EntityModelResolver
                     ? PlayerArmorModelDefinition.ForSlot(slot)
                     : rawBabyHumanoidArmor
                         ? BabyHumanoidArmorModelDefinition.ForSlot(slot)
-                        : null;
+                        : piglin
+                            ? PiglinArmorModelDefinition.ForSlot(slot, baby)
+                            : null;
                 var layerModel = rawArmor is null
                     ? new EntityModelDefinition(
                         layerName,

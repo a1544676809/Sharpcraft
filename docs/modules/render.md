@@ -811,7 +811,13 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 - **probe 扩展**：`RawRenderUnitProbe` 遇到 `<SET>_ARMOR` 字段时反射 `ArmorModelSet`，逐个 `.head()/.chest()/.legs()/.feet()` 取 slot ModelLayerLocation 后 bake，输出 layer 名 `<SET>_HELMET/CHESTPLATE/LEGGINGS/BOOTS`；baby zombie/zombie villager 各 slot 样本 24/72/72/48。
 - **源定义**：`BabyHumanoidArmorModelDefinition` 使用 baby outer deformation `(-0.1,0.5,0.3)` / inner `(-0.1,0.3,0.3)`，legs 的 waist、legs 与 cube extend(-0.1)；LEGS 含 waist，FEET 为 `left_leg/right_foot` + `right_leg/left_foot`；texture 64×64、raw baseline 0、无 FaceTransforms。
-- **验收**：8 个 keyed 样本（baby zombie + baby zombie villager）位置 1e-5 + UV half（waist half UV 逐值量化）；production resolver 对 baby humanoid 四 slot 走 raw layer，baby piglin 保持 legacy；adult/skeleton/piglin 与 trim/glint/crackiness 零回归；full 3,627+、三门禁。
+- **验收**：8 个 keyed 样本（baby zombie + baby zombie villager）位置 1e-5 + UV half（waist half UV 逐值量化）；production resolver 对 baby humanoid 四 slot 走 raw layer；baby piglin 由 task-243 另有 raw 定义；adult/skeleton/piglin 与 trim/glint/crackiness 零回归；full 3,627+、三门禁。
+
+### task-243 Piglin / baby piglin armor raw
+
+- **源证据**：`PIGLIN_ARMOR`/`PIGLIN_BRUTE_ARMOR`/`ZOMBIFIED_PIGLIN_ARMOR` 均 `putFrom(piglinArmor)`（`PiglinModel.createArmorMeshSet(INNER, 1.02)` + `removeEars` 空组）；`PIGLIN_BABY_ARMOR`/`ZOMBIFIED_PIGLIN_BABY_ARMOR` 均 `putFrom(piglinBabyArmor)`（`AbstractPiglinModel.createBabyArmorMeshSet(0.7,0.7, armOffset(0.5,-0.5,0))`）。鼻子 cube 不属于 armor mesh，猪灵耳朵是空组。
+- **定义**：`PiglinArmorModelDefinition` adult outer 1.02 / inner 0.5（legs extend -0.1）、baby uniform 0.7（legs/waist extend -0.1）+ arm offset；texture adult 64×32、baby 64×64，raw baseline 0、无 FaceTransforms，保留空耳组。
+- **验收**：Piglin/ZombifiedPiglin adult+baby 共 16 个 keyed 样本（48/72/72/48、24/72/72/48）位置 1e-5 + UV half；production resolver 覆盖 Piglin/Brute/ZombifiedPiglin；adult/baby humanoid、材质层零回归；full 3,636+、三门禁。
 
 <!-- simplification:SIM-ENTITY-RAW-SCALE task:T-41 -->
 
