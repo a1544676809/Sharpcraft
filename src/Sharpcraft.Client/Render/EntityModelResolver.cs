@@ -311,9 +311,11 @@ public static partial class EntityModelResolver
                     ? PlayerArmorModelDefinition.ForSlot(slot)
                     : rawBabyHumanoidArmor
                         ? BabyHumanoidArmorModelDefinition.ForSlot(slot)
-                        : piglin
-                            ? PiglinArmorModelDefinition.ForSlot(slot, baby)
-                            : null;
+                        : typeId == HumanoidMobModelDefinition.HuskEntityTypeId
+                            ? HuskArmorModelDefinition.ForSlot(slot)
+                            : piglin
+                                ? PiglinArmorModelDefinition.ForSlot(slot, baby)
+                                : null;
                 var layerModel = rawArmor is null
                     ? new EntityModelDefinition(
                         layerName,
@@ -338,7 +340,7 @@ public static partial class EntityModelResolver
                         rawArmor.Parts,
                         faceTransforms: null,
                         layerTexture,
-                        definition.Scale,
+                        rawArmor.Scale,
                         textureSelector: selector,
                         additionalTexturePaths: [layerTexture],
                         compiled: EntityModelLayerHelpers.WithTint(

@@ -101,12 +101,12 @@ public sealed class PlayerArmorRawReferenceSampleTests
             Assert.Equal(48, armor.Compiled!.Cubes.Sum(cube => 24));
         }
 
-        // Husk armor uses a scaled source mesh and must stay on the legacy 24 px layer.
-        var husk = EntityModelResolver.Resolve(Sharpcraft.Client.Render.HumanoidMobModelDefinition.HuskEntityTypeId);
-        var huskArmor = husk.RenderLayers!.First(layer => layer.Name == "equipment_HumanoidArmor_5").Model!;
-        Assert.False(huskArmor.RawSourceFrame);
-        Assert.Equal(24f, huskArmor.BaselinePx);
-        Assert.NotNull(huskArmor.FaceTransforms);
+        // Drowned armor is still an unscaled legacy layer; Husk has its own raw scaled definition.
+        var drowned = EntityModelResolver.Resolve(Sharpcraft.Client.Render.HumanoidMobModelDefinition.DrownedEntityTypeId);
+        var drownedArmor = drowned.RenderLayers!.First(layer => layer.Name == "equipment_HumanoidArmor_5").Model!;
+        Assert.False(drownedArmor.RawSourceFrame);
+        Assert.Equal(24f, drownedArmor.BaselinePx);
+        Assert.NotNull(drownedArmor.FaceTransforms);
     }
 
     private static Row[] Load(string sampleFile)
