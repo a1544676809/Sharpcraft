@@ -307,4 +307,8 @@ public static partial class VanillaMeshBake
             Parent: parent,
             Kind: kind);
     }
+
+    /// <summary>Pins the UV cube dimensions after a scaled bake without changing geometry.</summary>
+    internal static EntityModelPart PinUvDimensions(EntityModelPart part, int width, int height, int depth) =>
+        part with { UvWidth = width, UvHeight = height, UvDepth = depth };
 }

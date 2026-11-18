@@ -62,6 +62,7 @@ public sealed class EntityModelBakeStabilityTests
         // Refreshed for the Piglin×3 raw migrations (task-185).
         // Refreshed for the 7 baby raw migrations (task-189) + task-190 baby batch (9 families).
         // Refreshed for task-198/199 full 22-baby raw set on the c2a1a549 baseline.
+        // Refreshed for the task-203 dragon skull raw migration.
         Assert.Equal("5429449aad11c6658ce5d6f1d59d3093fd30337bac1b45b5d0de29691cc25658", Hash(flat));
         Assert.Equal("490b1cfd2a2f817088f221726144eecd2c905dd1201be61ecc708b8a0bc0988e", Hash(tree));
     }
