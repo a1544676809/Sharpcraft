@@ -318,7 +318,8 @@ public sealed class ItemEntityMesher
         ItemModelResolution resolution,
         GrassColorMap? grass,
         ref int vertexFloats,
-        ref int indexCount)
+        ref int indexCount,
+        string? textureOverride = null)
     {
         ArgumentNullException.ThrowIfNull(geometry);
         ArgumentNullException.ThrowIfNull(quads);
@@ -328,7 +329,7 @@ public sealed class ItemEntityMesher
         var written = 0;
         foreach (var quad in quads)
         {
-            if (atlas.Get(quad.Texture) is not { } sprite)
+            if (atlas.Get(textureOverride ?? quad.Texture) is not { } sprite)
             {
                 continue;
             }

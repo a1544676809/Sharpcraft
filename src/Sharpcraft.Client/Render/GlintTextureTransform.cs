@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using System.Numerics;
+using Sharpcraft.Framework.Rendering;
 
 namespace Sharpcraft.Client.Render;
 
@@ -47,8 +48,26 @@ public static class GlintTextureTransform
     }
 
     /// <summary>Applies the transform with the row-vector matrix and returns the wrapped UV.</summary>
-    public static Vector2 Apply(Vector2 uv, long millis, float scale) =>
-        new(Apply(uv.X, uv.Y, millis, scale).U, Apply(uv.X, uv.Y, millis, scale).V);
+    public static Vector2 Apply(Vector2 uv, long millis, float scale)
+    {
+        var (u, v) = Apply(uv.X, uv.Y, millis, scale);
+        return new Vector2(u, v);
+    }
+
+    /// <summary>Rewrites every half-UV in a built layer with this transform, leaving positions untouched.</summary>
+    public static void ApplyToGeometry(DynamicGeometry geometry, long millis, float scale)
+    {
+        for (var offset = 0; offset + ChunkMesher.FloatsPerVertex <= geometry.VertexFloats; offset += ChunkMesher.FloatsPerVertex)
+        {
+            var packed = BitConverter.SingleToUInt32Bits(geometry.Vertices[offset + 4]);
+            var u = (float)BitConverter.UInt16BitsToHalf((ushort)(packed & 0xFFFF));
+            var v = (float)BitConverter.UInt16BitsToHalf((ushort)(packed >> 16));
+            var glint = Apply(u, v, millis, scale);
+            geometry.Vertices[offset + 4] = BitConverter.UInt32BitsToSingle(
+                (uint)BitConverter.HalfToUInt16Bits((Half)glint.U)
+                | ((uint)BitConverter.HalfToUInt16Bits((Half)glint.V) << 16));
+        }
+    }
 
     private static float Fract(float value) => value - MathF.Floor(value);
 }
