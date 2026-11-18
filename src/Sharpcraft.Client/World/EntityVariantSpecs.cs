@@ -28,6 +28,7 @@ namespace Sharpcraft.Client.World;
 /// <param name="PoweredAccessorIndex">Boolean accessor carrying creeper powered state (Creeper DATA_IS_POWERED), or -1.</param>
 /// <param name="ArmorStandFlagsAccessorIndex">Byte accessor carrying ArmorStand DATA_CLIENT_FLAGS, or -1.</param>
 /// <param name="ArmorStandPoseAccessorIndex">First of six consecutive ROTATIONS accessors (head/body/left_arm/right_arm/left_leg/right_leg), or -1.</param>
+/// <param name="MainArmAccessorIndex">Avatar DATA_PLAYER_MAIN_HAND accessor (HUMANOID_ARM serializer 42), or -1.</param>
 /// <param name="ShellHideStates">True when the integer value is an Armadillo state whose ROLLING/SCARED/UNROLLING phase hides the body in the shell.</param>
 public readonly record struct EntityVariantSpec(
     int AccessorIndex,
@@ -48,7 +49,8 @@ public readonly record struct EntityVariantSpec(
     int MarkingsShift = -1,
     int PoweredAccessorIndex = -1,
     int ArmorStandFlagsAccessorIndex = -1,
-    int ArmorStandPoseAccessorIndex = -1);
+    int ArmorStandPoseAccessorIndex = -1,
+    int MainArmAccessorIndex = -1);
 
 /// <summary>
 /// Answering "which synced-data field is the variant" for the entity types this client renders with variants.
@@ -115,6 +117,9 @@ public static class EntityVariantSpecs
         // DATA_HEAD_POSE 16 / BODY 17 / LEFT_ARM 18 / RIGHT_ARM 19 / LEFT_LEG 20 / RIGHT_LEG 21 (ROTATIONS, id 9).
         // ref://mc-26.3-analysis/src/net/minecraft/world/entity/decoration/ArmorStand.java
         [5] = new(-1, null, ["default"], "default", ArmorStandFlagsAccessorIndex: 15, ArmorStandPoseAccessorIndex: 16),
+
+        // Avatar/Player: DATA_PLAYER_MAIN_HAND accessor 15 (HUMANOID_ARM serializer 42), then customization 16.
+        [159] = new(-1, null, ["default"], "default", MainArmAccessorIndex: 15),
 
         // Vex: byte flags at 16 (no AgeableMob in the chain), charging bit 0.
         [142] = new(-1, null, ["default"], "default", FlagsAccessorIndex: 16, ChargingMask: 1),

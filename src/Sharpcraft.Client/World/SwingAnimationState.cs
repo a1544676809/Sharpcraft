@@ -25,6 +25,9 @@ public sealed class SwingAnimationState
     /// <summary>Swing animation type of the current (or last) swing: 0 none / 1 whack / 2 stab.</summary>
     public int AnimationType => _animationType;
 
+    /// <summary>Duration of the current (or last) swing in ticks, from the SwingDescription payload.</summary>
+    public int DurationTicks => _durationTicks;
+
     /// <summary>Reference <c>startIfAble</c>: starts a swing unless the current one is still in its first half.</summary>
     public bool StartIfAble(int hand, int animationType, int durationTicks)
     {

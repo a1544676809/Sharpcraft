@@ -70,6 +70,19 @@ public sealed partial class EntityTracker
             var hasCustomBody = playerSkin?.Body is not null;
             var slim = hasCustomBody ? playerSkin!.Value.Slim : DefaultPlayerSkin.Get(entity.Uuid).Slim;
             var dragon = entity.TypeId == EnderDragonModelDefinition.EnderDragonEntityTypeId;
+            var ticksUsingItem = entity.Presentation.IsUsingItem ? entity.Presentation.UseItemTicks + t : 0f;
+            var mainArm = entity.TypeId == 159
+                ? (entity.MainArm == 0 ? 0 : 1)
+                : (entity.Presentation.IsLeftHanded ? 0 : 1);
+            var usingArm = entity.Presentation.UseItemHand == 0 ? mainArm : 1 - mainArm;
+            var useItemId = entity.EquipmentItemAt(entity.Presentation.UseItemHand);
+            var heldOnHeadItemId = entity.TypeId == 159
+                && entity.Presentation.IsUsingItem
+                && useItemId > 0
+                && EntityModelResolver.Items?.ById(useItemId) is { } heldItem
+                && heldItem.Id.Path == "spyglass"
+                ? useItemId
+                : -1;
 
             _renderStates.Add(new EntityRenderState(
                 entity.Id,
@@ -105,6 +118,12 @@ public sealed partial class EntityTracker
                 RightArmPose: entity.RightArmPose,
                 LeftLegPose: entity.LeftLegPose,
                 RightLegPose: entity.RightLegPose,
+                MainArm: mainArm,
+                LeftTicksUsingItem: entity.Presentation.IsUsingItem && usingArm == 0 ? ticksUsingItem : 0f,
+                RightTicksUsingItem: entity.Presentation.IsUsingItem && usingArm == 1 ? ticksUsingItem : 0f,
+                SwingDurationTicks: entity.Presentation.Swing.DurationTicks,
+                IsSwinging: entity.Presentation.Swing.IsSwinging,
+                HeldOnHeadItemId: heldOnHeadItemId,
                 Markings: entity.Markings,
                 Equipment: new EntityEquipment(
                     entity.EquipmentItemAt(0), entity.EquipmentItemAt(1), entity.EquipmentItemAt(2), entity.EquipmentItemAt(3),
@@ -129,7 +148,7 @@ public sealed partial class EntityTracker
                 IsUsingItem: entity.Presentation.IsUsingItem,
                 // Reference LivingEntity.getTicksUsingItem(partialTicks): integer ticks plus the partial tick, so the
                 // spear and crossbow animations advance smoothly instead of stepping once per tick.
-                TicksUsingItem: entity.Presentation.IsUsingItem ? entity.Presentation.UseItemTicks + t : 0f,
+                TicksUsingItem: ticksUsingItem,
                 OffHandItemId: entity.EquipmentItemAt(1),
                 MainHandChargedCrossbow: entity.EquipmentComponentsAt(0).HasChargedProjectiles,
                 MainHandQuickChargeLevel: entity.EquipmentComponentsAt(0).QuickChargeLevel,

@@ -228,6 +228,10 @@ public static class EntityDataPackets
                 status = reader.TryReadFloat(out rotationZ);
                 return status;
 
+            case 42: // HUMANOID_ARM: VarInt enum id (LEFT=0, RIGHT=1)
+                status = reader.TryReadVarInt(out value);
+                return status;
+
             case 10: // BLOCK_POS: packed long
                 return SkipBytes(ref reader, 8);
 
@@ -323,7 +327,6 @@ public static class EntityDataPackets
             case 36: // ARMADILLO_STATE
             case 37: // COPPER_GOLEM_STATE
             case 38: // WEATHERING_COPPER_STATE
-            case 42: // HUMANOID_ARM
             case 43: // DYE_COLOR
                 return reader.TryReadVarInt(out _);
 

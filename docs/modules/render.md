@@ -818,6 +818,12 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 - **源公式**：HUSK_ARMOR 是共享 humanoid armor 经 MeshTransformer.scaling(1.0625)：root PartPose 缩放 1.0625 并平移 24.016*(1-1.0625) px；立方体/UV 不变。HuskArmorModelDefinition 将源公式静态烘焙为 pivot/cube 坐标缩放 + 根 yOffset（UV 维度保留原值），不依赖 non-unit node scale 路径。
 - **验收**：Husk 四 slot keyed 样本 48/72/72/48，位置 1e-5 + UV half；production resolver Husk raw layer（scale 1，baseline 0）；Drowned/Bogged 等已由 task-247 切 raw，Parched 已由 task-257 接入；adult/baby/piglin/材质层零回归；full 3,657+、三门禁。
+### task-265 held 所需 render state 状态通道
+
+- **审计**：现有 `SwingHand`/`SwingType`/`TicksUsingItem`/`UseItemHand` 已从 swing packet 和 `DATA_LIVING_ENTITY_FLAGS`（index 8 bit0/1）解析；本次只补缺失通道，不改 hand frame/adapter。
+- **新增字段**：`MainArm`（Avatar `DATA_PLAYER_MAIN_HAND` accessor 15，HUMANOID_ARM serializer **42**，LEFT=0/RIGHT=1；非 Avatar 由 `IsLeftHanded` 派生）、`LeftTicksUsingItem`/`RightTicksUsingItem`（float；源 `HumanoidRenderState.ticksUsingItem(arm)` 派生，保留 partial tick）、`SwingDurationTicks`/`IsSwinging`（SwingDescription payload）、`HeldOnHeadItemId`（源 `AvatarRenderer` 仅在 `useItem.is(Items.SPYGLASS)` 时填 heldOnHead，其它 item -1）。
+- **验收**：默认值、Player main-arm metadata roundtrip、错误 index/serializer 不误写、using-item 分臂 ticks + heldOnHead、swing duration/type 测试；full 3,722+、三门禁。
+
 ### task-261 trim/glint/crackiness 跟随 raw armor 几何
 
 - **审计**：`rawArmor` 已为 raw 时，trim/glint 仍用 `equipmentTree`（legacy 24px compiled）且 `baselinePx:24/rawSourceFrame:false`；wolf crackiness 仍用 `EquipmentModelTrees` 的 legacy wolf armor tree。结果材质层与 armor 层几何/基线不一致。
