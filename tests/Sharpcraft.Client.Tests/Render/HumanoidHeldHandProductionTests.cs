@@ -63,12 +63,6 @@ public sealed class HumanoidHeldHandProductionTests
                 var skippedAttackStates = 0;
                 foreach (var state in vertices.Keys)
                 {
-                    if (state.Contains("_attack_", StringComparison.Ordinal))
-                    {
-                        skippedAttackStates++;
-                        continue;
-                    }
-
                     checkedStates++;
                     var expectedSource = vertices[state];
                     Assert.Equal(24, expectedSource.Length);
@@ -124,8 +118,8 @@ public sealed class HumanoidHeldHandProductionTests
                     AssertVertexSet(expected, actual, state);
                 }
 
-                Assert.Equal(8, checkedStates);
-                Assert.Equal(4, skippedAttackStates);
+                Assert.Equal(12, checkedStates);
+                Assert.Equal(0, skippedAttackStates);
 
                 // Non-humanoid raw models must still use the legacy hand adapter in the real mesher.
                 var copper = new EntityRenderState(
@@ -170,7 +164,12 @@ public sealed class HumanoidHeldHandProductionTests
         new(0f, 0f, 1f), new(1f, 0f, 1f), new(1f, 1f, 1f), new(0f, 1f, 1f),
     ];
 
-    private static HumanoidArmPose PoseFor(string motion) => motion == "use" ? HumanoidArmPose.Spear : HumanoidArmPose.Item;
+    private static HumanoidArmPose PoseFor(string motion) => motion switch
+    {
+        "attack" => HumanoidArmPose.ThrowTrident,
+        "use" => HumanoidArmPose.Spear,
+        _ => HumanoidArmPose.Item,
+    };
 
     private static Dictionary<string, Matrix4x4> ParseMatrices()
     {
