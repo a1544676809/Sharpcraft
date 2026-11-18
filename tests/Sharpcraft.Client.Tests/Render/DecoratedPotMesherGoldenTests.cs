@@ -20,15 +20,15 @@ public sealed class DecoratedPotMesherGoldenTests
     private const float Tolerance = 1e-5f;
     private const float Pixel = 1f / 16f;
 
-    // Vertex ranges for one pot: neck ring (0..23), neck rim (24..47), top (48..51),
-    // bottom (52..55), back (56..59), left (60..63), right (64..67), front (68..71).
+    // Vertex ranges for one pot: neck ring (0..23), neck rim (24..47), top cube (48..71),
+    // bottom cube (72..95), back (96..99), left (100..103), right (104..107), front (108..111).
     private const int NeckRingStart = 0;
     private const int NeckRimStart = 24;
     private const int TopPlaneStart = 48;
-    private const int BottomPlaneStart = 52;
-    private const int FirstSideStart = 56;
-    private const int VerticesPerPot = 72;
-    private const int IndicesPerPot = 108;
+    private const int BottomPlaneStart = 72;
+    private const int FirstSideStart = 96;
+    private const int VerticesPerPot = 112;
+    private const int IndicesPerPot = 168;
 
     /// <summary>The model constants are the reference's pixels over sixteen, with its deformations applied.</summary>
     [Fact]
@@ -84,7 +84,7 @@ public sealed class DecoratedPotMesherGoldenTests
     {
         var geometry = BuildOne(facing: 2);
 
-        var (topMinX, topMaxX, topMinY, topMaxY, topMinZ, topMaxZ) = Bounds(geometry, TopPlaneStart, 4);
+        var (topMinX, topMaxX, topMinY, topMaxY, topMinZ, topMaxZ) = Bounds(geometry, TopPlaneStart, 24);
         Assert.Equal(1f / 16f, topMinX, Tolerance);
         Assert.Equal(15f / 16f, topMaxX, Tolerance);
         Assert.Equal(1f, topMinY, Tolerance);
@@ -92,7 +92,7 @@ public sealed class DecoratedPotMesherGoldenTests
         Assert.Equal(1f / 16f, topMinZ, Tolerance);
         Assert.Equal(15f / 16f, topMaxZ, Tolerance);
 
-        var (bottomMinX, bottomMaxX, bottomMinY, bottomMaxY, bottomMinZ, bottomMaxZ) = Bounds(geometry, BottomPlaneStart, 4);
+        var (bottomMinX, bottomMaxX, bottomMinY, bottomMaxY, bottomMinZ, bottomMaxZ) = Bounds(geometry, BottomPlaneStart, 24);
         Assert.Equal(1f / 16f, bottomMinX, Tolerance);
         Assert.Equal(15f / 16f, bottomMaxX, Tolerance);
         Assert.Equal(0f, bottomMinY, Tolerance);
@@ -100,9 +100,9 @@ public sealed class DecoratedPotMesherGoldenTests
         Assert.Equal(1f / 16f, bottomMinZ, Tolerance);
         Assert.Equal(15f / 16f, bottomMaxZ, Tolerance);
 
-        Assert.Equal(Vector3.UnitY, Normal(geometry, TopPlaneStart));
+        Assert.Equal(-Vector3.UnitY, Normal(geometry, TopPlaneStart));
         Assert.Equal(-Vector3.UnitY, Normal(geometry, BottomPlaneStart));
-        AssertQuadUvs(geometry, TopPlaneStart,
+        AssertQuadUvs(geometry, TopPlaneStart + 4,
             [(28f / 32f, 27f / 32f), (14f / 32f, 27f / 32f), (14f / 32f, 13f / 32f), (28f / 32f, 13f / 32f)]);
         AssertQuadUvs(geometry, BottomPlaneStart,
             [(14f / 32f, 13f / 32f), (0f, 13f / 32f), (0f, 27f / 32f), (14f / 32f, 27f / 32f)]);
@@ -130,10 +130,10 @@ public sealed class DecoratedPotMesherGoldenTests
 
         var expected = new (int Start, float MinX, float MaxX, float MinZ, float MaxZ, (float X, float Y, float Z) Centre, Vector3 Normal)[]
         {
-            (56, 1f / 16f, 15f / 16f, 1f / 16f, 1f / 16f, (0.5f, 0.5f, 1f / 16f), new Vector3(0f, 0f, -1f)),
-            (60, 1f / 16f, 1f / 16f, 1f / 16f, 15f / 16f, (1f / 16f, 0.5f, 0.5f), new Vector3(-1f, 0f, 0f)),
-            (64, 15f / 16f, 15f / 16f, 1f / 16f, 15f / 16f, (15f / 16f, 0.5f, 0.5f), new Vector3(1f, 0f, 0f)),
-            (68, 1f / 16f, 15f / 16f, 15f / 16f, 15f / 16f, (0.5f, 0.5f, 15f / 16f), new Vector3(0f, 0f, 1f))
+            (96, 1f / 16f, 15f / 16f, 1f / 16f, 1f / 16f, (0.5f, 0.5f, 1f / 16f), new Vector3(0f, 0f, -1f)),
+            (100, 1f / 16f, 1f / 16f, 1f / 16f, 15f / 16f, (1f / 16f, 0.5f, 0.5f), new Vector3(-1f, 0f, 0f)),
+            (104, 15f / 16f, 15f / 16f, 1f / 16f, 15f / 16f, (15f / 16f, 0.5f, 0.5f), new Vector3(1f, 0f, 0f)),
+            (108, 1f / 16f, 15f / 16f, 15f / 16f, 15f / 16f, (0.5f, 0.5f, 15f / 16f), new Vector3(0f, 0f, 1f))
         };
 
         foreach (var (start, expectedMinX, expectedMaxX, expectedMinZ, expectedMaxZ, centre, normal) in expected)
@@ -168,10 +168,10 @@ public sealed class DecoratedPotMesherGoldenTests
         var geometry = BuildOne(facing: 2);
         var expected = new (int Start, Vector3[] Corners)[]
         {
-            (56, [new(1f / 16f, 1f, 1f / 16f), new(15f / 16f, 1f, 1f / 16f), new(15f / 16f, 0f, 1f / 16f), new(1f / 16f, 0f, 1f / 16f)]),
-            (60, [new(1f / 16f, 1f, 15f / 16f), new(1f / 16f, 1f, 1f / 16f), new(1f / 16f, 0f, 1f / 16f), new(1f / 16f, 0f, 15f / 16f)]),
-            (64, [new(15f / 16f, 1f, 1f / 16f), new(15f / 16f, 1f, 15f / 16f), new(15f / 16f, 0f, 15f / 16f), new(15f / 16f, 0f, 1f / 16f)]),
-            (68, [new(15f / 16f, 1f, 15f / 16f), new(1f / 16f, 1f, 15f / 16f), new(1f / 16f, 0f, 15f / 16f), new(15f / 16f, 0f, 15f / 16f)])
+            (96, [new(1f / 16f, 1f, 1f / 16f), new(15f / 16f, 1f, 1f / 16f), new(15f / 16f, 0f, 1f / 16f), new(1f / 16f, 0f, 1f / 16f)]),
+            (100, [new(1f / 16f, 1f, 15f / 16f), new(1f / 16f, 1f, 1f / 16f), new(1f / 16f, 0f, 1f / 16f), new(1f / 16f, 0f, 15f / 16f)]),
+            (104, [new(15f / 16f, 1f, 1f / 16f), new(15f / 16f, 1f, 15f / 16f), new(15f / 16f, 0f, 15f / 16f), new(15f / 16f, 0f, 1f / 16f)]),
+            (108, [new(15f / 16f, 1f, 15f / 16f), new(1f / 16f, 1f, 15f / 16f), new(1f / 16f, 0f, 15f / 16f), new(15f / 16f, 0f, 15f / 16f)])
         };
 
         foreach (var (start, corners) in expected)
