@@ -29,7 +29,7 @@ public static class PlayerArmorModelDefinition
         _ => throw new ArgumentOutOfRangeException(nameof(slot))
     };
 
-    private static EntityModelDefinition Build(string name, int slot)
+    internal static VanillaMeshDefinition CreateMesh(int slot)
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
         if (slot == 5)
@@ -63,15 +63,18 @@ public static class PlayerArmorModelDefinition
             }
         }
 
-        return EntityModelDefinition.FromTree(
+        return new VanillaMeshDefinition(root);
+    }
+
+    private static EntityModelDefinition Build(string name, int slot) =>
+        EntityModelDefinition.FromTree(
             "player_armor_" + name + "_raw",
             64,
             32,
-            new VanillaMeshDefinition(root),
+            CreateMesh(slot),
             faceTransforms: null,
             texturePath: null,
             baselinePx: 0f,
             rawSourceFrame: true,
             sourceFrameBaselinePx: 0f);
-    }
 }
