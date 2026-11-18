@@ -201,8 +201,8 @@ public sealed class ElytraWingGeometryTests
             maxY = MathF.Max(maxY, y);
         }
 
-        AssertClose(1.492f * Px, minY);
-        AssertClose(12.492f * Px, maxY);
+        Assert.True(MathF.Abs((1.492f * Px) - minY) <= 1e-6f, $"baby minY expected {1.492f * Px}, actual {minY}");
+        Assert.True(MathF.Abs((12.492f * Px) - maxY) <= 1e-6f, $"baby maxY expected {12.492f * Px}, actual {maxY}");
     }
 
     [Fact]

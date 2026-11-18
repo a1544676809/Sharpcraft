@@ -426,7 +426,7 @@ public static class EntityModelLayerHelpers
         var modelHeight = bodyCube.Value.Bottom + bodyCube.Value.Height;
         var wingPivotZ = bodyCube.Value.CentreZ + 2f;
         // Raw source layer is already in the entity-model frame; WingsLayer only adds translate(0,0,0.125).
-        var wings = TranslateElytraPivots(BuildElytraSourceLayer(baby), baby ? -30f : -24f, 2f);
+        var wings = TranslateElytraPivots(BuildElytraSourceLayer(baby), baby ? -24f - (12.008f * 0.5f) : -24f, 2f);
         return WithElytraSelectors(wings, baby);
     }
 
