@@ -10,41 +10,41 @@ namespace Sharpcraft.Client.Tests.Render;
 public sealed class BabyModelDefinitionsOddTests
 {
     [Fact]
-    public void BabyStriderPartsMatchLegacyRecords()
+    public void BabyStriderPartsMatchSourceFrameRecords()
     {
         var expected = new[]
         {
-            LegacyModelPartFactory.FromVanilla("body", 0f, 16.75f, 0f, -3.5f, -3.75f, -4f, 7f, 7f, 8f, 0, 0),
-            LegacyModelPartFactory.FromVanilla("right_leg", -1.5f, 20f, 0f, -1f, 0f, -1f, 2f, 4f, 2f, 0, 24),
-            LegacyModelPartFactory.FromVanilla("left_leg", 1.5f, 20f, 0f, -1f, 0f, -1f, 2f, 4f, 2f, 8, 24),
-            LegacyModelPartFactory.FromVanillaChild("bristle0", "body", 0f, -4.25f, 2f, -3.5f, -2.5f, 0f, 7f, 3f, 0f, 0, 21),
-            LegacyModelPartFactory.FromVanillaChild("bristle1", "body", 0f, -4.25f, 0f, -3.5f, -2.5f, 0f, 7f, 3f, 0f, 0, 18),
-            LegacyModelPartFactory.FromVanillaChild("bristle2", "body", 0f, -4.25f, -2f, -3.5f, -2.5f, 0f, 7f, 3f, 0f, 0, 15)
+            RawModelPartFactory.FromVanilla("body", 0f, 16.75f, 0f, -3.5f, -3.75f, -4f, 7f, 7f, 8f, 0, 0),
+            RawModelPartFactory.FromVanilla("right_leg", -1.5f, 20f, 0f, -1f, 0f, -1f, 2f, 4f, 2f, 0, 24),
+            RawModelPartFactory.FromVanilla("left_leg", 1.5f, 20f, 0f, -1f, 0f, -1f, 2f, 4f, 2f, 8, 24),
+            RawModelPartFactory.FromVanillaChild("bristle0", "body", 0f, -4.25f, 2f, -3.5f, -2.5f, 0f, 7f, 3f, 0f, 0, 21),
+            RawModelPartFactory.FromVanillaChild("bristle1", "body", 0f, -4.25f, 0f, -3.5f, -2.5f, 0f, 7f, 3f, 0f, 0, 18),
+            RawModelPartFactory.FromVanillaChild("bristle2", "body", 0f, -4.25f, -2f, -3.5f, -2.5f, 0f, 7f, 3f, 0f, 0, 15)
         };
         AssertPartsMatch(expected, BabyModelDefinitionsOdd.Strider.Parts);
     }
 
     [Fact]
-    public void BabySniffletPartsMatchLegacyRecords()
+    public void BabySniffletPartsMatchSourceFrameRecords()
     {
         var expected = new[]
         {
-            LegacyModelPartFactory.FromVanilla("bone", 0f, 24f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-            LegacyModelPartFactory.FromVanillaChild("body", "bone", 6f, -3f, -9.5f, -13f, -14f, -0.5f, 14f, 14f, 20f, 0, 35, grow: 0.25f),
-            LegacyModelPartFactory.FromVanillaChild("body_main", "body", 0f, 0f, 0f, -13f, -14f, -0.5f, 14f, 15f, 20f, 0, 0),
-            LegacyModelPartFactory.FromVanillaChild("body_flat", "body", 0f, 0f, 0f, -13f, 0f, -0.5f, 14f, 0f, 20f, 68, 0),
-            LegacyModelPartFactory.FromVanillaChild("head", "body", -6f, -4.75f, 0f, -5f, -4.25f, -7.5f, 10f, 9f, 9f, 68, 20),
-            LegacyModelPartFactory.FromVanillaChild("head_flat", "head", 0f, 0f, 0f, -5f, 3.75f, -7.5f, 10f, 0f, 9f, 88, 20),
-            LegacyModelPartFactory.FromVanillaChild("left_ear", "head", 5f, -4.25f, -1.5f, 0f, 0f, -2f, 1f, 11f, 3f, 104, 38),
-            LegacyModelPartFactory.FromVanillaChild("right_ear", "head", -5f, -4.25f, -1.5f, -1f, 0f, -2f, 1f, 11f, 3f, 96, 38),
-            LegacyModelPartFactory.FromVanillaChild("nose", "head", 0f, -1.25f, -9.5f, -5f, -3f, -2f, 10f, 3f, 4f, 68, 47),
-            LegacyModelPartFactory.FromVanillaChild("lower_beak", "head", 0f, 1.25f, -9.5f, -5f, -2.5f, -2f, 10f, 5f, 4f, 68, 38),
-            LegacyModelPartFactory.FromVanillaChild("right_front_leg", "bone", -4f, -4f, -7f, -2f, -1f, -2f, 4f, 5f, 4f, 0, 69),
-            LegacyModelPartFactory.FromVanillaChild("right_mid_leg", "bone", -4f, -4f, 0f, -2f, -1f, -2f, 4f, 5f, 4f, 0, 78),
-            LegacyModelPartFactory.FromVanillaChild("right_hind_leg", "bone", -4f, -4f, 7f, -2f, -1f, -2f, 4f, 5f, 4f, 0, 87),
-            LegacyModelPartFactory.FromVanillaChild("left_front_leg", "bone", 4f, -4f, -7f, -2f, -1f, -2f, 4f, 5f, 4f, 16, 69),
-            LegacyModelPartFactory.FromVanillaChild("left_mid_leg", "bone", 4f, -4f, 0f, -2f, -1f, -2f, 4f, 5f, 4f, 16, 78),
-            LegacyModelPartFactory.FromVanillaChild("left_hind_leg", "bone", 4f, -4f, 7f, -2f, -1f, -2f, 4f, 5f, 4f, 16, 87)
+            RawModelPartFactory.FromVanilla("bone", 0f, 24f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
+            RawModelPartFactory.FromVanillaChild("body", "bone", 6f, -3f, -9.5f, -13f, -14f, -0.5f, 14f, 14f, 20f, 0, 35, grow: 0.25f),
+            RawModelPartFactory.FromVanillaChild("body_main", "body", 0f, 0f, 0f, -13f, -14f, -0.5f, 14f, 15f, 20f, 0, 0),
+            RawModelPartFactory.FromVanillaChild("body_flat", "body", 0f, 0f, 0f, -13f, 0f, -0.5f, 14f, 0f, 20f, 68, 0),
+            RawModelPartFactory.FromVanillaChild("head", "body", -6f, -4.75f, 0f, -5f, -4.25f, -7.5f, 10f, 9f, 9f, 68, 20),
+            RawModelPartFactory.FromVanillaChild("head_flat", "head", 0f, 0f, 0f, -5f, 3.75f, -7.5f, 10f, 0f, 9f, 88, 20),
+            RawModelPartFactory.FromVanillaChild("left_ear", "head", 5f, -4.25f, -1.5f, 0f, 0f, -2f, 1f, 11f, 3f, 104, 38),
+            RawModelPartFactory.FromVanillaChild("right_ear", "head", -5f, -4.25f, -1.5f, -1f, 0f, -2f, 1f, 11f, 3f, 96, 38),
+            RawModelPartFactory.FromVanillaChild("nose", "head", 0f, -1.25f, -9.5f, -5f, -3f, -2f, 10f, 3f, 4f, 68, 47),
+            RawModelPartFactory.FromVanillaChild("lower_beak", "head", 0f, 1.25f, -9.5f, -5f, -2.5f, -2f, 10f, 5f, 4f, 68, 38),
+            RawModelPartFactory.FromVanillaChild("right_front_leg", "bone", -4f, -4f, -7f, -2f, -1f, -2f, 4f, 5f, 4f, 0, 69),
+            RawModelPartFactory.FromVanillaChild("right_mid_leg", "bone", -4f, -4f, 0f, -2f, -1f, -2f, 4f, 5f, 4f, 0, 78),
+            RawModelPartFactory.FromVanillaChild("right_hind_leg", "bone", -4f, -4f, 7f, -2f, -1f, -2f, 4f, 5f, 4f, 0, 87),
+            RawModelPartFactory.FromVanillaChild("left_front_leg", "bone", 4f, -4f, -7f, -2f, -1f, -2f, 4f, 5f, 4f, 16, 69),
+            RawModelPartFactory.FromVanillaChild("left_mid_leg", "bone", 4f, -4f, 0f, -2f, -1f, -2f, 4f, 5f, 4f, 16, 78),
+            RawModelPartFactory.FromVanillaChild("left_hind_leg", "bone", 4f, -4f, 7f, -2f, -1f, -2f, 4f, 5f, 4f, 16, 87)
         };
         AssertPartsMatch(expected, BabyModelDefinitionsOdd.Snifflet.Parts);
     }

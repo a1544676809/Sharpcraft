@@ -15,19 +15,21 @@ public static class BabyModelDefinitionsHumanoid
     /// <summary>Declarative DSL tree for the baby zombie parts (T-674).</summary>
     private static readonly VanillaMeshDefinition ZombieMesh = BuildZombieMesh();
 
-    private static readonly EntityModelPart[] ZombieParts = [.. VanillaMeshBake.Bake(ZombieMesh, 0, 0)];
+    private static readonly EntityModelPart[] ZombieParts = [.. VanillaMeshBake.Bake(ZombieMesh, 0, 0, rawSourceFrame: true)];
 
     private static readonly CompiledEntityModel ZombieCompiled =
-        VanillaMeshBakery.Build(ZombieMesh, 64, 64);
+        VanillaMeshBakery.Build(ZombieMesh, 64, 64, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Zombie = new(
         "baby_zombie",
         64,
         64,
         ZombieParts,
-        PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         "entity/zombie/zombie_baby",
-        compiled: ZombieCompiled);
+        compiled: ZombieCompiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     private static readonly CompiledEntityModel DrownedCompiled =
         EntityModelLayerHelpers.WithModelLayer(
@@ -42,39 +44,45 @@ public static class BabyModelDefinitionsHumanoid
         64,
         64,
         BuildDrownedParts(),
-        PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         "entity/zombie/drowned_baby",
-        compiled: DrownedCompiled);
+        compiled: DrownedCompiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     /// <summary>Declarative DSL tree for the baby zombie villager parts (T-674).</summary>
     private static readonly VanillaMeshDefinition ZombieVillagerMesh = BuildZombieVillagerMesh();
 
     private static readonly CompiledEntityModel ZombieVillagerCompiled =
-        VanillaMeshBakery.Build(ZombieVillagerMesh, 64, 64);
+        VanillaMeshBakery.Build(ZombieVillagerMesh, 64, 64, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition ZombieVillager = new(
         "baby_zombie_villager",
         64,
         64,
-        [.. VanillaMeshBake.Bake(ZombieVillagerMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms,
+        [.. VanillaMeshBake.Bake(ZombieVillagerMesh, 0, 0, rawSourceFrame: true)],
+        faceTransforms: null,
         "entity/zombie_villager/zombie_villager_baby",
-        compiled: ZombieVillagerCompiled);
+        compiled: ZombieVillagerCompiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     /// <summary>Declarative DSL tree for the baby villager parts (T-674).</summary>
     private static readonly VanillaMeshDefinition VillagerMesh = BuildVillagerMesh();
 
     private static readonly CompiledEntityModel VillagerCompiled =
-        VanillaMeshBakery.Build(VillagerMesh, 64, 64);
+        VanillaMeshBakery.Build(VillagerMesh, 64, 64, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Villager = new(
         "baby_villager",
         64,
         64,
-        [.. VanillaMeshBake.Bake(VillagerMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms,
+        [.. VanillaMeshBake.Bake(VillagerMesh, 0, 0, rawSourceFrame: true)],
+        faceTransforms: null,
         "entity/villager/villager_baby",
-        compiled: VillagerCompiled);
+        compiled: VillagerCompiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     public static readonly IReadOnlyDictionary<int, EntityModelDefinition> Models =
         new Dictionary<int, EntityModelDefinition>
@@ -98,7 +106,7 @@ public static class BabyModelDefinitionsHumanoid
                 64,
                 64,
                 EntityModelLayerHelpers.WithCopy(Villager.Parts, villagerPath, static _ => true, 0.05f),
-                PlayerModelDefinition.DefaultFaceTransforms,
+                faceTransforms: null,
                 "entity/villager/villager_baby",
                 compiled: EntityModelLayerHelpers.WithModelLayer(
                     VillagerCompiled,
@@ -106,14 +114,16 @@ public static class BabyModelDefinitionsHumanoid
                     "copy_",
                     _ => villagerPath,
                     fallbackTexture: villagerPath,
-                    inflate: 0.05f));
+                    inflate: 0.05f),
+                baselinePx: 0f,
+                rawSourceFrame: true);
             var zombieVillagerPath = "entity/zombie_villager/baby/" + key;
             variants[(157, key)] = new EntityModelDefinition(
                 "baby_zombie_villager_" + key,
                 64,
                 64,
                 EntityModelLayerHelpers.WithCopy(ZombieVillager.Parts, zombieVillagerPath, static _ => true, 0.05f),
-                PlayerModelDefinition.DefaultFaceTransforms,
+                faceTransforms: null,
                 "entity/zombie_villager/zombie_villager_baby",
                 compiled: EntityModelLayerHelpers.WithModelLayer(
                     ZombieVillagerCompiled,
@@ -121,7 +131,9 @@ public static class BabyModelDefinitionsHumanoid
                     "copy_",
                     _ => zombieVillagerPath,
                     fallbackTexture: zombieVillagerPath,
-                    inflate: 0.05f));
+                    inflate: 0.05f),
+                baselinePx: 0f,
+                rawSourceFrame: true);
         }
 
         return variants;
