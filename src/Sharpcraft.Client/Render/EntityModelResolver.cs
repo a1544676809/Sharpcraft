@@ -301,22 +301,42 @@ public static partial class EntityModelResolver
                     ? state => EntityModelResolver.ResolveEquipmentTexture(state, effectiveKind, slot)
                     : _ => fixedTexture;
                 var layerName = "equipment_" + effectiveKind + "_" + slot;
-                var layerModel = new EntityModelDefinition(
-                    layerName,
-                    definition.TextureWidth,
-                    definition.TextureHeight,
-                    [],
-                    PlayerModelDefinition.DefaultFaceTransforms,
-                    layerTexture,
-                    definition.Scale,
-                    textureSelector: selector,
-                    additionalTexturePaths: [layerTexture],
-                    compiled: EntityModelLayerHelpers.WithTint(
-                        equipmentTree,
-                        state => EntityModelResolver.ResolveEquipmentTint(state, effectiveKind, slot)),
-                    baselinePx: 24f,
-                    rawSourceFrame: false,
-                    sourceFrameBaselinePx: 24f);
+                var rawArmor = !baby && !piglin && typeId == EntityPlaceholderMesher.PlayerEntityTypeId
+                    ? PlayerArmorModelDefinition.ForSlot(slot)
+                    : null;
+                var layerModel = rawArmor is null
+                    ? new EntityModelDefinition(
+                        layerName,
+                        definition.TextureWidth,
+                        definition.TextureHeight,
+                        [],
+                        PlayerModelDefinition.DefaultFaceTransforms,
+                        layerTexture,
+                        definition.Scale,
+                        textureSelector: selector,
+                        additionalTexturePaths: [layerTexture],
+                        compiled: EntityModelLayerHelpers.WithTint(
+                            equipmentTree,
+                            state => EntityModelResolver.ResolveEquipmentTint(state, effectiveKind, slot)),
+                        baselinePx: 24f,
+                        rawSourceFrame: false,
+                        sourceFrameBaselinePx: 24f)
+                    : new EntityModelDefinition(
+                        layerName,
+                        rawArmor.TextureWidth,
+                        rawArmor.TextureHeight,
+                        rawArmor.Parts,
+                        faceTransforms: null,
+                        layerTexture,
+                        definition.Scale,
+                        textureSelector: selector,
+                        additionalTexturePaths: [layerTexture],
+                        compiled: EntityModelLayerHelpers.WithTint(
+                            rawArmor.Compiled!,
+                            state => EntityModelResolver.ResolveEquipmentTint(state, effectiveKind, slot)),
+                        baselinePx: 0f,
+                        rawSourceFrame: true,
+                        sourceFrameBaselinePx: 0f);
                 customLayers.Add(new EntityRenderLayerDefinition(
                     layerName,
                     EntityGeometryLayerKind.Elytra,
