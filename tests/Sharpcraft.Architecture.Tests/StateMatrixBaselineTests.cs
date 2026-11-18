@@ -1,16 +1,14 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
-using Sharpcraft.Client.Render;
 using Sharpcraft.Equivalence.Audit;
 using Xunit;
 
 namespace Sharpcraft.Architecture.Tests;
 
 /// <summary>
-/// task-273 / Issue #219: the state matrix is metadata-driven (#219 review round 2). Assertions are derived
-/// from the same resolver/layer metadata as the builder: every real layer is covered, every expressible
-/// state enters the matrix, no row lies outside the allowed metadata set, and UNKNOWN is not NO_SOURCE.
+/// task-273 / Issue #219: the state matrix is metadata-driven (#219 round 3). Coverage assertions iterate
+/// the FULL machine enumeration of entity and block entity types — no hand-picked type samples.
 /// </summary>
 [CollectionDefinition("StateMatrixBaseline", DisableParallelization = true)]
 public sealed class StateMatrixBaselineCollection;
@@ -18,8 +16,6 @@ public sealed class StateMatrixBaselineCollection;
 [Collection("StateMatrixBaseline")]
 public sealed class StateMatrixBaselineTests
 {
-    private static readonly string[] EntityNames = ["allay", "player", "creeper", "skeleton", "cod", "wither", "armor_stand", "armadillo"];
-
     private static (string Root, IReadOnlyList<StateMatrixBaseline.StateMatrixRow> Rows) Build()
     {
         var root = StateMatrixBaseline.FindRepositoryRoot();
@@ -52,33 +48,94 @@ public sealed class StateMatrixBaselineTests
     }
 
     [Fact]
-    public void UnknownIsNotNoSourceAndBlocksUseBaseOnly()
+    public void UnknownIsNotNoSourceAndEveryBlockTypeIsEmittedWithBaseOnly()
     {
         var (_, rows) = Build();
-        var blocks = rows.Where(row => row.TypeKind == "block").ToArray();
-        Assert.NotEmpty(blocks);
-        Assert.All(blocks, row => Assert.Equal("base", row.StateClass));
-        Assert.Contains(blocks, row => row.Status == StateMatrixBaseline.Unknown);
-        Assert.DoesNotContain(blocks, row => row.Status == StateMatrixBaseline.NoSource);
         Assert.NotEqual(StateMatrixBaseline.NoSource, StateMatrixBaseline.Unknown);
+        var blockRows = rows.Where(row => row.TypeKind == "block").ToArray();
+        Assert.All(blockRows, row => Assert.Equal("base", row.StateClass));
+        Assert.Contains(blockRows, row => row.Status == StateMatrixBaseline.Unknown);
+        Assert.DoesNotContain(blockRows, row => row.Status == StateMatrixBaseline.NoSource);
+
+        // Every block entity type from the machine registry must be emitted with all its declared layers.
+        foreach (var typeId in StateMatrixBaseline.AllBlockTypeIds())
+        {
+            var emitted = blockRows.Where(row => row.TypeId == typeId).Select(row => row.LayerClass)
+                .ToHashSet(StringComparer.Ordinal);
+            Assert.NotEmpty(emitted);
+            foreach (var layer in StateMatrixBaseline.BlockLayersFor(typeId))
+            {
+                Assert.Contains(layer, emitted);
+            }
+        }
     }
 
     [Fact]
-    public void EveryEmittedEntityRowIsMetadataRelevantAndInAllowedSet()
+    public void EveryEntityTypeHasAllRealLayersCovered()
     {
         var (_, rows) = Build();
-        var entityRows = rows.Where(row => row.TypeKind == "entity").ToArray();
-        Assert.NotEmpty(entityRows);
-        // SourceRelevant is computed per pair, not a constant: every emitted row must be in its type's
-        // metadata-derived allowed set, and a representative disallowed pair must be false (#219 review).
-        foreach (var row in entityRows)
+        var entityTypeIds = StateMatrixBaseline.AllEntityTypeIds();
+        Assert.NotEmpty(entityTypeIds);
+
+        // Iterate EVERY entity type from the machine resolver enumeration; no hand-picked sample set.
+        foreach (var typeId in entityTypeIds)
         {
-            Assert.True(row.SourceRelevant, $"{row.TypeName}/{row.StateClass}/{row.LayerClass}");
-            Assert.Contains((row.StateClass, row.LayerClass), StateMatrixBaseline.AllowedCombinations(row.TypeId));
+            var coveredLayers = rows.Where(row => row.TypeKind == "entity" && row.TypeId == typeId)
+                .Select(row => row.LayerClass).ToHashSet(StringComparer.Ordinal);
+            Assert.NotEmpty(coveredLayers);
+            foreach (var layer in StateMatrixBaseline.LayersFor(typeId))
+            {
+                Assert.True(coveredLayers.Contains(layer), $"type {typeId} missing real layer {layer}");
+            }
+        }
+    }
+
+    [Fact]
+    public void EveryEntityTypeHasAllExpressibleStatesCovered()
+    {
+        var (_, rows) = Build();
+        var entityTypeIds = StateMatrixBaseline.AllEntityTypeIds();
+        Assert.NotEmpty(entityTypeIds);
+
+        foreach (var typeId in entityTypeIds)
+        {
+            var coveredStates = rows.Where(row => row.TypeKind == "entity" && row.TypeId == typeId)
+                .Select(row => row.StateClass).ToHashSet(StringComparer.Ordinal);
+            Assert.NotEmpty(coveredStates);
+            foreach (var state in StateMatrixBaseline.CapabilitiesFor(typeId).States())
+            {
+                Assert.True(coveredStates.Contains(state), $"type {typeId} missing expressible state {state}");
+            }
+        }
+    }
+
+    [Fact]
+    public void EveryTypeAllowedAndDisallowedPairMatchesComputedSourceRelevant()
+    {
+        var (_, rows) = Build();
+        var allayRow = rows.First(row => row.TypeName == "allay");
+        // For EVERY type, verify SourceRelevant is a computed value over allowed/disallowed pairs:
+        // each emitted row is allowed/relevant, and representative disallowed pairs are false.
+        foreach (var typeId in StateMatrixBaseline.AllEntityTypeIds())
+        {
+            var allowed = StateMatrixBaseline.AllowedCombinations(typeId);
+            var typeRows = rows.Where(row => row.TypeKind == "entity" && row.TypeId == typeId).ToArray();
+            foreach (var row in typeRows)
+            {
+                Assert.True(row.SourceRelevant, $"type {typeId} row {row.StateClass}/{row.LayerClass}");
+                Assert.Contains((row.StateClass, row.LayerClass), allowed);
+            }
+
+            // The allowed set itself must agree with the public computed relevance for each pair.
+            foreach (var (state, layer) in allowed)
+            {
+                Assert.True(StateMatrixBaseline.IsSourceRelevant(typeId, state, layer));
+            }
         }
 
-        Assert.False(StateMatrixBaseline.IsSourceRelevant(EntityModelResolver.FindTypeId("allay")!.Value, "powered", "base"));
-        Assert.False(StateMatrixBaseline.IsSourceRelevant(EntityModelResolver.FindTypeId("cod")!.Value, "armor", "base"));
+        // Disallowed pairs from non-expressible types must be false (computed, not constant true).
+        Assert.False(StateMatrixBaseline.IsSourceRelevant(allayRow.TypeId, "powered", "base"));
+        Assert.False(StateMatrixBaseline.IsSourceRelevant(allayRow.TypeId, "energy", "energy"));
     }
 
     [Theory]
@@ -95,43 +152,6 @@ public sealed class StateMatrixBaselineTests
         Assert.DoesNotContain(rows, row =>
             row.TypeName == typeName
             && (row.StateClass == stateOrLayer || row.LayerClass == stateOrLayer));
-    }
-
-    [Fact]
-    public void EveryRealRenderLayerIsCoveredAtLeastOnce()
-    {
-        var (_, rows) = Build();
-        foreach (var name in EntityNames)
-        {
-            var typeId = EntityModelResolver.FindTypeId(name);
-            Assert.NotNull(typeId);
-            var realLayers = StateMatrixBaseline.LayersFor(typeId.Value);
-            Assert.NotEmpty(realLayers);
-            var coveredLayers = rows.Where(row => row.TypeId == typeId.Value)
-                .Select(row => row.LayerClass).ToHashSet(StringComparer.Ordinal);
-            foreach (var layer in realLayers)
-            {
-                Assert.Contains(layer, coveredLayers);
-            }
-        }
-    }
-
-    [Fact]
-    public void EveryExpressibleStateEntersTheMatrix()
-    {
-        var (_, rows) = Build();
-        foreach (var name in EntityNames)
-        {
-            var typeId = EntityModelResolver.FindTypeId(name);
-            Assert.NotNull(typeId);
-            var capabilities = StateMatrixBaseline.CapabilitiesFor(typeId.Value);
-            var coveredStates = rows.Where(row => row.TypeId == typeId.Value)
-                .Select(row => row.StateClass).ToHashSet(StringComparer.Ordinal);
-            foreach (var state in capabilities.States())
-            {
-                Assert.Contains(state, coveredStates);
-            }
-        }
     }
 
     [Fact]

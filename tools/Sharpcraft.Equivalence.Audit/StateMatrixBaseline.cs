@@ -90,6 +90,26 @@ public static class StateMatrixBaseline
         throw new DirectoryNotFoundException("Sharpcraft.slnx not found above the current or build directory");
     }
 
+    /// <summary>All entity type ids the matrix is built from, from the machine resolver enumeration (#219 round 3).</summary>
+    public static IReadOnlyList<int> AllEntityTypeIds() => EntityModelResolver.Definitions
+        .Select(definition => definition.Name)
+        .Where(name => !string.IsNullOrWhiteSpace(name))
+        .Distinct(StringComparer.Ordinal)
+        .Select(EntityModelResolver.FindTypeId)
+        .Where(id => id.HasValue)
+        .Select(id => id!.Value)
+        .Distinct()
+        .OrderBy(id => id)
+        .ToArray();
+
+    /// <summary>All block entity type ids with a registry path, from the machine registry enumeration (#219 round 3).</summary>
+    public static IReadOnlyList<int> AllBlockTypeIds() => Enumerable.Range(0, VanillaBlockEntityTypes.Count)
+        .Where(typeId => VanillaBlockEntityTypes.PathOf(typeId) is not null)
+        .ToArray();
+
+    /// <summary>The real render layer classes declared for a block entity type.</summary>
+    public static IReadOnlyList<string> BlockLayersFor(int typeId) => BlockLayerClasses(typeId).ToArray();
+
     /// <summary>Builds and self-validates the matrix against the repository's Repro/Data directory.</summary>
     public static IReadOnlyList<StateMatrixRow> Build(string repoRoot)
     {
@@ -105,23 +125,13 @@ public static class StateMatrixBaseline
             .ToArray();
 
         var rows = new List<StateMatrixRow>();
-        var names = EntityModelResolver.Definitions
-            .Select(definition => definition.Name)
-            .Where(name => !string.IsNullOrWhiteSpace(name))
-            .Distinct(StringComparer.Ordinal)
-            .OrderBy(name => name, StringComparer.Ordinal);
-        foreach (var name in names)
+        foreach (var typeId in AllEntityTypeIds())
         {
-            var typeId = EntityModelResolver.FindTypeId(name);
-            if (typeId is null)
-            {
-                continue;
-            }
-
-            var definition = EntityModelResolver.Resolve(typeId.Value);
+            var definition = EntityModelResolver.Resolve(typeId);
+            var name = definition.Name;
             var layers = LayersFor(definition);
-            var capabilities = CapabilitiesFor(typeId.Value);
-            var allowed = AllowedCombinations(typeId.Value);
+            var capabilities = CapabilitiesFor(typeId);
+            var allowed = AllowedCombinations(typeId);
             // Iterate the full state×layer domain and compute relevance per pair; disallowed pairs are
             // filtered out. This keeps SourceRelevant a computed value (false cases exist) and emits
             // only metadata-allowed combinations (#219).
@@ -135,20 +145,15 @@ public static class StateMatrixBaseline
                         continue;
                     }
 
-                    var row = Row("entity", typeId.Value, name, state, layer, definition.Name, samples);
+                    var row = Row("entity", typeId, name, state, layer, definition.Name, samples);
                     rows.Add(row with { SourceRelevant = relevant });
                 }
             }
         }
 
-        for (var typeId = 0; typeId < VanillaBlockEntityTypes.Count; typeId++)
+        foreach (var typeId in AllBlockTypeIds())
         {
-            var path = VanillaBlockEntityTypes.PathOf(typeId);
-            if (path is null)
-            {
-                continue;
-            }
-
+            var path = VanillaBlockEntityTypes.PathOf(typeId)!;
             foreach (var layer in BlockLayerClasses(typeId))
             {
                 // Block entities have no baby/powered/pose/held/energy states; only `base` is meaningful.
