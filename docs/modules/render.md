@@ -797,7 +797,9 @@ task-95 已把 **Illager 4 族（vindicator/evoker/pillager/illusioner）+ Villa
 
 ### task-79 humanoid / 村民 / 灾厄 / Piglin 批次：阻塞登记（#102 / #134）
 
-以下原因仍适用于**尚未迁移的 22 族**；Illager/Villager 6 族已按上段解决：
+> **当前状态（R-031 修正，取代本节历史"22 族"计数）**：Player/player-slim、HumanoidMob 8 族、Witch、ZombieVillager、Bogged、Piglin×3 均已切 raw（R-035/#150 全清）。**剩余 blocker = 22 个 baby 模型仍 legacy**：`BabyModelDefinitionsHumanoid.cs`（baby_zombie/drowned/zombie_villager/villager）、`Odd.cs`（husk/sniffer/strider）、`Nether.cs`（piglin/zombified_piglin）、`Equine.cs`（horse/camel/donkey）、`Extra.cs`（cat/wolf/fox/rabbit）、`Misc.cs`（goat/panda/polar_bear）、`Final.cs`（happy_ghast/nautilus/glow_squid）。已 raw 的 baby：pig/cow/chicken/squid/bee/dolphin/axolotl/turtle/llama/hoglin/zoglin/armadillo。
+
+以下历史原因适用于当时尚未迁移的族；Illager/Villager 6 族已按上段解决，其余非 baby 族亦已由后续 task-121/128/173/178/#176/185 解决：
 
 - 源 hat/overlay 是独立 cube（不同尺寸/pivot/deformation，如 illager hat 8×12×8+0.45 vs head 8×10×8+0.45），仓内 DSL 用单一 `Grow` 近似，无法源正确表达；
 - 源 `MeshTransformer.scaling(factor)`（`MeshTransformer.java:7-9`）在 baked root 加 `yOffset=24.016*(1-factor)`；**规格与 living 路径实现已由 #141/R-034 解决**（见下节）。humanoid 仍受独立 hat/overlay DSL 缺口（#134）阻塞；
