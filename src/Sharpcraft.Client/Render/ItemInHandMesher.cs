@@ -23,6 +23,7 @@ public sealed class ItemInHandMesher
     private readonly DynamicGeometry _cutoutGeometry = new();
     private readonly DynamicGeometry _translucentGeometry = new();
     private readonly DynamicGeometry _glintGeometry = new();
+    private readonly DynamicGeometry _specialGlintGeometry = new();
     private readonly List<ItemModelQuad> _quads = [];
 
     /// <summary>Item glint sampler texture (ItemFeatureRenderer.ENCHANTED_GLINT_ITEM).</summary>
@@ -33,6 +34,7 @@ public sealed class ItemInHandMesher
     /// drawable item. <paramref name="poses"/> must be the poses the entity layers were built with, indexed like
     /// <paramref name="entities"/>.
     /// </summary>
+    [Sharpcraft.Common.Diagnostics.Simplification("SIM-ITEM-SPECIAL-GLINT-RENDERTYPE", "T-631e", Note = "source item_cutout_glint_special/item_translucent_glint_special compose albedo+glint in one pass; Sharpcraft keeps its base item pass plus an additive overlay, now with its own SpecialGlint kind and pipeline")]
     public IReadOnlyList<EntityGeometryLayer> Build(
         IReadOnlyList<EntityRenderState> entities,
         IReadOnlyList<EntityPose> poses,
@@ -50,12 +52,15 @@ public sealed class ItemInHandMesher
         _cutoutGeometry.Clear();
         _translucentGeometry.Clear();
         _glintGeometry.Clear();
+        _specialGlintGeometry.Clear();
         var cutoutFloats = 0;
         var cutoutIndices = 0;
         var translucentFloats = 0;
         var translucentIndices = 0;
         var glintFloats = 0;
         var glintIndices = 0;
+        var specialGlintFloats = 0;
+        var specialGlintIndices = 0;
         var grass = models.GrassColormap;
 
         for (var index = 0; index < entities.Count; index++)
@@ -75,6 +80,8 @@ public sealed class ItemInHandMesher
                 }
 
                 var armName = offhand ? "left_arm" : "right_arm";
+                var foil = offhand ? entity.OffHandFoil : entity.MainHandFoil;
+                var displayContext = EntityModelResolver.DisplayContextFor(offhand);
                 var humanoidSource = HumanoidHeldHandFrame.IsHumanoid(entity.TypeId);
                 var handFrame = humanoidSource
                     ? HumanoidHeldHandFrame.SourceWorld(model, armName, pose, offhand, entity.IsBaby)
@@ -129,7 +136,23 @@ public sealed class ItemInHandMesher
                             ref cutoutIndices);
                     }
 
-                    if (offhand ? entity.OffHandGlint : entity.MainHandGlint)
+                    if (foil == ItemFoilType.Special)
+                    {
+                        // SPECIAL foil (compass/clock): the glint samples the reference decal coordinate (UV3), so the
+                        // same quads go through the emitter with the model-space projection instead of the sprite UV.
+                        ItemEntityMesher.EmitQuads(
+                            _specialGlintGeometry,
+                            _quads,
+                            world,
+                            itemAtlas,
+                            placement.Model,
+                            grass,
+                            ref specialGlintFloats,
+                            ref specialGlintIndices,
+                            GlintTexture,
+                            ItemFoilDecal.ScaleFor(displayContext));
+                    }
+                    else if (foil == ItemFoilType.Standard)
                     {
                         ItemEntityMesher.EmitQuads(
                             _glintGeometry,
@@ -169,6 +192,14 @@ public sealed class ItemInHandMesher
             layers.Add(new EntityGeometryLayer($"{LayerName}_glint", EntityGeometryLayerKind.Glint, 892, _glintGeometry, usesItemAtlas: true));
         }
 
+        if (specialGlintIndices > 0)
+        {
+            _specialGlintGeometry.VertexFloats = specialGlintFloats;
+            _specialGlintGeometry.IndexCount = specialGlintIndices;
+            GlintTextureTransform.ApplyDecalToGeometry(_specialGlintGeometry, GlintClock.Millis, GlintTextureTransform.ItemScale);
+            layers.Add(new EntityGeometryLayer($"{LayerName}_glint_special", EntityGeometryLayerKind.SpecialGlint, 893, _specialGlintGeometry, usesItemAtlas: true));
+        }
+
         return layers;
     }
 
@@ -178,7 +209,7 @@ public sealed class ItemInHandMesher
     /// </summary>
     public static IEnumerable<string> ResolveTextures(EntityRenderState entity)
     {
-        if (entity.MainHandGlint || entity.OffHandGlint)
+        if (entity.MainHandFoil != ItemFoilType.None || entity.OffHandFoil != ItemFoilType.None)
         {
             yield return GlintTexture;
         }

@@ -308,7 +308,9 @@ public sealed class ItemEntityMesher
 
     /// <summary>
     /// Appends resolved quads with a caller-supplied transform. Shared by the drop path and the held-item pass so both
-    /// emit the identical vertex layout and tinting; returns how many quads were written.
+    /// emit the identical vertex layout and tinting; returns how many quads were written. A non-null
+    /// <paramref name="foilDecalScale"/> writes the SPECIAL foil decal coordinate (the reference UV3) instead of the
+    /// sprite UV, which is how a compass/clock glint samples a projection of the model instead of its texture.
     /// </summary>
     public static int EmitQuads(
         DynamicGeometry geometry,
@@ -319,7 +321,8 @@ public sealed class ItemEntityMesher
         GrassColorMap? grass,
         ref int vertexFloats,
         ref int indexCount,
-        string? textureOverride = null)
+        string? textureOverride = null,
+        float? foilDecalScale = null)
     {
         ArgumentNullException.ThrowIfNull(geometry);
         ArgumentNullException.ThrowIfNull(quads);
@@ -339,11 +342,14 @@ public sealed class ItemEntityMesher
             var tint = resolution.TintFor(quad.TintIndex, grass);
             for (var corner = 0; corner < 4; corner++)
             {
+                var uv = foilDecalScale is { } decalScale
+                    ? ItemFoilDecal.Uv(quad.Corner(corner), quad.Direction, decalScale)
+                    : quad.Uv(corner);
                 WriteVertex(
                     geometry.Vertices,
                     ref vertexFloats,
                     Vector3.Transform(quad.Corner(corner), world),
-                    quad.Uv(corner),
+                    uv,
                     sprite,
                     tint);
             }

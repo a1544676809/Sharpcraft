@@ -26,6 +26,7 @@ internal sealed class EntityPassRecorder
     private readonly PipelineHandle _entityElytraPipeline;
     private readonly PipelineHandle _entityEmissivePipeline;
     private readonly PipelineHandle _entityGlintPipeline;
+    private readonly PipelineHandle _entitySpecialGlintPipeline;
     private readonly EntitySkinTextureGpu _entitySkin;
     private readonly EntitySkinTextureGpu _itemAtlas;
     private readonly EntityLayerPool _layers;
@@ -42,6 +43,7 @@ internal sealed class EntityPassRecorder
     /// <param name="entityElytraPipeline">Elytra pipeline.</param>
     /// <param name="entityEmissivePipeline">Emissive pipeline.</param>
     /// <param name="entityGlintPipeline">Glint pipeline.</param>
+    /// <param name="entitySpecialGlintPipeline">SPECIAL foil glint pipeline (compass/clock decal glint).</param>
     /// <param name="entitySkin">Skin atlas, or one that was never created.</param>
     /// <param name="itemAtlas">Item atlas, or one that was never created.</param>
     /// <param name="layers">Per-layer buffers the layer plan fills.</param>
@@ -57,6 +59,7 @@ internal sealed class EntityPassRecorder
         PipelineHandle entityElytraPipeline,
         PipelineHandle entityEmissivePipeline,
         PipelineHandle entityGlintPipeline,
+        PipelineHandle entitySpecialGlintPipeline,
         EntitySkinTextureGpu entitySkin,
         EntitySkinTextureGpu itemAtlas,
         EntityLayerPool layers,
@@ -72,6 +75,7 @@ internal sealed class EntityPassRecorder
         _entityElytraPipeline = entityElytraPipeline;
         _entityEmissivePipeline = entityEmissivePipeline;
         _entityGlintPipeline = entityGlintPipeline;
+        _entitySpecialGlintPipeline = entitySpecialGlintPipeline;
         _entitySkin = entitySkin ?? throw new ArgumentNullException(nameof(entitySkin));
         _itemAtlas = itemAtlas ?? throw new ArgumentNullException(nameof(itemAtlas));
         _layers = layers ?? throw new ArgumentNullException(nameof(layers));
@@ -137,6 +141,7 @@ internal sealed class EntityPassRecorder
                 EntityGeometryLayerKind.Translucent => _entityPipeline,
                 EntityGeometryLayerKind.Emissive => _entityEmissivePipeline,
                 EntityGeometryLayerKind.Glint => _entityGlintPipeline,
+                EntityGeometryLayerKind.SpecialGlint => _entitySpecialGlintPipeline,
                 EntityGeometryLayerKind.Elytra => _entityElytraPipeline,
                 _ => _entityCutoutPipeline
             });

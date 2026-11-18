@@ -54,15 +54,35 @@ public static class GlintTextureTransform
         return new Vector2(u, v);
     }
 
+    /// <summary>
+    /// Applies the source texture matrix to one SPECIAL foil decal coordinate. Unlike <see cref="Apply"/> the input is
+    /// not wrapped first: the decal coordinate is a projection position, not a sprite UV, so wrapping it would rotate a
+    /// different point. Only the sampled result wraps, exactly like the repeat sampler in the reference shader.
+    /// </summary>
+    public static (float U, float V) ApplyDecal(float u, float v, long millis, float scale)
+    {
+        var (offsetU, offsetV) = Offsets(millis);
+        var rotatedU = (Cos * u) - (Sin * v);
+        var rotatedV = (Sin * u) + (Cos * v);
+        return (Fract((rotatedU * scale) - offsetU), Fract((rotatedV * scale) + offsetV));
+    }
+
     /// <summary>Rewrites every half-UV in a built layer with this transform, leaving positions untouched.</summary>
-    public static void ApplyToGeometry(DynamicGeometry geometry, long millis, float scale)
+    public static void ApplyToGeometry(DynamicGeometry geometry, long millis, float scale) =>
+        RewriteUvs(geometry, millis, scale, decal: false);
+
+    /// <summary>Rewrites every half-UV in a built SPECIAL foil decal layer, leaving positions untouched.</summary>
+    public static void ApplyDecalToGeometry(DynamicGeometry geometry, long millis, float scale) =>
+        RewriteUvs(geometry, millis, scale, decal: true);
+
+    private static void RewriteUvs(DynamicGeometry geometry, long millis, float scale, bool decal)
     {
         for (var offset = 0; offset + ChunkMesher.FloatsPerVertex <= geometry.VertexFloats; offset += ChunkMesher.FloatsPerVertex)
         {
             var packed = BitConverter.SingleToUInt32Bits(geometry.Vertices[offset + 4]);
             var u = (float)BitConverter.UInt16BitsToHalf((ushort)(packed & 0xFFFF));
             var v = (float)BitConverter.UInt16BitsToHalf((ushort)(packed >> 16));
-            var glint = Apply(u, v, millis, scale);
+            var glint = decal ? ApplyDecal(u, v, millis, scale) : Apply(u, v, millis, scale);
             geometry.Vertices[offset + 4] = BitConverter.UInt32BitsToSingle(
                 (uint)BitConverter.HalfToUInt16Bits((Half)glint.U)
                 | ((uint)BitConverter.HalfToUInt16Bits((Half)glint.V) << 16));

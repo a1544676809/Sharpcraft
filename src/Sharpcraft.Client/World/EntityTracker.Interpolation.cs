@@ -11,9 +11,10 @@ namespace Sharpcraft.Client.World;
 
 public sealed partial class EntityTracker
 {
-    // ItemStack.hasFoil(): an explicit glint override wins, otherwise enchantment presence decides.
-    private static bool HasFoil(ItemComponentInfo components) =>
-        components.GlintOverride ?? components.HasEnchantments;
+    // ItemStack.hasFoil(): an explicit glint override wins, otherwise enchantment presence decides. A foil compass or
+    // clock (CuboidItemModelWrapper.hasSpecialAnimatedTexture) upgrades the foil to the special decal glint.
+    private static ItemFoilType FoilTypeOf(TrackedEntity entity, int slot) =>
+        ItemFoil.Resolve(entity.EquipmentComponentsAt(slot), entity.EquipmentItemAt(slot));
 
     public ReadOnlySpan<EntityRenderState> Interpolate(float alpha)
     {
@@ -148,14 +149,14 @@ public sealed partial class EntityTracker
                 IsAggressive: entity.Presentation.IsAggressive,
                 MainHandItemId: entity.EquipmentItemAt(0),
                 IsFoil: entity.IsFoil,
-                MainHandGlint: HasFoil(entity.EquipmentComponentsAt(0)),
+                MainHandFoil: FoilTypeOf(entity, 0),
                 ArmPose: entity.Animation is IEntityArmPoseAnimationState armPose ? armPose.ArmPose : 0,
                 IsUsingItem: entity.Presentation.IsUsingItem,
                 // Reference LivingEntity.getTicksUsingItem(partialTicks): integer ticks plus the partial tick, so the
                 // spear and crossbow animations advance smoothly instead of stepping once per tick.
                 TicksUsingItem: ticksUsingItem,
                 OffHandItemId: entity.EquipmentItemAt(1),
-                OffHandGlint: HasFoil(entity.EquipmentComponentsAt(1)),
+                OffHandFoil: FoilTypeOf(entity, 1),
                 MainHandChargedCrossbow: entity.EquipmentComponentsAt(0).HasChargedProjectiles,
                 MainHandQuickChargeLevel: entity.EquipmentComponentsAt(0).QuickChargeLevel,
                 IsLeftHanded: entity.Presentation.IsLeftHanded,

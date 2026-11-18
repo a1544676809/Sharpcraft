@@ -50,7 +50,7 @@ public sealed class ItemGlintTests
                 var state = new EntityRenderState(
                     1, EntityPlaceholderMesher.PlayerEntityTypeId, 0f, 0f, 0f, 0f, 0f,
                     MainHandItemId: paperId,
-                    MainHandGlint: true);
+                    MainHandFoil: ItemFoilType.Standard);
                 GlintClock.SetFixedSourceMillis(55000);
                 var layers = new ItemInHandMesher().Build([state], [new EntityPose()], variants: null, atlas);
                 var cutout = layers.Single(layer => layer.Name == ItemInHandMesher.LayerName);
@@ -68,7 +68,7 @@ public sealed class ItemGlintTests
                 }
 
                 var plain = new ItemInHandMesher().Build(
-                    [state with { MainHandGlint = false }], [new EntityPose()], variants: null, atlas);
+                    [state with { MainHandFoil = ItemFoilType.None }], [new EntityPose()], variants: null, atlas);
                 Assert.DoesNotContain(plain, layer => layer.Name.EndsWith("_glint", StringComparison.Ordinal));
             }
             finally
@@ -144,15 +144,15 @@ public sealed class ItemGlintTests
                 1, EntityPlaceholderMesher.PlayerEntityTypeId, 0f, 0f, 0f, 0f, 0f,
                 MainHandItemId: trident,
                 OffHandItemId: shield,
-                MainHandGlint: true,
-                OffHandGlint: true);
+                MainHandFoil: ItemFoilType.Standard,
+                OffHandFoil: ItemFoilType.Standard);
             var mesher = new EntityModelMesher();
             var layers = mesher.BuildLayers([foil], new SpriteRect(0, 0, 64, 64, 1), 64, 64,
                 variants: null, itemAtlas: atlas);
             AssertSpecialGlint(layers, "held_special_trident_right", GlintTextureTransform.EntityScale);
             AssertSpecialGlint(layers, "held_special_shield_left", GlintTextureTransform.EntityScale);
 
-            var plain = foil with { MainHandGlint = false, OffHandGlint = false };
+            var plain = foil with { MainHandFoil = ItemFoilType.None, OffHandFoil = ItemFoilType.None };
             var plainLayers = mesher.BuildLayers([plain], new SpriteRect(0, 0, 64, 64, 1), 64, 64,
                 variants: null, itemAtlas: atlas);
             Assert.DoesNotContain(plainLayers, layer => layer.Name.EndsWith("_glint", StringComparison.Ordinal));
@@ -194,13 +194,13 @@ public sealed class ItemGlintTests
         Assert.True(tracker.Add(new AddedEntity(7, Guid.Empty, EntityPlaceholderMesher.PlayerEntityTypeId, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)));
         var paper = EntityModelResolver.Items!.GetId(Identifier.Parse("minecraft:paper"));
         Assert.True(tracker.ApplyEquipment(7, [new EquipmentItem(0, paper, 1, new ItemComponentInfo(HasEnchantments: true))]));
-        Assert.True(tracker.Interpolate(0f)[0].MainHandGlint);
+        Assert.Equal(ItemFoilType.Standard, tracker.Interpolate(0f)[0].MainHandFoil);
 
         Assert.True(tracker.ApplyEquipment(7, [new EquipmentItem(0, paper, 1, new ItemComponentInfo(GlintOverride: false, HasEnchantments: true))]));
-        Assert.False(tracker.Interpolate(0f)[0].MainHandGlint);
+        Assert.Equal(ItemFoilType.None, tracker.Interpolate(0f)[0].MainHandFoil);
 
         Assert.True(tracker.ApplyEquipment(7, [new EquipmentItem(0, paper, 1, new ItemComponentInfo(GlintOverride: true, HasEnchantments: false))]));
-        Assert.True(tracker.Interpolate(0f)[0].MainHandGlint);
+        Assert.Equal(ItemFoilType.Standard, tracker.Interpolate(0f)[0].MainHandFoil);
     }
 
     private static void Write(string root, string relative, string contents)
