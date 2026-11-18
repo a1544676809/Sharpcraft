@@ -7,8 +7,9 @@ using Xunit;
 namespace Sharpcraft.Architecture.Tests;
 
 /// <summary>
-/// task-273 / Issue #219: the state matrix is metadata-driven (#219 round 3). Coverage assertions iterate
-/// the FULL machine enumeration of entity and block entity types — no hand-picked type samples.
+/// task-273 / Issue #219: the state matrix is metadata-driven (#219 round 4). Coverage is proven by
+/// comparing the pairs actually emitted by Build against AllowedCombinations over the FULL per-type
+/// candidate domain — no IsSourceRelevant self-proof, no hand-picked type samples.
 /// </summary>
 [CollectionDefinition("StateMatrixBaseline", DisableParallelization = true)]
 public sealed class StateMatrixBaselineCollection;
@@ -21,6 +22,12 @@ public sealed class StateMatrixBaselineTests
         var root = StateMatrixBaseline.FindRepositoryRoot();
         return (root, StateMatrixBaseline.Build(root));
     }
+
+    private static HashSet<(string State, string Layer)> EmittedPairs(
+        IReadOnlyList<StateMatrixBaseline.StateMatrixRow> rows, int typeId) =>
+        rows.Where(row => row.TypeKind == "entity" && row.TypeId == typeId)
+            .Select(row => (row.StateClass, row.LayerClass))
+            .ToHashSet();
 
     [Fact]
     public void SourceRowsResolveRealFilesAndKeysAndNonStrictRowsAreNotStrict()
@@ -57,7 +64,6 @@ public sealed class StateMatrixBaselineTests
         Assert.Contains(blockRows, row => row.Status == StateMatrixBaseline.Unknown);
         Assert.DoesNotContain(blockRows, row => row.Status == StateMatrixBaseline.NoSource);
 
-        // Every block entity type from the machine registry must be emitted with all its declared layers.
         foreach (var typeId in StateMatrixBaseline.AllBlockTypeIds())
         {
             var emitted = blockRows.Where(row => row.TypeId == typeId).Select(row => row.LayerClass)
@@ -71,17 +77,58 @@ public sealed class StateMatrixBaselineTests
     }
 
     [Fact]
-    public void EveryEntityTypeHasAllRealLayersCovered()
+    public void EveryEntityTypeEmittedPairsEqualAllowedCombinations()
     {
         var (_, rows) = Build();
         var entityTypeIds = StateMatrixBaseline.AllEntityTypeIds();
         Assert.NotEmpty(entityTypeIds);
 
-        // Iterate EVERY entity type from the machine resolver enumeration; no hand-picked sample set.
+        // For EVERY type, the (state,layer) pairs actually emitted by Build must be set-equal to the
+        // metadata-derived AllowedCombinations. This compares real output to metadata, not a helper to itself.
         foreach (var typeId in entityTypeIds)
         {
-            var coveredLayers = rows.Where(row => row.TypeKind == "entity" && row.TypeId == typeId)
-                .Select(row => row.LayerClass).ToHashSet(StringComparer.Ordinal);
+            var emitted = EmittedPairs(rows, typeId);
+            var allowed = StateMatrixBaseline.AllowedCombinations(typeId);
+            Assert.True(allowed.SetEquals(emitted),
+                $"type {typeId}: allowed={{{string.Join(",", allowed.Select(p => p.State + "/" + p.Layer))}}} "
+                + $"emitted={{{string.Join(",", emitted.Select(p => p.State + "/" + p.Layer))}}}");
+        }
+    }
+
+    [Fact]
+    public void EveryEntityTypeFullCandidateDomainMatchesAllowedAndEmitted()
+    {
+        var (_, rows) = Build();
+        // Full candidate domain per type = all known states × that type's real layers. For each pair,
+        // membership in AllowedCombinations must equal membership in emitted rows (both directions), and
+        // the computed relevance must agree. Disallowed pairs are checked for every type, not just allay.
+        foreach (var typeId in StateMatrixBaseline.AllEntityTypeIds())
+        {
+            var allowed = StateMatrixBaseline.AllowedCombinations(typeId);
+            var emitted = EmittedPairs(rows, typeId);
+            var layers = StateMatrixBaseline.LayersFor(typeId);
+            foreach (var state in StateMatrixBaseline.AllStateClasses)
+            {
+                foreach (var layer in layers)
+                {
+                    var pair = (state, layer);
+                    var isAllowed = allowed.Contains(pair);
+                    var isEmitted = emitted.Contains(pair);
+                    Assert.True(isAllowed == isEmitted, $"type {typeId} pair {state}/{layer}: allowed={isAllowed} emitted={isEmitted}");
+                    Assert.True(isAllowed == StateMatrixBaseline.IsSourceRelevant(typeId, state, layer),
+                        $"type {typeId} pair {state}/{layer}: relevance disagrees with allowed");
+                }
+            }
+        }
+    }
+
+    [Fact]
+    public void EveryEntityTypeHasAllRealLayersCovered()
+    {
+        var (_, rows) = Build();
+        foreach (var typeId in StateMatrixBaseline.AllEntityTypeIds())
+        {
+            var coveredLayers = EmittedPairs(rows, typeId).Select(pair => pair.Layer).ToHashSet(StringComparer.Ordinal);
             Assert.NotEmpty(coveredLayers);
             foreach (var layer in StateMatrixBaseline.LayersFor(typeId))
             {
@@ -94,48 +141,15 @@ public sealed class StateMatrixBaselineTests
     public void EveryEntityTypeHasAllExpressibleStatesCovered()
     {
         var (_, rows) = Build();
-        var entityTypeIds = StateMatrixBaseline.AllEntityTypeIds();
-        Assert.NotEmpty(entityTypeIds);
-
-        foreach (var typeId in entityTypeIds)
+        foreach (var typeId in StateMatrixBaseline.AllEntityTypeIds())
         {
-            var coveredStates = rows.Where(row => row.TypeKind == "entity" && row.TypeId == typeId)
-                .Select(row => row.StateClass).ToHashSet(StringComparer.Ordinal);
+            var coveredStates = EmittedPairs(rows, typeId).Select(pair => pair.State).ToHashSet(StringComparer.Ordinal);
             Assert.NotEmpty(coveredStates);
             foreach (var state in StateMatrixBaseline.CapabilitiesFor(typeId).States())
             {
                 Assert.True(coveredStates.Contains(state), $"type {typeId} missing expressible state {state}");
             }
         }
-    }
-
-    [Fact]
-    public void EveryTypeAllowedAndDisallowedPairMatchesComputedSourceRelevant()
-    {
-        var (_, rows) = Build();
-        var allayRow = rows.First(row => row.TypeName == "allay");
-        // For EVERY type, verify SourceRelevant is a computed value over allowed/disallowed pairs:
-        // each emitted row is allowed/relevant, and representative disallowed pairs are false.
-        foreach (var typeId in StateMatrixBaseline.AllEntityTypeIds())
-        {
-            var allowed = StateMatrixBaseline.AllowedCombinations(typeId);
-            var typeRows = rows.Where(row => row.TypeKind == "entity" && row.TypeId == typeId).ToArray();
-            foreach (var row in typeRows)
-            {
-                Assert.True(row.SourceRelevant, $"type {typeId} row {row.StateClass}/{row.LayerClass}");
-                Assert.Contains((row.StateClass, row.LayerClass), allowed);
-            }
-
-            // The allowed set itself must agree with the public computed relevance for each pair.
-            foreach (var (state, layer) in allowed)
-            {
-                Assert.True(StateMatrixBaseline.IsSourceRelevant(typeId, state, layer));
-            }
-        }
-
-        // Disallowed pairs from non-expressible types must be false (computed, not constant true).
-        Assert.False(StateMatrixBaseline.IsSourceRelevant(allayRow.TypeId, "powered", "base"));
-        Assert.False(StateMatrixBaseline.IsSourceRelevant(allayRow.TypeId, "energy", "energy"));
     }
 
     [Theory]
@@ -160,6 +174,10 @@ public sealed class StateMatrixBaselineTests
         var (_, rows) = Build();
         // The cross-product generator emitted ~1,880 rows; a metadata-driven matrix must be compact (#219).
         Assert.InRange(rows.Count, 200, 700);
-        Assert.All(rows, row => Assert.True(row.SourceRelevant));
+        // Compactness is real filtering: the full candidate domain exceeds the emitted set for at least one type.
+        var anyFiltered = StateMatrixBaseline.AllEntityTypeIds().Any(typeId =>
+            StateMatrixBaseline.AllStateClasses.Count * StateMatrixBaseline.LayersFor(typeId).Count
+            > EmittedPairs(rows, typeId).Count);
+        Assert.True(anyFiltered, "metadata filtering must drop cross-product pairs");
     }
 }

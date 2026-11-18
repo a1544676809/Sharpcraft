@@ -25,6 +25,9 @@ public static class StateMatrixBaseline
     // express (see CapabilitiesFor) and only on layers that carry the matching metadata (AllowedCombinations).
     private static readonly string[] AllStates = ["base", "baby", "pose", "held", "glint", "energy", "powered"];
 
+    /// <summary>The full state-class domain used by tests to build per-type candidate pairs (#219 round 4).</summary>
+    public static IReadOnlyList<string> AllStateClasses => AllStates;
+
     /// <summary>States a concrete entity type can express, derived from resolver/layer metadata (#219).</summary>
     public sealed record TypeStateCapabilities(
         bool Baby, bool Pose, bool Held, bool Glint, bool Energy, bool Powered)
