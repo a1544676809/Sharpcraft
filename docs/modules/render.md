@@ -839,6 +839,14 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **验收**：`glint-texture-transform.reference.txt` 固定 millis {55000, 110000, 137500, -55000} × item/entity/armor 的 UV 样本；`GlintTextureTransformTests` production zombie armor glint `BuildLayers` 顶点 UV strict，helper 覆盖三分类与负 millis。
 - **限制/blocker**：task-270 当时只有 **armor glint production 层**（`glint_HumanoidArmor_*`）；item glint 已由 task-271 接入 held item production。entity glint 仍只有 scale 0.5 helper + 源样本，**没有 entity glint production 层可接线**，不能声称 glint 全部完成。
 
+### task-273 state matrix 覆盖基线
+
+- **工具**：`tools/Sharpcraft.Equivalence.Audit --suite statematrix`，输出 type/state/layer/sample/status TSV 与三态/每层 counts。
+- **行**：`EntityModelResolver.Definitions` 与 `VanillaBlockEntityTypes` 机器枚举 × state 类（base/baby/powered/pose/held/glint/energy）× layer 类（base/armor/trim/glint/special/…）。
+- **状态**：`SOURCE_SAMPLE` 引用真实 Repro/Data 文件与 key；`SOURCE_CONSTRAINT` 引用 energy/glint 公式样本；`NO_SOURCE` 明确未覆盖且不标 strict。
+- **校验**：`StateMatrixBaseline.Build` 自检 strict 行文件/key 存在；`StateMatrixBaselineTests` 架构测试复验；禁止 golden hash 自证。
+- **语义**：覆盖基线，不是全状态等效证明；`NO_SOURCE` 不计入覆盖通过。
+
 ### task-271 held item glint 生产层
 ### task-272 special held foil glint
 

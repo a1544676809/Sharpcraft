@@ -12,3 +12,19 @@
 * 原版端：`ModelGeometryProbe.java` 支持 `--suite all|state|entity|vis`
 * 自研端：`Sharpcraft.Equivalence.Audit` 支持 `--suite all|state|protocol|physics|blockmodel|entity|vis`
 * 统一汇总：`run_all.ps1 -Jar <26.3.jar>` 自动跑批并输出 `PASS/FAIL` 总表与 `report.json`。
+
+### 2.1 状态覆盖基线（`--suite statematrix`）
+
+```
+dotnet run --project tools/Sharpcraft.Equivalence.Audit -- --suite statematrix --out <output.tsv>
+```
+
+输出 `type_kind	type_id	type_name	state_class	layer_class	definition_or_layer	sample_file	sample_key	status	strict`，并在文件尾与 stdout 输出三态 counts 和每层 counts。
+
+* `SOURCE_SAMPLE`：`tests/Sharpcraft.Client.Tests/Repro/Data/*.reference.txt` 有对应源样本；`sample_file` 是真实相对路径，`sample_key` 是该文件真实存在的数据 key（rig 层名/状态名）。
+* `SOURCE_CONSTRAINT`：公式/常量样本（`creeper-energy-swirl-uv.reference.txt`、`glint-texture-transform.reference.txt`）；key 形如 `millis|scale`。
+* `NO_SOURCE`：无对应源样本，`strict=no`，**不得计入覆盖通过**。
+* 行来自 `EntityModelResolver.Definitions` / `VanillaBlockEntityTypes` 的机器枚举，样本 key 来自文件解析；没有手写假路径。
+* 校验：`StateMatrixBaseline.Build` 对每条 strict 行检查文件与 key 存在，缺失即抛错；`StateMatrixBaselineTests` 在架构测试中复验。NO_SOURCE 行不得标 strict。
+
+**语义边界**：这是覆盖基线，不是全状态等效证明。它回答“哪些生产类型/状态/layer 有可核对源样本或公式约束，哪些没有”，不替代逐像素/逐顶点 strict 对拍；`NO_SOURCE` 明确表示未覆盖。
