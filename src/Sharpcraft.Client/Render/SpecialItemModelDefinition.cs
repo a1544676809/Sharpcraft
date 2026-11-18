@@ -84,15 +84,19 @@ public static class SpecialItemModelDefinition
                 };
             }
 
-            // A multi-cube part must be named after its first cube, so the flag shape keeps "flag_<i>" and the shield
-            // shape keeps "plate_<i>" (handle_<i> rides along in the same part).
-            root.AddOrReplaceChild(copies[0].Name, pose, copies);
+            // Source ShieldModel/BannerFlagModel own each cube as a separate ModelPart. Emit one part per
+            // cube so the source frame (and keyed jar sample) matches one part per cube, not a merged cube group.
+            foreach (var copy in copies)
+                root.AddOrReplaceChild(copy.Name, pose, copy);
         }
 
+        // task-206: pattern overlays re-submit the same jar ModelLayer geometry as the base shield/flag
+        // (ShieldSpecialRenderer.submitPatterns / BannerRenderer.submitPatterns), so the source frame is
+        // the already-verified base layer frame; only visibility/tint selection stays state-driven.
         return EntityModelDefinition.FromTree(
             name, 64, 64, new VanillaMeshDefinition(root),
-            PlayerModelDefinition.DefaultFaceTransforms, spritePrefix + "/base", 1f,
-            additionalTexturePaths: [spritePrefix + "/base"]);
+            faceTransforms: null, spritePrefix + "/base", 1f,
+            additionalTexturePaths: [spritePrefix + "/base"], baselinePx: 0f, rawSourceFrame: true);
     }
 
     private static Sharpcraft.Common.Network.BannerPatternLayer? LayerAt(

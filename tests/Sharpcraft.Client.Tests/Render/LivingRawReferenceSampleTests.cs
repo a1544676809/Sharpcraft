@@ -129,6 +129,9 @@ public sealed class LivingRawReferenceSampleTests
         { "enderman-raw-vectors.reference.txt", HumanoidMobModelDefinition.Enderman, 64, 32, "entity/enderman/enderman", 168, 48, 120, 0 },
         { "zombie-raw-vectors.reference.txt", HumanoidMobModelDefinition.Zombie, 64, 64, "entity/zombie/zombie", 168, 48, 120, 0 },
         // task-108 humanoid batch (total, mirror, checked, degenerate).
+        // task-206: pattern overlays raw (base geometry replicated per state layer, keyed jar samples).
+        { "special-banner-patterns-raw-vectors.reference.txt", SpecialItemModelDefinition.BannerFlagPatternsRight, 64, 64, "entity/banner/base", 144, 0, 144, 0 },
+        { "special-shield-patterns-raw-vectors.reference.txt", SpecialItemModelDefinition.ShieldPatternsRight, 64, 64, "entity/shield/base", 288, 0, 288, 0 },
         // task-202: special item models raw (keyed jar samples).
         { "special-trident-raw-vectors.reference.txt", SpecialItemModelDefinition.Trident, 32, 32, "entity/trident/trident", 120, 24, 96, 0 },
         { "special-shield-raw-vectors.reference.txt", SpecialItemModelDefinition.Shield, 64, 64, "entity/shield/shield_base_nopattern", 48, 0, 48, 0 },
