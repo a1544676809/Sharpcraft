@@ -22,9 +22,11 @@ public sealed class HumanoidHeldHandProductionTests
         AppContext.BaseDirectory, "Repro", "Data", "humanoid-held-hand-source-vectors.reference.txt");
 
     [Fact]
-    public void RestAndUseMesherVerticesMatchTheJarSample()
+    public void AllMesherVerticesMatchTheJarSample()
     {
         var vertices = ParseVertices();
+        var matrices = ParseMatrices();
+        Assert.Equal(12, matrices.Count);
         Assert.Equal(8, vertices.Keys.Count(key => !key.Contains("_attack_", StringComparison.Ordinal)));
         Assert.Equal(4, vertices.Keys.Count(key => key.Contains("_attack_", StringComparison.Ordinal)));
 
@@ -57,13 +59,11 @@ public sealed class HumanoidHeldHandProductionTests
                 });
                 var definition = EntityModelResolver.Resolve(EntityPlaceholderMesher.PlayerEntityTypeId);
                 var mesher = new ItemInHandMesher();
+                var checkedStates = 0;
+                var skippedAttackStates = 0;
                 foreach (var state in vertices.Keys)
                 {
-                    if (state.Contains("_attack_", StringComparison.Ordinal))
-                    {
-                        continue;
-                    }
-
+                    checkedStates++;
                     var expectedSource = vertices[state];
                     Assert.Equal(24, expectedSource.Length);
                     var parts = state.Split('_');
@@ -77,6 +77,8 @@ public sealed class HumanoidHeldHandProductionTests
                         IsBaby = baby,
                         IsUsingItem = motion == "use",
                         TicksUsingItem = motion == "use" ? 10f : 0f,
+                        SwingAnimation = motion == "attack" ? 0.15f : 0f,
+                        SwingType = 0,
                         UseItemHand = left ? 1 : 0,
                     };
                     var pose = new EntityPose();
@@ -97,7 +99,10 @@ public sealed class HumanoidHeldHandProductionTests
                         MainHandItemId: left ? -1 : paperId,
                         IsUsingItem: motion == "use",
                         TicksUsingItem: motion == "use" ? 10f : 0f,
-                        OffHandItemId: left ? paperId : -1);
+                        OffHandItemId: left ? paperId : -1,
+                        SwingAnimation: motion == "attack" ? 0.15f : 0f,
+                        SwingType: motion == "attack" ? SpearAnimations.StabSwingType : 0,
+                        SwingHand: left ? 1 : 0);
                     var layers = mesher.Build([entity], [pose], variants: null, atlas);
                     var layer = layers.Single(entry => entry.Name == ItemInHandMesher.LayerName);
                     var actual = ReadPositions(layer.Geometry);
@@ -112,6 +117,9 @@ public sealed class HumanoidHeldHandProductionTests
                         .ToArray();
                     AssertVertexSet(expected, actual, state);
                 }
+
+                Assert.Equal(12, checkedStates);
+                Assert.Equal(0, skippedAttackStates);
 
                 // Non-humanoid raw models must still use the legacy hand adapter in the real mesher.
                 var copper = new EntityRenderState(
@@ -156,7 +164,26 @@ public sealed class HumanoidHeldHandProductionTests
         new(0f, 0f, 1f), new(1f, 0f, 1f), new(1f, 1f, 1f), new(0f, 1f, 1f),
     ];
 
-    private static HumanoidArmPose PoseFor(string motion) => motion == "use" ? HumanoidArmPose.Spear : HumanoidArmPose.Item;
+    private static HumanoidArmPose PoseFor(string motion) => motion switch
+    {
+        "attack" => HumanoidArmPose.ThrowTrident,
+        "use" => HumanoidArmPose.Spear,
+        _ => HumanoidArmPose.Item,
+    };
+
+    private static Dictionary<string, Matrix4x4> ParseMatrices()
+    {
+        var result = new Dictionary<string, Matrix4x4>(StringComparer.Ordinal);
+        foreach (var line in File.ReadAllLines(SamplePath))
+        {
+            if (!line.StartsWith("#MATRIX ", StringComparison.Ordinal)) continue;
+            var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var values = parts.Skip(2).Select(v => float.Parse(v, CultureInfo.InvariantCulture)).ToArray();
+            Assert.Equal(16, values.Length);
+            result[parts[1]] = new Matrix4x4(values[0], values[1], values[2], 0f, values[4], values[5], values[6], 0f, values[8], values[9], values[10], 0f, values[12], values[13], values[14], values[15]);
+        }
+        return result;
+    }
 
     private static Dictionary<string, Vector3[]> ParseVertices()
     {
