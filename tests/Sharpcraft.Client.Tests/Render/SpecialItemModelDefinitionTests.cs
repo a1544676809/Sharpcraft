@@ -9,6 +9,24 @@ namespace Sharpcraft.Client.Tests.Render;
 public sealed class SpecialItemModelDefinitionTests
 {
     [Fact]
+    public void SampledSpecialItemModelsAreRaw()
+    {
+        // task-202: these six non-entity special models were migrated to the raw source frame and
+        // verified against keyed jar samples; production flags guard against silent legacy drift.
+        foreach (var def in new[]
+        {
+            SpecialItemModelDefinition.Trident, SpecialItemModelDefinition.Shield,
+            SpecialItemModelDefinition.BannerStanding, SpecialItemModelDefinition.BannerWall,
+            SpecialItemModelDefinition.BannerFlagStanding, SpecialItemModelDefinition.BannerFlagWall
+        })
+        {
+            Assert.True(def.RawSourceFrame, $"{def.Name}: rawSourceFrame");
+            Assert.Equal(0f, def.BaselinePx);
+            Assert.Null(def.FaceTransforms is { Count: > 0 } ? def.FaceTransforms : null);
+        }
+    }
+
+    [Fact]
     public void TridentHasPoleBaseAndThreeSpikes()
     {
         var names = SpecialItemModelDefinition.Trident.Compiled!.Parts.Select(part => part.Name).ToArray();
