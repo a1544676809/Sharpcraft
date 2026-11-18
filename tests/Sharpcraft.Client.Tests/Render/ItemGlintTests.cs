@@ -86,6 +86,31 @@ public sealed class ItemGlintTests
     }
 
     [Fact]
+    public void SpecialFoilItemsDoNotGetGlintYet()
+    {
+        // R-037 blocker: special held items (trident/shield/banner) render through held_special* layers and do not
+        // consume ItemInHandMesher's normal item glint pass. No special foil glint is implemented yet; keep this
+        // assertion explicit so the gap is not mistaken for coverage.
+        var special = EntityModelResolver.Resolve(EntityPlaceholderMesher.PlayerEntityTypeId).RenderLayers!
+            .Where(layer => layer.Name.StartsWith("held_special", StringComparison.Ordinal))
+            .ToArray();
+        Assert.NotEmpty(special);
+        Assert.Contains(special, layer => layer.Name.Contains("trident", StringComparison.Ordinal));
+
+        var trident = EntityModelResolver.Items!.GetId(Identifier.Parse("minecraft:trident"));
+        Assert.True(trident > 0);
+        var atlas = ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
+        {
+            [ItemInHandMesher.GlintTexture] = new(64, 64, new byte[64 * 64 * 4]),
+        });
+        var state = new EntityRenderState(
+            1, EntityPlaceholderMesher.PlayerEntityTypeId, 0f, 0f, 0f, 0f, 0f,
+            MainHandItemId: trident,
+            MainHandGlint: true);
+        var layers = new ItemInHandMesher().Build([state], [new EntityPose()], variants: null, atlas);
+        Assert.DoesNotContain(layers, layer => layer.Name.EndsWith("_glint", StringComparison.Ordinal));
+    }
+    [Fact]
     public void HandFoilComesFromGlintOverrideOrEnchantmentPresence()
     {
         var tracker = new EntityTracker();

@@ -846,6 +846,7 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **atlas**：`ResolveTextures` 为 foil hand 追加 glint 纹理，glint layer 使用 item atlas、`EntityGeometryLayerKind.Glint`。
 - **验收**：`ItemGlintTests` 固定 millis=55000 的 production `ItemInHandMesher.Build` glint UV = base UV 经 item scale 源矩阵且位置与 base 相同；非 foil 无 glint layer；tracker foil 由 enchantment/override 驱动。
 - **未改**：entity/armor glint 路径、EnergySwirl、其它材质。
+- **限制/blocker（special foil）**：本任务只覆盖 **normal held item foil**（`ItemInHandMesher` 的 item model quads）。trident/shield/banner 等 special held item 走 `held_special*` 特殊层，**special foil glint 未接入**（源 `ITEM_*_GLINT_SPECIAL` / special foil 路径未实现）；`ItemGlintTests.SpecialFoilItemsDoNotGetGlintYet` 明确断言当前不生成 glint，后续任务见 `R-037`。
 
 ### task-261 trim/glint/crackiness 跟随 raw armor 几何
 
