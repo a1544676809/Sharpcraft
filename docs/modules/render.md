@@ -807,6 +807,12 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **复用**：`ZOMBIE_ARMOR`/`SKELETON_ARMOR` 四 slot 新增 keyed 样本（48/72/72/48），与 player armor 12 个样本一起严格匹配同一 `PlayerArmorModelDefinition`，位置 1e-5 + UV half；production resolver 对 adult Player/Zombie/Skeleton 复用 raw 定义，不复制 mesh。
 - **边界**：baby/piglin armor、Husk 等 scaled/特殊 humanoid 仍 legacy；trim/glint/crackiness 材质层不变；legacy armor 零回归由 Husk + 全量测试覆盖。
 
+### task-241 Baby humanoid armor raw（baby piglin 后续）
+
+- **probe 扩展**：`RawRenderUnitProbe` 遇到 `<SET>_ARMOR` 字段时反射 `ArmorModelSet`，逐个 `.head()/.chest()/.legs()/.feet()` 取 slot ModelLayerLocation 后 bake，输出 layer 名 `<SET>_HELMET/CHESTPLATE/LEGGINGS/BOOTS`；baby zombie/zombie villager 各 slot 样本 24/72/72/48。
+- **源定义**：`BabyHumanoidArmorModelDefinition` 使用 baby outer deformation `(-0.1,0.5,0.3)` / inner `(-0.1,0.3,0.3)`，legs 的 waist、legs 与 cube extend(-0.1)；LEGS 含 waist，FEET 为 `left_leg/right_foot` + `right_leg/left_foot`；texture 64×64、raw baseline 0、无 FaceTransforms。
+- **验收**：8 个 keyed 样本（baby zombie + baby zombie villager）位置 1e-5 + UV half（waist half UV 逐值量化）；production resolver 对 baby humanoid 四 slot 走 raw layer，baby piglin 保持 legacy；adult/skeleton/piglin 与 trim/glint/crackiness 零回归；full 3,627+、三门禁。
+
 <!-- simplification:SIM-ENTITY-RAW-SCALE task:T-41 -->
 
 ### SIM-ENTITY-RAW-DEGENERATE：raw 零面积部件退化面（已解决）
