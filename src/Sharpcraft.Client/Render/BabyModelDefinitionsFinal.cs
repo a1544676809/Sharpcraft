@@ -9,24 +9,26 @@ public static class BabyModelDefinitionsFinal
 {
     private static readonly VanillaMeshDefinition NautilusMesh = BuildNautilusMesh();
     private static readonly VanillaMeshDefinition HappyGhastMesh = BuildHappyGhastMesh();
+    private static readonly VanillaMeshDefinition GlowSquidMesh = BuildGlowSquidMesh();
 
-    private static readonly CompiledEntityModel NautilusCompiled = VanillaMeshBakery.Build(NautilusMesh, 64, 64);
-    private static readonly CompiledEntityModel HappyGhastCompiled = VanillaMeshBakery.Build(HappyGhastMesh, 64, 64);
+    private static readonly CompiledEntityModel NautilusCompiled = VanillaMeshBakery.Build(NautilusMesh, 64, 64, rawSourceFrame: true);
+    private static readonly CompiledEntityModel HappyGhastCompiled = VanillaMeshBakery.Build(HappyGhastMesh, 64, 64, rawSourceFrame: true);
+    private static readonly CompiledEntityModel GlowSquidCompiled = VanillaMeshBakery.Build(GlowSquidMesh, 32, 32, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Nautilus = new(
-        "baby_nautilus", 64, 64, [.. VanillaMeshBake.Bake(NautilusMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms, "entity/nautilus/nautilus_baby",
-        compiled: NautilusCompiled);
+        "baby_nautilus", 64, 64, [.. VanillaMeshBake.Bake(NautilusMesh, 0, 0, rawSourceFrame: true)],
+        faceTransforms: null, "entity/nautilus/nautilus_baby",
+        compiled: NautilusCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition HappyGhast = new(
-        "baby_happy_ghast", 64, 64, [.. VanillaMeshBake.Bake(HappyGhastMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms, "entity/ghast/happy_ghast_baby", 0.95f,
-        compiled: HappyGhastCompiled);
+        "baby_happy_ghast", 64, 64, [.. VanillaMeshBake.Bake(HappyGhastMesh, 0, 0, rawSourceFrame: true)],
+        faceTransforms: null, "entity/ghast/happy_ghast_baby", 0.95f,
+        compiled: HappyGhastCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition GlowSquid = new(
-        "baby_glow_squid", 32, 32, BabyModelDefinitionsAquatic.Squid.Parts,
-        PlayerModelDefinition.DefaultFaceTransforms, "entity/squid/glow_squid_baby",
-        compiled: BabyModelDefinitionsAquatic.Squid.Compiled);
+        "baby_glow_squid", 32, 32, [.. VanillaMeshBake.Bake(GlowSquidMesh, 0, 0, rawSourceFrame: true)],
+        faceTransforms: null, "entity/squid/glow_squid_baby",
+        compiled: GlowSquidCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly IReadOnlyDictionary<int, EntityModelDefinition> Models =
         new Dictionary<int, EntityModelDefinition>
@@ -78,6 +80,25 @@ public static class BabyModelDefinitionsFinal
             var (x, y, z, length) = tentacles[i];
             body.AddOrReplaceChild("tentacle" + i, VanillaPartPose.Offset(x, y, z),
                 new VanillaCubeDefinition("tentacle" + i, 0, 0, -1f, 0f, -1f, 2f, length, 2f));
+        }
+
+        return new VanillaMeshDefinition(root);
+    }
+
+    private static VanillaMeshDefinition BuildGlowSquidMesh()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, 13f, 0f),
+            new VanillaCubeDefinition("body", 0, 0, -4f, -5f, -4f, 8f, 10f, 8f));
+        for (var i = 0; i < 8; i++)
+        {
+            var angle = i * MathF.PI * 2f / 8f;
+            var x = MathF.Cos(angle) * 3f;
+            var z = MathF.Sin(angle) * 3f;
+            var yRot = (i * MathF.PI * -2f / 8f) + (MathF.PI / 2f);
+            root.AddOrReplaceChild("tentacle" + i,
+                VanillaPartPose.OffsetAndRotation(x, 18.5f, z, 0f, yRot, 0f),
+                new VanillaCubeDefinition("tentacle" + i, 0, 18, -1f, -0.5f, -1f, 2f, 6f, 2f));
         }
 
         return new VanillaMeshDefinition(root);

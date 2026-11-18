@@ -402,7 +402,7 @@ public sealed class EntityModelTreeBakeryTests
         Assert.NotNull(BabyModelDefinitionsFinal.HappyGhast.Compiled);
         Assert.NotNull(BabyModelDefinitionsFinal.GlowSquid.Compiled);
 
-        Assert.Same(BabyModelDefinitionsFinal.GlowSquid.Compiled, BabyModelDefinitionsAquatic.Squid.Compiled);
+        Assert.NotSame(BabyModelDefinitionsFinal.GlowSquid.Compiled, BabyModelDefinitionsAquatic.Squid.Compiled);
         Assert.Same(BabyModelDefinitionsOdd.Husk.Compiled, BabyModelDefinitionsHumanoid.Zombie.Compiled);
         Assert.NotNull(BabyModelDefinitionsFinal.GlowSquid.Compiled!.Find("body"));
         Assert.NotNull(BabyModelDefinitionsFinal.Nautilus.Compiled!.Find("shell"));

@@ -162,6 +162,10 @@ public sealed class LivingRawReferenceSampleTests
         { "baby-wolf-raw-vectors.reference.txt", BabyModelDefinitionsExtra.Wolf, 32, 32, "entity/wolf/wolf_baby", 240, 0, 240, 0 },
         { "baby-fox-raw-vectors.reference.txt", BabyModelDefinitionsExtra.Fox, 32, 32, "entity/fox/fox_baby", 240, 0, 240, 0 },
         { "baby-rabbit-raw-vectors.reference.txt", BabyModelDefinitionsExtra.Rabbit, 32, 32, "entity/rabbit/rabbit_brown_baby", 216, 0, 216, 0 },
+        // task-199 baby final: happy ghast layer scale 0.95, nautilus zero-depth shell/body, glow squid baby mesh.
+        { "baby-happy-ghast-raw-vectors.reference.txt", BabyModelDefinitionsFinal.HappyGhast, 64, 64, "entity/ghast/happy_ghast_baby", 264, 0, 264, 0 },
+        { "baby-nautilus-raw-vectors.reference.txt", BabyModelDefinitionsFinal.Nautilus, 64, 64, "entity/nautilus/nautilus_baby", 192, 0, 192, 0 },
+        { "baby-glow-squid-raw-vectors.reference.txt", BabyModelDefinitionsFinal.GlowSquid, 32, 32, "entity/squid/glow_squid_baby", 216, 0, 216, 0 },
         // task-150: Armadillo raw (multi-cube body/head, rolled cube).
         { "armadillo-raw-vectors.reference.txt", ArmadilloModelDefinition.Definition, 64, 64, "entity/armadillo/armadillo", 264, 0, 216, 48 },
         // task-150: Ravager raw (multi-cube head, source Mirror on right_horn + left legs, body +PI/2).
@@ -275,6 +279,9 @@ public sealed class LivingRawReferenceSampleTests
                 || sampleFile.StartsWith("baby-wolf-", StringComparison.Ordinal)
                 || sampleFile.StartsWith("baby-fox-", StringComparison.Ordinal)
                 || sampleFile.StartsWith("baby-rabbit-", StringComparison.Ordinal)
+                || sampleFile.StartsWith("baby-happy-ghast-", StringComparison.Ordinal)
+                || sampleFile.StartsWith("baby-nautilus-", StringComparison.Ordinal)
+                || sampleFile.StartsWith("baby-glow-squid-", StringComparison.Ordinal)
                 || sampleFile.StartsWith("parrot-", StringComparison.Ordinal)
                 || sampleFile.StartsWith("allay-", StringComparison.Ordinal);
             if ((!includeRawDegenerate && (sourceParts[0].Width == 0f || sourceParts[0].Height == 0f || sourceParts[0].Depth == 0f))
@@ -487,6 +494,10 @@ public sealed class LivingRawReferenceSampleTests
                 flatName = cube switch { 0 => "head", 1 => "snout", 2 => "right_ear", _ => "left_ear" }; break;
             case "/body/head" when definition.Name == "baby_camel":
                 flatName = cube switch { 0 => "head", 1 => "head_upper", _ => "muzzle" }; break;
+            case "/root/shell" when definition.Name == "baby_nautilus":
+                flatName = cube switch { 0 => "shell", 1 => "shell_mid", _ => "shell_back" }; break;
+            case "/root/body" when definition.Name == "baby_nautilus":
+                flatName = cube == 0 ? "body" : "body_back"; break;
             case "/head" when definition.Name.StartsWith("baby_cow", StringComparison.Ordinal):
                 flatName = cube switch { 0 => "head", 1 => "ear_right", 2 => "ear_left", _ => "snout" }; break;
             case "/body" when definition.Name.StartsWith("baby_chicken", StringComparison.Ordinal):
