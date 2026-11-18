@@ -552,6 +552,8 @@ internal static class WindowCommand
                 AddIfPresent(paths, EntityModelResolver.ResolveHeldItemTexture(entity, offhand: true));
                 AddIfPresent(paths, EntityModelResolver.ResolveHeldItemSpecialTexture(entity, offhand: false));
                 AddIfPresent(paths, EntityModelResolver.ResolveHeldItemSpecialTexture(entity, offhand: true));
+                AddIfPresent(paths, EntityModelResolver.ResolveHeldItemSpecialGlintTexture(entity, offhand: false));
+                AddIfPresent(paths, EntityModelResolver.ResolveHeldItemSpecialGlintTexture(entity, offhand: true));
                 paths.AddRange(Sharpcraft.Client.Render.ItemEntityMesher.ResolveTextures(entity));
                 paths.AddRange(Sharpcraft.Client.Render.ItemInHandMesher.ResolveTextures(entity));
                 AddIfPresent(paths, EntityModelResolver.ResolveHeldItemPotSideTexture(entity, offhand: false));
