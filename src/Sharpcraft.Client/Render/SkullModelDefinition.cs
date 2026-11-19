@@ -81,6 +81,44 @@ public static class SkullModelDefinition
         VanillaMeshBake.Bake(DragonMesh, 256, 256, modelHeight: 0f, rawSourceFrame: true)
             .Select(PinDragonUv).ToArray();
 
+    // Compiled tree with the same scaled-bake UV pins applied to its cubes, so production compiled geometry
+    // is byte-identical to the formerly-meshed pinned flat parts (DragonHeadModel PartPose.scaled(0.75)).
+    private static readonly CompiledEntityModel DragonCompiled = BuildDragonCompiled();
+
+    private static CompiledEntityModel BuildDragonCompiled()
+    {
+        var compiled = VanillaMeshBakery.Build(DragonMesh, 256, 256, modelHeight: 0f, texturePath: DragonTexture, rawSourceFrame: true);
+        (int W, int H, int D) Pins(string name) => name switch
+        {
+            "head" => (12, 5, 16),
+            "upper_head" => (16, 16, 16),
+            "scale_left" or "scale_right" => (2, 4, 6),
+            "nostril_left" or "nostril_right" => (2, 2, 4),
+            "jaw" => (12, 4, 16),
+            _ => (0, 0, 0)
+        };
+        void PinNode(EntityModelPartNode node)
+        {
+            for (var i = 0; i < node.CubeArray.Length; i++)
+            {
+                var cube = node.CubeArray[i];
+                var (w, h, d) = Pins(cube.Name);
+                if (w > 0) node.CubeArray[i] = cube with { UvWidth = w, UvHeight = h, UvDepth = d };
+            }
+            foreach (var child in node.ChildArray) PinNode(child);
+        }
+        PinNode(compiled.Root);
+        // CubeArray entries are also referenced by compiled.Cubes; rebuild the flat cube list from the tree.
+        var cubes = new List<EntityModelCube>();
+        void Collect(EntityModelPartNode node)
+        {
+            cubes.AddRange(node.CubeArray);
+            foreach (var child in node.ChildArray) Collect(child);
+        }
+        Collect(compiled.Root);
+        return new CompiledEntityModel(compiled.Root, compiled.Parts, cubes);
+    }
+
     /// <summary>
     /// Baked head definition shared by the four mob skull types, in the raw source y-down frame.
     /// The renderer's source <c>scale(-1,-1,1)</c> outer pose performs the y-up flip, so no baked
@@ -118,6 +156,7 @@ public static class SkullModelDefinition
         parts: DragonParts,
         faceTransforms: null,
         texturePath: DragonTexture,
+        compiled: DragonCompiled,
         baselinePx: 0f, rawSourceFrame: true)
     {
         // Source head pose uses PartPose.scaled(0.75); the generic scaled bake emits absolute source-frame

@@ -16,7 +16,9 @@ public static class ShulkerBoxModelDefinition
     public static readonly EntityModelDefinition Definition = new(
         "shulker_box_raw", 64, 64,
         [.. VanillaMeshBake.Bake(Mesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
-        faceTransforms: null, texturePath: null, baselinePx: 0f, rawSourceFrame: true);
+        faceTransforms: null, texturePath: null,
+        compiled: VanillaMeshBakery.Build(Mesh, 64, 64, modelHeight: 0f, rawSourceFrame: true),
+        baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition Build()
     {

@@ -16,7 +16,9 @@ public sealed class DragonSkullRawTests
         Assert.True(def.RawSourceFrame);
         Assert.Equal(0f, def.BaselinePx);
         Assert.True(def.FaceTransforms is null || def.FaceTransforms.Count == 0);
-        Assert.Null(def.Compiled);
+        // Dragon skull is now produced by the compiled-only production mesher (#229); its compiled tree
+        // carries the same scaled-head UV pins as the flat parts (verified byte-identical by golden tests).
+        Assert.NotNull(def.Compiled);
         Assert.Equal(7, def.Parts.Count);
     }
 
