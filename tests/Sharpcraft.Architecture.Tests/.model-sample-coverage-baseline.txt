@@ -2,9 +2,6 @@
 # Entries ending in .golden.txt or .reference.txt are samples with no test literal.
 # Other entries are Type.Member model definitions with no truth assertion.
 # Sorted; '#' starts a comment. Remove an entry once it is covered (the gate enforces this).
-potion-colors.reference.txt
-special-banner-patterns-raw-vectors.reference.txt
-special-shield-patterns-raw-vectors.reference.txt
 ArmorStandArmorModelDefinition.Boots
 ArmorStandArmorModelDefinition.Chestplate
 ArmorStandArmorModelDefinition.Helmet
