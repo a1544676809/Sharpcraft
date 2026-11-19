@@ -177,14 +177,98 @@ public sealed class HeldSpecialWorldReferenceSampleTests
             }
         }
     }
-    [Fact]
-    public void HeadSpecialLayersAreRegistered()
+    [Theory]
+    [InlineData("chest", false)]
+    [InlineData("chest", true)]
+    [InlineData("skeleton_skull", false)]
+    [InlineData("skeleton_skull", true)]
+    [InlineData("white_banner", false)]
+    [InlineData("white_banner", true)]
+    public void HeldSpecialTexturesArePrimedForTheAtlas(string itemName, bool offhand)
     {
+        using var fixture = new ItemFixture();
+        var itemId = EntityModelResolver.Items!.GetId(Identifier.Parse("minecraft:" + itemName));
+        var state = new EntityRenderState(5, EntityPlaceholderMesher.PlayerEntityTypeId, 0f, 0f, 0f, 180f, 0f,
+            MainHandItemId: offhand ? -1 : itemId,
+            OffHandItemId: offhand ? itemId : -1);
+        var texture = EntityModelResolver.ResolveHeldItemSpecialTexture(state, offhand);
+        Assert.NotNull(texture);
+        Assert.Contains(texture, ItemInHandMesher.ResolveTextures(state));
+    }
+    [Fact]
+    public void MigratedSpecialLayersAreNotOnTheResolver()
+    {
+        // B-4 T3: chest/skull/banner body (and the banner flag) are emitted by ItemInHandMesher; the resolver keeps only
+        // the banner pattern overlay among the held special layers migrated here.
         var layers = EntityModelResolver.Resolve(EntityPlaceholderMesher.PlayerEntityTypeId).RenderLayers!;
-        foreach (var name in new[] { "held_special_head_right", "held_special_head_left" })
+        foreach (var name in new[] { "held_special_head_right", "held_special_head_left",
+                     "held_special_chest_right", "held_special_chest_left",
+                     "held_special_banner_right", "held_special_banner_left",
+                     "held_special_banner_flag_right", "held_special_banner_flag_left" })
         {
-            var layer = layers.Single(entry => entry.Name == name);
-            Assert.NotNull(layer.Model);
+            Assert.DoesNotContain(layers, layer => layer.Name == name);
+        }
+    }
+    public static TheoryData<string, string, string, string> ChestSkullBannerCases => new()
+    {
+        { "chest-held-world.reference.txt", "CHEST_RIGHT", "chest", "held_special_chest_right" },
+        { "chest-held-world.reference.txt", "CHEST_LEFT", "chest", "held_special_chest_left" },
+        { "skull-held-world.reference.txt", "SKULL_RIGHT", "skeleton_skull", "held_special_head_right" },
+        { "skull-held-world.reference.txt", "SKULL_LEFT", "skeleton_skull", "held_special_head_left" },
+        { "banner-held-world.reference.txt", "BANNER_RIGHT", "white_banner", "held_special_banner_right" },
+        { "banner-held-world.reference.txt", "BANNER_LEFT", "white_banner", "held_special_banner_left" }
+    };
+
+    [Theory]
+    [MemberData(nameof(ChestSkullBannerCases))]
+    public void ProductionChestSkullBannerMatchesTheWorldSamplePerKey(string sampleFile, string sampleLayer, string itemName,
+        string layerName)
+    {
+        var offhand = layerName.EndsWith("_left", StringComparison.Ordinal);
+        var model = itemName switch
+        {
+            "chest" => SpecialItemModelDefinition.ChestRaw,
+            "skeleton_skull" => SpecialItemModelDefinition.SkullRaw,
+            _ => SpecialItemModelDefinition.BannerStanding
+        };
+        using var fixture = new ItemFixture();
+        var itemId = EntityModelResolver.Items!.GetId(Identifier.Parse("minecraft:" + itemName));
+        var state = new EntityRenderState(4, EntityPlaceholderMesher.PlayerEntityTypeId, 0f, 0f, 0f, 180f, 0f,
+            MainHandItemId: offhand ? -1 : itemId,
+            OffHandItemId: offhand ? itemId : -1);
+        var texture = EntityModelResolver.ResolveHeldItemSpecialTexture(state, offhand);
+        Assert.NotNull(texture);
+        var atlas = ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
+        {
+            [texture] = new(model.TextureWidth, model.TextureHeight, new byte[model.TextureWidth * model.TextureHeight * 4])
+        });
+        var layers = new ItemInHandMesher().Build([state], [new EntityPose()], variants: null, atlas);
+        var layer = layers.Single(entry => entry.Name == layerName);
+        Assert.DoesNotContain(layers, entry => entry.Name == layerName + "_glint");
+
+        var rows = Load(sampleFile).Where(row => row.Layer == sampleLayer).ToArray();
+        Assert.NotEmpty(rows);
+        var cubes = model.Compiled!.Cubes.Select(cube => cube.Name).ToArray();
+        Assert.Equal(rows.Length, 24 * cubes.Length);
+        Assert.Equal(rows.Length, layer.Geometry.VertexFloats / ChunkMesher.FloatsPerVertex);
+        foreach (var group in rows.GroupBy(row => (row.Part, row.Cube)))
+        {
+            var cubeName = group.Key.Part.Split('/').Last();
+            var cubeIndex = Array.IndexOf(cubes, cubeName);
+            Assert.True(cubeIndex >= 0, $"{sampleLayer}: production cube '{cubeName}' missing");
+            var ordered = group.OrderBy(row => row.Polygon).ThenBy(row => row.Vertex).ToArray();
+            Assert.Equal(24, ordered.Length);
+            foreach (var row in ordered)
+            {
+                var produced = ReadVertex(layer.Geometry, (cubeIndex * 24) + (row.Polygon * 4) + row.Vertex);
+                var expected = EntityPlaceholderMesher.ModelScale
+                    * new Vector3(-row.Position.X, 1.501f - row.Position.Y, row.Position.Z);
+                Assert.True((produced.Position - expected).Length() <= Tolerance,
+                    $"{sampleLayer}/{row.Part}#{row.Cube} {row.Polygon}/{row.Vertex}: position {produced.Position} vs {expected}");
+                Assert.True(MathF.Abs(produced.U - QuantizeHalf(row.U)) <= Tolerance
+                        && MathF.Abs(produced.V - QuantizeHalf(row.V)) <= Tolerance,
+                    $"{sampleLayer}/{row.Part}#{row.Cube} {row.Polygon}/{row.Vertex}: UV");
+            }
         }
     }
     [Theory]
@@ -294,9 +378,18 @@ public sealed class HeldSpecialWorldReferenceSampleTests
         {
             _root = Path.Combine(Path.GetTempPath(), "sharpcraft-held-special-" + Guid.NewGuid().ToString("N"));
             Write("assets/minecraft/items/trident.json",
-                """{"model":{"type":"minecraft:condition","property":"minecraft:using_item","on_false":{"type":"minecraft:special","base":"minecraft:item/trident_in_hand","model":{"type":"minecraft:trident"}},"on_true":{"type":"minecraft:special","base":"minecraft:item/trident_throwing","model":{"type":"minecraft:trident"}}}}""");
+                """{"model":{"type":"minecraft:condition","property":"minecraft:using_item","on_false":{"type":"minecraft:special","base":"minecraft:item/trident_in_hand","model":{"type":"minecraft:trident"},"transformation":{"scale":[1,-1,-1]}},"on_true":{"type":"minecraft:special","base":"minecraft:item/trident_throwing","model":{"type":"minecraft:trident"},"transformation":{"scale":[1,-1,-1]}}}}""");
             Write("assets/minecraft/items/shield.json",
-                """{"model":{"type":"minecraft:condition","property":"minecraft:using_item","on_false":{"type":"minecraft:special","base":"minecraft:item/shield","model":{"type":"minecraft:shield"}},"on_true":{"type":"minecraft:special","base":"minecraft:item/shield_blocking","model":{"type":"minecraft:shield"}}}}""");
+                """{"model":{"type":"minecraft:condition","property":"minecraft:using_item","on_false":{"type":"minecraft:special","base":"minecraft:item/shield","model":{"type":"minecraft:shield"},"transformation":{"scale":[1,-1,-1]}},"on_true":{"type":"minecraft:special","base":"minecraft:item/shield_blocking","model":{"type":"minecraft:shield"},"transformation":{"scale":[1,-1,-1]}}}}""");
+            Write("assets/minecraft/items/chest.json",
+                """{"model":{"type":"minecraft:special","base":"minecraft:item/chest","model":{"type":"minecraft:chest","texture":"minecraft:normal"}}}""");
+            Write("assets/minecraft/items/skeleton_skull.json",
+                """{"model":{"type":"minecraft:special","base":"minecraft:item/template_skull","model":{"type":"minecraft:head","kind":"skeleton"},"transformation":{"translation":[0.5,0,0.5],"scale":[1,1,1]}}}""");
+            Write("assets/minecraft/items/white_banner.json",
+                """{"model":{"type":"minecraft:special","base":"minecraft:item/template_banner","model":{"type":"minecraft:banner","color":"white"},"transformation":{"translation":[0.5,0,0.5],"scale":[0.6666667,-0.6666667,-0.6666667]}}}""");
+            WriteModel("chest", "[75,315,0]", "[0,2.5,0]", "[75,315,0]", "[0,2.5,0]", scale: "[0.375,0.375,0.375]");
+            WriteModel("template_skull", "[45,45,0]", "[0,3,0]", "[45,45,0]", "[0,3,0]", scale: "[0.5,0.5,0.5]");
+            WriteModel("template_banner", "[0,90,0]", "[0,2,0.5]", "[0,90,0]", "[0,2,0.5]", scale: "[0.375,0.375,0.375]");
             WriteModel("trident_in_hand", "[0,60,0]", "[11,17,-2]", "[0,60,0]", "[11,17,-2]");
             WriteModel("trident_throwing", "[0,90,180]", "[8,-17,9]", "[0,90,180]", "[8,-17,9]");
             WriteModel("shield", "[0,90,0]", "[10,6,-4]", "[0,90,0]", "[10,6,-4]");
@@ -318,13 +411,14 @@ public sealed class HeldSpecialWorldReferenceSampleTests
             }
         }
 
-        private void WriteModel(string name, string rightRotation, string rightTranslation, string leftRotation, string leftTranslation) =>
+        private void WriteModel(string name, string rightRotation, string rightTranslation, string leftRotation,
+            string leftTranslation, string scale = "[1,1,1]") =>
             Write($"assets/minecraft/models/item/{name}.json",
                 "{\"display\":{\"thirdperson_righthand\":{\"rotation\":" + rightRotation
                 + ",\"translation\":" + rightTranslation
-                + ",\"scale\":[1,1,1]},\"thirdperson_lefthand\":{\"rotation\":" + leftRotation
+                + ",\"scale\":" + scale + "},\"thirdperson_lefthand\":{\"rotation\":" + leftRotation
                 + ",\"translation\":" + leftTranslation
-                + ",\"scale\":[1,1,1]}}}");
+                + ",\"scale\":" + scale + "}}}");
 
         private void Write(string relative, string json)
         {

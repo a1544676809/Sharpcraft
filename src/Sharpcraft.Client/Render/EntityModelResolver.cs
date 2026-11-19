@@ -440,8 +440,7 @@ public static partial class EntityModelResolver
             var existing = renderLayers ?? definition.RenderLayers;
             var heldLayers = new List<EntityRenderLayerDefinition>(existing);
             // trident/shield special models are emitted by ItemInHandMesher through the raw hand chain (B-4 T2).
-            AddSpecialHeadLayers(heldLayers);
-            AddSpecialChestLayers(heldLayers);
+
             AddSpecialShulkerLayers(heldLayers);
             AddSpecialBannerPotConduitLayers(heldLayers);
             renderLayers = heldLayers;

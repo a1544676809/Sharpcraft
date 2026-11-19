@@ -166,13 +166,20 @@ public static class SpecialItemModelDefinition
         texturePath: null,
         1f);
 
-    public static readonly EntityModelDefinition HeldChestRight = EntityModelDefinition.FromTree(
-        "held_special_chest_right", 64, 64, BuildChestMesh(held: true),
-        PlayerModelDefinition.DefaultFaceTransforms, texturePath: null, 1f);
-
-    public static readonly EntityModelDefinition HeldChestLeft = EntityModelDefinition.FromTree(
-        "held_special_chest_left", 64, 64, BuildChestMesh(held: true, left: true),
-        PlayerModelDefinition.DefaultFaceTransforms, texturePath: null, 1f);
+    /// <summary>
+    /// Raw source-frame chest used by the held special hand chain (B-4 T3); the item-entity model above keeps its
+    /// authored item-model extents.
+    /// </summary>
+    public static readonly EntityModelDefinition ChestRaw = EntityModelDefinition.FromTree(
+        "special_chest_raw",
+        64,
+        64,
+        BuildChestMesh(),
+        faceTransforms: null,
+        texturePath: null,
+        1f,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     /// <summary>Shulker box item model: lid plus base; texture comes from the special property.</summary>
     public static readonly EntityModelDefinition ShulkerBox = EntityModelDefinition.FromTree(
@@ -202,13 +209,17 @@ public static class SpecialItemModelDefinition
         texturePath: null,
         1f);
 
-    public static readonly EntityModelDefinition HeldSkullRight = EntityModelDefinition.FromTree(
-        "held_special_skull_right", 64, 32, BuildSkullMesh(held: true),
-        PlayerModelDefinition.DefaultFaceTransforms, texturePath: null, 1f);
-
-    public static readonly EntityModelDefinition HeldSkullLeft = EntityModelDefinition.FromTree(
-        "held_special_skull_left", 64, 32, BuildSkullMesh(held: true, left: true),
-        PlayerModelDefinition.DefaultFaceTransforms, texturePath: null, 1f);
+    /// <summary>Raw source-frame skull used by the held special hand chain (B-4 T3).</summary>
+    public static readonly EntityModelDefinition SkullRaw = EntityModelDefinition.FromTree(
+        "special_skull_raw",
+        64,
+        32,
+        BuildSkullMesh(),
+        faceTransforms: null,
+        texturePath: null,
+        1f,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     /// <summary>Trident model: pole plus base and three spikes (32×32 texture).</summary>
     public static readonly EntityModelDefinition Trident = EntityModelDefinition.FromTree(
@@ -327,14 +338,10 @@ public static class SpecialItemModelDefinition
         return new VanillaMeshDefinition(root);
     }
 
-    private static VanillaMeshDefinition BuildChestMesh(bool held = false, bool left = false)
+    private static VanillaMeshDefinition BuildChestMesh()
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
-        var parent = held
-            ? root.AddOrReplaceChild(left ? "left_arm" : "right_arm",
-                VanillaPartPose.Offset(left ? 5f : -5f, 2f, 0f),
-                new VanillaCubeDefinition(left ? "left_arm" : "right_arm", 0, 0, 0f, 0f, 0f, 0f, 0f, 0f))
-            : root;
+        var parent = root;
         parent.AddOrReplaceChild("bottom", VanillaPartPose.Zero,
             new VanillaCubeDefinition("bottom", 0, 19, 1f, 0f, 1f, 14f, 10f, 14f));
         parent.AddOrReplaceChild("lid", VanillaPartPose.Offset(0f, 9f, 1f),
@@ -344,14 +351,10 @@ public static class SpecialItemModelDefinition
         return new VanillaMeshDefinition(root);
     }
 
-    private static VanillaMeshDefinition BuildSkullMesh(bool held = false, bool left = false)
+    private static VanillaMeshDefinition BuildSkullMesh()
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
-        var parent = held
-            ? root.AddOrReplaceChild(left ? "left_arm" : "right_arm",
-                VanillaPartPose.Offset(left ? 5f : -5f, 2f, 0f),
-                new VanillaCubeDefinition(left ? "left_arm" : "right_arm", 0, 0, 0f, 0f, 0f, 0f, 0f, 0f))
-            : root;
+        var parent = root;
         parent.AddOrReplaceChild("head", VanillaPartPose.Zero,
             new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f));
         return new VanillaMeshDefinition(root);

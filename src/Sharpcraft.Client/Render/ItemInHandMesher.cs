@@ -14,7 +14,7 @@ namespace Sharpcraft.Client.Render;
 /// hand frame times the item's own display transform. It replaces the previous fixed 8x8 quad, which drew every item as
 /// the same box wearing a different sprite.
 /// </summary>
-[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.entity.layers.ItemInHandLayer", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/layers/ItemInHandLayer.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Item geometry reuses the item-model path; special renderers keep their own hand layers")]
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.entity.layers.ItemInHandLayer", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/layers/ItemInHandLayer.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Item geometry reuses the item-model path; supported special renderers are emitted through the same raw hand chain into separate geometry buffers")]
 [Sharpcraft.Common.Diagnostics.Simplification("SIM-ITEM-HELD-GEOMETRY", "T-765", Note = "Held items use the shared geometry and display transform with the STAB offset and the spear use-item animation applied; kinetic weapon values come from the reference spear table, and the hit-feedback term is always zero because the client does not track ticksSinceKineticHitFeedback")]
 public sealed class ItemInHandMesher
 {
@@ -26,13 +26,17 @@ public sealed class ItemInHandMesher
     private readonly DynamicGeometry _glintGeometry = new();
     private readonly DynamicGeometry _specialGlintGeometry = new();
     private readonly List<ItemModelQuad> _quads = [];
-    // Held special (trident/shield) raw hand-chain output: [trident/right, trident/left, shield/right, shield/left].
-    private readonly DynamicGeometry[] _heldSpecialCutout = [new(), new(), new(), new()];
-    private readonly DynamicGeometry[] _heldSpecialGlint = [new(), new(), new(), new()];
-    private readonly int[] _heldSpecialCutoutFloats = new int[4];
-    private readonly int[] _heldSpecialCutoutIndices = new int[4];
-    private readonly int[] _heldSpecialGlintFloats = new int[4];
-    private readonly int[] _heldSpecialGlintIndices = new int[4];
+    // Held special raw hand-chain output, two slots per kind: trident, shield, chest, head, banner, banner_flag.
+    // Only the trident/shield slots emit a foil glint companion.
+    private const int HeldSpecialSlotCount = 12;
+    private static readonly string[] HeldSpecialLayerNames =
+        ["trident", "trident", "shield", "shield", "chest", "chest", "head", "head", "banner", "banner", "banner_flag", "banner_flag"];
+    private readonly DynamicGeometry[] _heldSpecialCutout = CreateGeometryBuffer(HeldSpecialSlotCount);
+    private readonly DynamicGeometry[] _heldSpecialGlint = CreateGeometryBuffer(HeldSpecialSlotCount);
+    private readonly int[] _heldSpecialCutoutFloats = new int[HeldSpecialSlotCount];
+    private readonly int[] _heldSpecialCutoutIndices = new int[HeldSpecialSlotCount];
+    private readonly int[] _heldSpecialGlintFloats = new int[HeldSpecialSlotCount];
+    private readonly int[] _heldSpecialGlintIndices = new int[HeldSpecialSlotCount];
     private readonly EntityModelMesher _heldSpecialMesher = new();
     private readonly Dictionary<EntityModelDefinition, HeldSpecialGeometry> _heldSpecialGeometryCache = [];
 
@@ -222,9 +226,9 @@ public sealed class ItemInHandMesher
             layers.Add(new EntityGeometryLayer($"{LayerName}_glint_special", EntityGeometryLayerKind.SpecialGlint, 893, _specialGlintGeometry, usesItemAtlas: true));
         }
 
-        for (var heldSpecial = 0; heldSpecial < 4; heldSpecial++)
+        for (var heldSpecial = 0; heldSpecial < HeldSpecialSlotCount; heldSpecial++)
         {
-            var specialName = heldSpecial < 2 ? "trident" : "shield";
+            var specialName = HeldSpecialLayerNames[heldSpecial];
             var specialHand = heldSpecial % 2 == 1 ? "left" : "right";
             var cutout = _heldSpecialCutout[heldSpecial];
             if (_heldSpecialCutoutIndices[heldSpecial] > 0)
@@ -267,6 +271,18 @@ public sealed class ItemInHandMesher
                 foreach (var texture in ItemEntityMesher.ResolutionTextures(placement.Model))
                 {
                     yield return texture;
+                }
+            }
+
+            if (EntityModelResolver.ResolveHeldItemSpecial(entity, offhand) is { } specialId)
+            {
+                var specialType = specialId.StartsWith("minecraft:", StringComparison.Ordinal)
+                    ? specialId["minecraft:".Length..]
+                    : specialId;
+                if (specialType is "chest" or "head" or "player_head" or "banner"
+                    && EntityModelResolver.ResolveHeldItemSpecialTexture(entity, offhand) is { } specialTexture)
+                {
+                    yield return specialTexture;
                 }
             }
         }
@@ -313,9 +329,9 @@ public sealed class ItemInHandMesher
     }
 
     /// <summary>
-    /// Emits the trident/shield special model through the same raw hand chain as regular held items:
+    /// Emits a supported special model (trident/shield/chest/skull/banner) through the same raw hand chain as regular held items:
     /// world = specialLocal · display · stab · anchor · handFrame · entityMatrix (row vectors).
-    /// The special geometry cannot share the item-quad buffer (cube model vs. quad model), so it keeps its own
+    /// The special geometry cannot share the item-quad buffer (cube model vs. quad model), so each slot keeps its own
     /// geometry buffer while using the identical frame.
     /// </summary>
     private void EmitHeldSpecial(
@@ -333,7 +349,16 @@ public sealed class ItemInHandMesher
         }
 
         var specialType = specialId.StartsWith("minecraft:", StringComparison.Ordinal) ? specialId["minecraft:".Length..] : specialId;
-        if (specialType is not ("trident" or "shield"))
+        var kind = specialType switch
+        {
+            "trident" => 0,
+            "shield" => 1,
+            "chest" => 2,
+            "head" or "player_head" => 3,
+            "banner" => 4,
+            _ => -1
+        };
+        if (kind < 0)
         {
             return;
         }
@@ -361,18 +386,33 @@ public sealed class ItemInHandMesher
             : Matrix4x4.Identity;
         var anchor = humanoidSource ? Matrix4x4.Identity : EntityModelResolver.AnchorCoreFor(offhand, entity.IsBaby);
         var display = EntityModelResolver.DisplayFor(placements[0].Model, offhand);
-        // items/{trident,shield}.json `transformation.scale = (1, -1, -1)`; rotations/translation are identity.
-        var specialLocal = Matrix4x4.CreateScale(1f, -1f, -1f);
+        // The item JSON `transformation` block of the special model is the source local transform (trident/shield
+        // scale(1,-1,-1), chest identity, skull translation(0.5,0,0.5), banner translation+scale).
+        var specialLocal = placements[0].Model.LocalTransform == default
+            ? Matrix4x4.Identity
+            : placements[0].Model.LocalTransform;
         var world = specialLocal * display * stab * anchor * handFrame * entityMatrix;
 
-        var specialModel = specialType == "trident" ? SpecialItemModelDefinition.Trident : SpecialItemModelDefinition.Shield;
-        var texture = specialType == "trident" ? SpecialItemModelDefinition.TridentTexture : SpecialItemModelDefinition.ShieldTexture;
-        if (itemAtlas.Get(texture) is not { } sprite)
+        var specialModel = kind switch
+        {
+            0 => SpecialItemModelDefinition.Trident,
+            1 => SpecialItemModelDefinition.Shield,
+            2 => SpecialItemModelDefinition.ChestRaw,
+            3 => SpecialItemModelDefinition.SkullRaw,
+            _ => SpecialItemModelDefinition.BannerStanding
+        };
+        var texture = kind switch
+        {
+            0 => SpecialItemModelDefinition.TridentTexture,
+            1 => SpecialItemModelDefinition.ShieldTexture,
+            _ => EntityModelResolver.ResolveHeldItemSpecialTexture(entity, offhand)
+        };
+        if (texture is null || itemAtlas.Get(texture) is not { } sprite)
         {
             return;
         }
 
-        var slot = (specialType == "shield" ? 2 : 0) + (offhand ? 1 : 0);
+        var slot = (kind * 2) + (offhand ? 1 : 0);
         var geometry = HeldSpecialGeometryFor(specialModel);
         var target = _heldSpecialCutout[slot];
         var vertices = geometry.Positions.Length / 3;
@@ -390,8 +430,15 @@ public sealed class ItemInHandMesher
 
         WriteHeldSpecialIndices(target, ref _heldSpecialCutoutIndices[slot], _heldSpecialCutoutFloats[slot], vertices);
 
+        if (kind == 4)
+        {
+            // The reference BannerSpecialRenderer submits the body and the flag plane through the same item display
+            // and special local transform; emit the flag as the adjacent slot with the same hand frame.
+            EmitHeldSpecialGeometry(entity, kind + 1, offhand, sprite, world);
+        }
+
         var foil = offhand ? entity.OffHandFoil : entity.MainHandFoil;
-        if (foil == ItemFoilType.None)
+        if (kind >= 2 || foil == ItemFoilType.None)
         {
             return;
         }
@@ -410,6 +457,46 @@ public sealed class ItemInHandMesher
         }
 
         WriteHeldSpecialIndices(glintTarget, ref _heldSpecialGlintIndices[slot], _heldSpecialGlintFloats[slot], vertices);
+    }
+
+    /// <summary>Emits one additional special model (the banner flag plane) into its own layer slot with a frame already
+    /// resolved by the caller.</summary>
+    private void EmitHeldSpecialGeometry(EntityRenderState entity, int kind, bool offhand, SpriteRect sprite, Matrix4x4 world)
+    {
+        var model = kind == 5 ? SpecialItemModelDefinition.BannerFlagStanding : null;
+        if (model is null)
+        {
+            return;
+        }
+
+        var slot = (kind * 2) + (offhand ? 1 : 0);
+        var geometry = HeldSpecialGeometryFor(model);
+        var target = _heldSpecialCutout[slot];
+        var vertices = geometry.Positions.Length / 3;
+        target.Reserve(_heldSpecialCutoutFloats[slot] + (vertices * ChunkMesher.FloatsPerVertex),
+            _heldSpecialCutoutIndices[slot] + ((vertices / 4) * 6));
+        for (var vertex = 0; vertex < vertices; vertex++)
+        {
+            var point = new Vector3(geometry.Positions[vertex * 3], geometry.Positions[(vertex * 3) + 1],
+                geometry.Positions[(vertex * 3) + 2]);
+            point = Vector3.Transform(point, world);
+            TerrainVertexWriter.Write(target.Vertices, ref _heldSpecialCutoutFloats[slot],
+                point.X, point.Y, point.Z, 1f, 1f, 1f,
+                geometry.Uvs[vertex * 2], geometry.Uvs[(vertex * 2) + 1], sprite, sky: 1f, block: 0f);
+        }
+
+        WriteHeldSpecialIndices(target, ref _heldSpecialCutoutIndices[slot], _heldSpecialCutoutFloats[slot], vertices);
+    }
+
+    private static DynamicGeometry[] CreateGeometryBuffer(int count)
+    {
+        var result = new DynamicGeometry[count];
+        for (var i = 0; i < count; i++)
+        {
+            result[i] = new DynamicGeometry();
+        }
+
+        return result;
     }
 
     private static void WriteHeldSpecialIndices(DynamicGeometry target, ref int indexCount, int vertexFloats, int vertices)
