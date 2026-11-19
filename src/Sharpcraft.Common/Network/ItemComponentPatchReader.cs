@@ -23,11 +23,20 @@ public readonly record struct ItemComponentInfo(
     string? ItemModelId = null,
     int? BaseColorId = null,
     IReadOnlyList<BannerPatternLayer>? BannerPatternLayers = null,
-    int? PotionColor = null)
+    int? PotionColor = null,
+    int? PotionId = null,
+    IReadOnlyList<PotionEffectInstance>? PotionEffects = null)
 {
     /// <summary>True when some component payload could not be decoded and the rest of the packet was skipped.</summary>
     public bool HasUnknownComponents => Opaque;
 }
+
+/// <summary>
+/// One visible potion effect carried by <c>potion_contents</c> (reference <c>MobEffectInstance</c>): the effect
+/// registry holder id, amplifier, and whether it contributes to the potion colour (visible/show particles).
+/// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.effect.MobEffectInstance", "ref://mc-26.3-analysis/src/net/minecraft/world/effect/MobEffectInstance.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "effect id/amplifier/visible only; duration/ambient/icon drained for stream alignment")]
+public readonly record struct PotionEffectInstance(int EffectId, int Amplifier, bool Visible);
 
 /// <summary>
 /// One <c>banner_patterns</c> layer: the pattern's registry asset id plus its dye colour id (reference
@@ -1012,13 +1021,26 @@ internal static class ItemComponentPatchReader
 
     // Wire order follows PotionContents.STREAM_CODEC (ref://mc-26.3-analysis/src/net/minecraft/world/item/alchemy/PotionContents.java:58-68):
     // optional(potion holder) -> optional(int customColor) -> list(mobEffectInstance) -> optional(string customName).
-    // Only customColor is consumed for rendering; the potion/effects/name fields are still fully drained to keep the
-    // packet stream aligned. Effect-derived colours need the potion registry and are not available at this layer.
+    // The potion holder id and visible effects are captured for the production effect-derived colour table
+    // (PotionColorTable); the custom name and hidden effects are still drained to keep the packet stream aligned.
     private static bool TryReadPotionContents(ref PayloadReader reader, ref ItemComponentInfo info)
     {
-        if (reader.TryReadBool(out var hasPotion) != DecodeStatus.Success ||
-            (hasPotion && reader.TryReadVarInt(out _) != DecodeStatus.Success) ||
-            reader.TryReadBool(out var hasColor) != DecodeStatus.Success)
+        int? potionId = null;
+        if (reader.TryReadBool(out var hasPotion) != DecodeStatus.Success)
+        {
+            return false;
+        }
+
+        if (hasPotion)
+        {
+            if (reader.TryReadVarInt(out var id) != DecodeStatus.Success)
+            {
+                return false;
+            }
+            potionId = id;
+        }
+
+        if (reader.TryReadBool(out var hasColor) != DecodeStatus.Success)
         {
             return false;
         }
@@ -1033,17 +1055,22 @@ internal static class ItemComponentPatchReader
             customColor = color;
         }
 
-        if (reader.TryReadVarInt(out var effects) != DecodeStatus.Success ||
-            effects < 0)
+        if (reader.TryReadVarInt(out var effects) != DecodeStatus.Success || effects < 0)
         {
             return false;
         }
 
+        List<PotionEffectInstance>? effectList = effects > 0 ? new List<PotionEffectInstance>(effects) : null;
         for (var i = 0; i < effects; i++)
         {
-            if (!TrySkipMobEffect(ref reader))
+            if (!TryReadPotionEffect(ref reader, out var effect))
             {
                 return false;
+            }
+
+            if (effect.Visible)
+            {
+                effectList?.Add(effect);
             }
         }
 
@@ -1053,8 +1080,45 @@ internal static class ItemComponentPatchReader
             return false;
         }
 
-        info = info with { PotionColor = customColor };
+        info = info with { PotionColor = customColor, PotionId = potionId, PotionEffects = effectList };
         return true;
+    }
+
+    private static bool TryReadPotionEffect(ref PayloadReader reader, out PotionEffectInstance effect)
+    {
+        effect = default;
+        if (reader.TryReadVarInt(out var effectId) != DecodeStatus.Success ||
+            reader.TryReadVarInt(out var amplifier) != DecodeStatus.Success ||
+            reader.TryReadVarInt(out _) != DecodeStatus.Success || // duration
+            reader.TryReadBool(out _) != DecodeStatus.Success ||  // ambient
+            reader.TryReadBool(out var visible) != DecodeStatus.Success ||
+            reader.TryReadBool(out _) != DecodeStatus.Success)    // show icon
+        {
+            return false;
+        }
+
+        effect = new PotionEffectInstance(effectId, amplifier, visible);
+        return TrySkipOptionalEffectDetails(ref reader, 0);
+    }
+
+    private static bool TrySkipOptionalEffectDetails(ref PayloadReader reader, int depth)
+    {
+        if (depth > MaxDepth || reader.TryReadBool(out var hasHidden) != DecodeStatus.Success)
+        {
+            return false;
+        }
+
+        if (!hasHidden)
+        {
+            return true;
+        }
+
+        return reader.TryReadVarInt(out _) == DecodeStatus.Success &&
+               reader.TryReadVarInt(out _) == DecodeStatus.Success &&
+               reader.TryReadBool(out _) == DecodeStatus.Success &&
+               reader.TryReadBool(out _) == DecodeStatus.Success &&
+               reader.TryReadBool(out _) == DecodeStatus.Success &&
+               TrySkipOptionalEffectDetails(ref reader, depth + 1);
     }
 
     private static bool TrySkipFireworks(ref PayloadReader reader)

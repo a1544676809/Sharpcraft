@@ -234,6 +234,12 @@ public sealed partial class EntityTracker
                 IsHoldingPotion: entity.TypeId == WitchModelDefinition.WitchEntityTypeId && IsPotionItem(entity.EquipmentItemAt(0)),
                 HeldPotionColor: entity.TypeId == WitchModelDefinition.WitchEntityTypeId && IsPotionItem(entity.EquipmentItemAt(0))
                     ? entity.EquipmentComponentsAt(0).PotionColor
+                    : null,
+                HeldPotionId: entity.TypeId == WitchModelDefinition.WitchEntityTypeId && IsPotionItem(entity.EquipmentItemAt(0))
+                    ? entity.EquipmentPotionIdAt(0) ?? -1
+                    : -1,
+                HeldPotionEffects: entity.TypeId == WitchModelDefinition.WitchEntityTypeId && IsPotionItem(entity.EquipmentItemAt(0))
+                    ? entity.EquipmentPotionEffectsAt(0)
                     : null));
         }
 
