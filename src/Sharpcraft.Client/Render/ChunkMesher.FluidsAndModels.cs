@@ -265,12 +265,11 @@ public static partial class ChunkMesher
                     var tr = 1f;
                     var tg = 1f;
                     var tb = 1f;
-                    if (tint is not null)
+                    if (BlockTintTable.MultiplierForKind(tint, BlockTintKind.Water, bx, by, bz) is { } waterTint)
                     {
-                        var (cr, cg, cb) = BiomeTint.ToMultiplier(tint.ColourAt(BlockTintKind.Water, bx, by, bz));
-                        tr = cr;
-                        tg = cg;
-                        tb = cb;
+                        tr = waterTint.R;
+                        tg = waterTint.G;
+                        tb = waterTint.B;
                     }
 
                     eligible[cell] = true;
@@ -426,12 +425,12 @@ public static partial class ChunkMesher
                     var tr = 1f;
                     var tg = 1f;
                     var tb = 1f;
-                    if (fluidPath != "lava" && tint is not null)
+                    if (fluidPath != "lava"
+                        && BlockTintTable.MultiplierForKind(tint, BlockTintKind.Water, bx, by, bz) is { } flowTint)
                     {
-                        var (r, g, b) = BiomeTint.ToMultiplier(tint.ColourAt(BlockTintKind.Water, bx, by, bz));
-                        tr = r;
-                        tg = g;
-                        tb = b;
+                        tr = flowTint.R;
+                        tg = flowTint.G;
+                        tb = flowTint.B;
                     }
 
                     var blockId = fluidBlockRef;

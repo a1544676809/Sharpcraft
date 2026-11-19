@@ -584,6 +584,16 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 ## 已知刻意的简化
 
+### SIM-LOCAL-FRAME-NO-LAYOUT：`--frame` 本地演示场景不传 layout / tint
+
+- **简化了什么**：`FrameCommand.RenderLocal` 调 `ChunkMeshCache.MeshWorldOnce` 时**不传** `layout` 与 `tint`，因此这条诊断场景的网格没有生物群系着色，面剔除也按"没有 layout"的旧规则走。
+- **为什么**：传 `layout: DemoLayout()` 会让同一个演示世界（2045 方块不变）的三角形从 **2392 变成 4176**，说明该场景此前把**不同方块之间**的面剔掉了。改它等于静默改动所有已记录的离线 A/B 几何基线，而那个剔除缺陷与 #227 无关，按原则 14 的切片纪律必须另起任务。
+- **对等效性的影响**：只影响 `--frame` + `MC_FRAME_LOCAL` 这条**诊断**路径。生产活体路径走 `ChunkMeshCache` / `ChunkWorkerPool`，两者都带 `layout` 与 `tint`，因此着色与剔除行为不受影响；演示世界本身不含草/树叶，实际像素也无差异。
+- **当前状态与独立任务**：入口已备好参数（`ChunkMesher.Mesh` 与 `ChunkMeshCache.MeshWorldOnce` 均已接受 `layout` / `tint`），调用点写明了原因；剔除条件的修正列为独立任务，跟踪于 `docs/risks.md` **R-049**（Issue 待项目所有者建号后回填）。**不是已解决。**
+- **验收入口**：R-049 的复查条件——用带 / 不带 layout 的同世界逐面集合对比，差集应全部是"不同方块之间的面"；修好后同步把本文档 §5 的 `local demo` 几何基线从 2392 更新为修正值，并删掉本条。
+
+<!-- simplification:SIM-LOCAL-FRAME-NO-LAYOUT task:R-049 -->
+
 ### SIM-BE-BELL-NO-SHAKE：钟只渲染静态外观
 
 - **简化了什么**：`BellMesher` 按原版 `BellModel.createBodyLayer()` 的静态盒定义绘制钟体与钟座；原版 `BellRenderer` 还会用 `BellBlockEntity.ticks` 与 `clickDirection` 驱动 `BellModel.State`，让钟体绕 X/Z 轴摆动，本实现未接入该动画。

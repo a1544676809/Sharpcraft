@@ -597,19 +597,15 @@ public static partial class ChunkMesher
         // rendered pixels against the atlas cell of a forced stone world).
         var (red, green, blue) = sprites is null ? ColourOf(state) : (1f, 1f, 1f);
 
-        if (tint is not null && layout?.BlockAt(state) is { } tintedBlock)
+        // One tint decision for every path: BlockTintTable answers the colour, and the top-face-only rule the
+        // reference uses for a cube face is asked for explicitly rather than reimplemented here.
+        if (layout?.BlockAt(state) is { } tintedBlock
+            && BlockTintTable.MultiplierForCubeFace(tint, tintedBlock, origin.X, origin.Y, origin.Z, direction == PositiveY)
+                is { } tintMultiplier)
         {
-            // The reference tints the faces whose model carries a tint index; grass tints only its top, leaves and plants
-            // tint every face.
-            var kind = BlockTintTable.KindOf(tintedBlock);
-
-            if (kind != BlockTintKind.None && (!BlockTintTable.TintsTopFaceOnly(kind) || direction == PositiveY))
-            {
-                var (tintRed, tintGreen, tintBlue) = BiomeTint.ToMultiplier(tint.ColourAt(kind, origin.X, origin.Y, origin.Z));
-                red *= tintRed;
-                green *= tintGreen;
-                blue *= tintBlue;
-            }
+            red *= tintMultiplier.R;
+            green *= tintMultiplier.G;
+            blue *= tintMultiplier.B;
         }
         // Directional face brightness follows the reference's CardinalLighting.DEFAULT: up 1.0, down 0.5, north/south
         // (Z axis) 0.8, west/east (X axis) 0.6. A single 0.75 for every side made side faces shade wrong.

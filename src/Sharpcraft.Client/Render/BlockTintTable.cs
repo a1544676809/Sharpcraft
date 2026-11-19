@@ -81,20 +81,52 @@ public static class BlockTintTable
     /// <param name="y">Block Y, for the biome lookup.</param>
     /// <param name="z">Block Z, for the biome lookup.</param>
     /// <remarks>
-    /// This is the one place that decides whether a block is tinted, shared by both mesh paths. The element model path
-    /// applies it to the faces whose model declares a tint index; the cube path applies it per face rule. Issue 227 was
-    /// the model path not asking at all, so keeping the decision here means a test can pin it without a GPU.
+    /// This is the single answer to "is this block tinted, and with what colour": the kind lookup, the biome blend and
+    /// the reference's channel unpacking all live here, so both mesh paths and the fluid path agree by construction and
+    /// a test can pin the decision without a GPU. What stays per path is only the <em>face rule</em>, because the
+    /// reference really does differ: the element path honours each face's model tint index, the cube path uses the
+    /// per-block rule below, and fluid is always water. Issue 227 was the element path not asking at all.
     /// </remarks>
-    public static (float R, float G, float B)? MultiplierFor(BiomeTint? tint, Identifier block, int x, int y, int z)
+    public static (float R, float G, float B)? MultiplierFor(BiomeTint? tint, Identifier block, int x, int y, int z) =>
+        MultiplierForKind(tint, KindOf(block), x, y, z);
+
+    /// <summary>
+    /// The same multiplier for a block the cube path draws, applying the reference's top-face-only rule.
+    /// </summary>
+    /// <param name="tint">Biome tint, or null when the caller has none.</param>
+    /// <param name="block">Block identifier the state resolves to.</param>
+    /// <param name="x">Block X, for the biome lookup.</param>
+    /// <param name="y">Block Y, for the biome lookup.</param>
+    /// <param name="z">Block Z, for the biome lookup.</param>
+    /// <param name="upward">Whether the face being drawn looks up.</param>
+    /// <returns>The multiplier, or null when this face takes no tint.</returns>
+    public static (float R, float G, float B)? MultiplierForCubeFace(
+        BiomeTint? tint,
+        Identifier block,
+        int x,
+        int y,
+        int z,
+        bool upward)
     {
-        if (tint is null)
+        var kind = KindOf(block);
+        if (kind != BlockTintKind.None && TintsTopFaceOnly(kind) && !upward)
         {
             return null;
         }
 
-        var kind = KindOf(block);
-        return kind == BlockTintKind.None
+        return MultiplierForKind(tint, kind, x, y, z);
+    }
+
+    /// <summary>
+    /// The multiplier for a caller that already knows the tint kind, which is the fluid path: water is water.
+    /// </summary>
+    /// <param name="tint">Biome tint, or null when the caller has none.</param>
+    /// <param name="kind">Tint kind to resolve.</param>
+    /// <param name="x">Block X, for the biome lookup.</param>
+    /// <param name="y">Block Y, for the biome lookup.</param>
+    /// <param name="z">Block Z, for the biome lookup.</param>
+    public static (float R, float G, float B)? MultiplierForKind(BiomeTint? tint, BlockTintKind kind, int x, int y, int z) =>
+        tint is null || kind == BlockTintKind.None
             ? null
             : BiomeTint.ToMultiplier(tint.ColourAt(kind, x, y, z));
-    }
 }
