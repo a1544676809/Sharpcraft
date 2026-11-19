@@ -192,9 +192,13 @@ public sealed class ItemEntityMesherTests
     }
 
     [Fact]
-    public void PotionTintUsesTheSourceDefaultAndCustomColor()
+    public void PotionTintSourceEvaluatesTheSourceDefaultOnly()
     {
         // items/potion.json: tints [{ type: minecraft:potion, default: -13083194 }].
+        // The parsed default is the only value this source can evaluate: a stack's custom colour
+        // (ItemComponentInfo.PotionColor -> EntityRenderState.HeldPotionColor) is captured as state
+        // but NOT consumed by any renderer yet (flat quad path). See R-046. This test asserts only
+        // the default-tint path and must not be read as custom-tint coverage.
         var tint = ItemTintSource.Parse(System.Text.Json.JsonDocument.Parse(
             """{"type":"minecraft:potion","default":-13083194}""").RootElement);
 

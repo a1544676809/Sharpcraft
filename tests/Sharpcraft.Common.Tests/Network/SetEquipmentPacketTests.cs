@@ -597,6 +597,53 @@ public sealed class SetEquipmentPacketTests
     }
 
     [Fact]
+    public void MalformedPotionContentsLeavesColorNullAndDoesNotDesynchronise()
+    {
+        // Error path: TryReadPotionContents writes PotionColor only after all fields parse. A truncated
+        // custom color / effects list / custom name must leave the colour null and surface a decode
+        // failure (NeedMoreData), never a partially written value or a desynchronised stream.
+        var potion = DataComponentTypes.GetId("potion_contents");
+        Assert.True(potion >= 0);
+
+        // Each delegate writes only the malformed tail of the potion_contents value after the header
+        // (no potion id, then the field under test truncated / negative).
+        Action<List<byte>>[] malformedTails =
+        {
+            tail => { tail.Add(1); tail.Add(0x2A); },                    // has color, only 1 of 4 bytes
+            tail => { tail.Add(0); tail.AddRange(VarInt(1)); },          // no color, one effect declared but no data
+            tail => { tail.Add(0); tail.AddRange(VarInt(0)); tail.Add(1); } // no color, no effects, has name but no string
+        };
+
+        foreach (var writeTail in malformedTails)
+        {
+            var body = Body(
+                b =>
+                {
+                    b.Add(0x80);
+                    b.AddRange(VarInt(1));
+                    b.AddRange(VarInt(1));
+                    b.AddRange(VarInt(1));
+                    b.AddRange(VarInt(0));
+                    b.AddRange(VarInt(potion));
+                    b.Add(0); // no potion id
+                    writeTail(b);
+                },
+                b =>
+                {
+                    b.Add(7);
+                    b.AddRange(VarInt(0));
+                });
+
+            var result = Read(body, out _, out var complete, out var status);
+
+            Assert.Equal(DecodeStatus.NeedMoreData, status);
+            Assert.False(complete);
+            // No fully decoded slot was committed, so no component carries a colour.
+            Assert.All(result, item => Assert.Null(item.Components.PotionColor));
+        }
+    }
+
+    [Fact]
     public void CustomDataNbtIsSkippedAndParsingContinues()
     {
         var customData = DataComponentTypes.GetId("custom_data");
