@@ -25,11 +25,28 @@ public static partial class EntityModelResolver
     public static ItemTagRegistry ItemTags { get; set; } = ItemTagRegistry.Empty;
 
 
+    // The fallback placeholder box is compiled like every production model. Built from the same single
+    // baked part so its geometry is byte-identical to the former flat path (rawSourceFrame:false default).
+    private static readonly EntityModelPart PlaceholderPart = new("body", 0f, 0f, 14f, 14f, 14f, 0, 0);
+
+    private static CompiledEntityModel BuildPlaceholderCompiled()
+    {
+        var p = PlaceholderPart;
+        var cube = new EntityModelCube("body", p.CentreX, p.Bottom, p.CentreZ, p.Width, p.Height, p.Depth,
+            p.TextureX, p.TextureY, p.Mirror, p.OverlayLayers, p.TexturePath, p.Grow, p.GrowXyz, p.Kind,
+            p.UvWidth, p.UvHeight, p.UvDepth, p.TextureWidth, p.TextureHeight);
+        var node = new EntityModelPartNode("body", null, p.PivotX, p.PivotY, p.PivotZ, p.RotationX, p.RotationY,
+            p.RotationZ, [cube], []);
+        var root = new EntityModelPartNode("root", null, 0f, 0f, 0f, 0f, 0f, 0f, [], [node]);
+        return new CompiledEntityModel(root, [node], [cube]);
+    }
+
     public static readonly EntityModelDefinition Placeholder = new(
         "placeholder",
         64,
         64,
-        [new EntityModelPart("body", 0f, 0f, 14f, 14f, 14f, 0, 0)]);
+        [PlaceholderPart],
+        compiled: BuildPlaceholderCompiled());
 
     private static readonly Dictionary<int, EntityModelDefinition> Models = new()
     {        [EntityPlaceholderMesher.PlayerEntityTypeId] = PlayerModelDefinition.Definition,
