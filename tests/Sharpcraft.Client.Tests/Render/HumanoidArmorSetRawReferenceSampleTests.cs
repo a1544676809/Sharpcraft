@@ -30,6 +30,14 @@ public sealed class HumanoidArmorSetRawReferenceSampleTests
     [InlineData("parched-armor-chestplate-raw-vectors.reference.txt", 4, "player")]
     [InlineData("parched-armor-leggings-raw-vectors.reference.txt", 3, "player")]
     [InlineData("parched-armor-boots-raw-vectors.reference.txt", 2, "player")]
+    [InlineData("stray-armor-helmet-raw-vectors.reference.txt", 5, "player")]
+    [InlineData("stray-armor-chestplate-raw-vectors.reference.txt", 4, "player")]
+    [InlineData("stray-armor-leggings-raw-vectors.reference.txt", 3, "player")]
+    [InlineData("stray-armor-boots-raw-vectors.reference.txt", 2, "player")]
+    [InlineData("wither-skeleton-armor-helmet-raw-vectors.reference.txt", 5, "wither_skeleton")]
+    [InlineData("wither-skeleton-armor-chestplate-raw-vectors.reference.txt", 4, "wither_skeleton")]
+    [InlineData("wither-skeleton-armor-leggings-raw-vectors.reference.txt", 3, "wither_skeleton")]
+    [InlineData("wither-skeleton-armor-boots-raw-vectors.reference.txt", 2, "wither_skeleton")]
     [InlineData("player-slim-armor-helmet-raw-vectors.reference.txt", 5, "player")]
     [InlineData("player-slim-armor-chestplate-raw-vectors.reference.txt", 4, "player")]
     [InlineData("player-slim-armor-leggings-raw-vectors.reference.txt", 3, "player")]
@@ -45,6 +53,7 @@ public sealed class HumanoidArmorSetRawReferenceSampleTests
         {
             "baby" => BabyHumanoidArmorModelDefinition.ForSlot(slot),
             "giant" => GiantArmorModelDefinition.ForSlot(slot),
+            "wither_skeleton" => WitherSkeletonArmorModelDefinition.ForSlot(slot),
             _ => PlayerArmorModelDefinition.ForSlot(slot)
         };
         Assert.True(definition.RawSourceFrame);
@@ -88,7 +97,9 @@ public sealed class HumanoidArmorSetRawReferenceSampleTests
         foreach (var typeId in new[]
                  {
                      HumanoidMobModelDefinition.DrownedEntityTypeId,
-                     HumanoidMobModelDefinition.BoggedEntityTypeId
+                     HumanoidMobModelDefinition.BoggedEntityTypeId,
+                     HumanoidMobModelDefinition.StrayEntityTypeId,
+                     HumanoidMobModelDefinition.WitherSkeletonEntityTypeId
                  })
         {
             var model = EntityModelResolver.Resolve(typeId);
@@ -131,6 +142,124 @@ public sealed class HumanoidArmorSetRawReferenceSampleTests
         Assert.Equal(0f, slimArmor.BaselinePx);
     }
 
+    [Theory]
+    [InlineData(131, 5, "equipment_HumanoidArmor_5", "stray-armor-helmet-raw-vectors.reference.txt", "minecraft:iron_helmet")]
+    [InlineData(131, 4, "equipment_HumanoidArmor_4", "stray-armor-chestplate-raw-vectors.reference.txt", "minecraft:iron_chestplate")]
+    [InlineData(131, 3, "equipment_HumanoidLeggings_3", "stray-armor-leggings-raw-vectors.reference.txt", "minecraft:iron_leggings")]
+    [InlineData(131, 2, "equipment_HumanoidArmor_2", "stray-armor-boots-raw-vectors.reference.txt", "minecraft:iron_boots")]
+    [InlineData(150, 5, "equipment_HumanoidArmor_5", "wither-skeleton-armor-helmet-raw-vectors.reference.txt", "minecraft:iron_helmet")]
+    [InlineData(150, 4, "equipment_HumanoidArmor_4", "wither-skeleton-armor-chestplate-raw-vectors.reference.txt", "minecraft:iron_chestplate")]
+    [InlineData(150, 3, "equipment_HumanoidLeggings_3", "wither-skeleton-armor-leggings-raw-vectors.reference.txt", "minecraft:iron_leggings")]
+    [InlineData(150, 2, "equipment_HumanoidArmor_2", "wither-skeleton-armor-boots-raw-vectors.reference.txt", "minecraft:iron_boots")]
+    public void ProductionArmorLayerMatchesSourcePerKey(int typeId, int slot, string layerName, string sampleFile, string itemName)
+    {
+        var model = EntityModelResolver.Resolve(typeId);
+        var layer = model.RenderLayers!.Single(entry => entry.Name == layerName);
+        var layerModel = layer.Model!;
+        Assert.True(layerModel.RawSourceFrame, layerName);
+        Assert.Equal(0f, layerModel.BaselinePx);
+        Assert.Equal(0f, layerModel.SourceFrameBaselinePx);
+
+        var itemId = EntityModelResolver.Items!.GetId(Sharpcraft.Common.Identifiers.Identifier.Parse(itemName));
+        Assert.True(itemId >= 0, itemName);
+        var equipment = new EntityEquipment(-1, -1, -1, -1, -1, -1, -1, -1);
+        equipment = slot switch
+        {
+            2 => equipment with { Feet = itemId },
+            3 => equipment with { Legs = itemId },
+            4 => equipment with { Chest = itemId },
+            5 => equipment with { Head = itemId },
+            _ => throw new Xunit.Sdk.XunitException($"slot {slot}")
+        };
+        var state = new EntityRenderState(1, typeId, 0f, 0f, 0f, 180f, 0f, Equipment: equipment);
+        var atlas = ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
+        {
+            ["entity/equipment/humanoid/iron"] = new(64, 32, new byte[64 * 32 * 4])
+        });
+        var rows = Load(sampleFile);
+        var nodes = Flatten(layerModel.Compiled!.Root).GroupBy(node => node.Name, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+        var consumed = 0;
+        foreach (var group in rows.GroupBy(row => row.Part))
+        {
+            var nodeName = group.Key.Split('/').Last();
+            var cubeName = nodes[nodeName].Cubes[0].Name;
+            var ordered = group.OrderBy(row => row.Cube).ThenBy(row => row.Polygon).ThenBy(row => row.Vertex).ToArray();
+            var geometry = BuildProductionCube(state, layerName, layerModel.TextureWidth, layerModel.TextureHeight, cubeName, atlas);
+            Assert.Equal(ordered.Length, geometry.VertexFloats / ChunkMesher.FloatsPerVertex);
+            for (var i = 0; i < ordered.Length; i++)
+            {
+                var row = ordered[i];
+                var (x, y, z) = VertexFieldReader.Position(geometry.Vertices, i);
+                var (u, v) = VertexFieldReader.Uv(geometry.Vertices, i);
+                var actual = new System.Numerics.Vector3(-x / EntityPlaceholderMesher.ModelScale,
+                    -y / EntityPlaceholderMesher.ModelScale, z / EntityPlaceholderMesher.ModelScale);
+                Assert.True((actual - new System.Numerics.Vector3(row.X, row.Y, row.Z)).Length() <= 1e-5f,
+                    $"{sampleFile} {group.Key} v{i} position");
+                Assert.True(MathF.Abs(u - QuantizeHalf(row.U)) <= 1e-5f, $"{sampleFile} {group.Key} v{i} u");
+                Assert.True(MathF.Abs(v - QuantizeHalf(row.V)) <= 1e-5f, $"{sampleFile} {group.Key} v{i} v");
+            }
+
+            consumed += ordered.Length;
+        }
+
+        Assert.Equal(rows.Length, consumed);
+    }
+
+    [Fact]
+    public void ProductionMigratedArmorMaterialLayersFollowRawGeometry()
+    {
+        foreach (var typeId in new[]
+                 {
+                     HumanoidMobModelDefinition.StrayEntityTypeId,
+                     HumanoidMobModelDefinition.WitherSkeletonEntityTypeId,
+                     ZombieVillagerModelDefinition.ZombieVillagerEntityTypeId
+                 })
+        {
+            var model = EntityModelResolver.Resolve(typeId);
+            foreach (var (armor, trim, glint, vertices) in new[]
+                     {
+                         ("equipment_HumanoidArmor_5", "trim_HumanoidArmor_5", "glint_HumanoidArmor_5", 48),
+                         ("equipment_HumanoidArmor_4", "trim_HumanoidArmor_4", "glint_HumanoidArmor_4", 72),
+                         ("equipment_HumanoidLeggings_3", "trim_HumanoidLeggings_3", "glint_HumanoidLeggings_3", 72),
+                         ("equipment_HumanoidArmor_2", "trim_HumanoidArmor_2", "glint_HumanoidArmor_2", 48)
+                     })
+            {
+                var armorLayer = model.RenderLayers!.Single(layer => layer.Name == armor).Model!;
+                Assert.True(armorLayer.RawSourceFrame, $"{typeId} {armor}");
+                Assert.Equal(0f, armorLayer.BaselinePx);
+                Assert.Equal(vertices, armorLayer.Compiled!.Cubes.Sum(cube => 24));
+                foreach (var name in new[] { trim, glint })
+                {
+                    var material = model.RenderLayers!.Single(layer => layer.Name == name).Model!;
+                    Assert.True(material.RawSourceFrame, $"{typeId} {name}");
+                    Assert.Equal(0f, material.BaselinePx);
+                    Assert.Equal(0f, material.SourceFrameBaselinePx);
+                    Assert.Equal(vertices, material.Compiled!.Cubes.Sum(cube => 24));
+                }
+            }
+        }
+    }
+
+    private static DynamicGeometry BuildProductionCube(EntityRenderState state, string layerName, int width, int height,
+        string cubeName, ItemAtlas atlas)
+    {
+        var layers = new EntityModelMesher().BuildLayers([state], new SpriteRect(0, 0, width, height, 1), width, height,
+            onlyPart: cubeName, skinAtlas: atlas, variants: EntityVariantTable.Builtin, pose: new EntityPose());
+        return layers.Single(layer => layer.Name == layerName).Geometry;
+    }
+
+    private static IEnumerable<EntityModelPartNode> Flatten(EntityModelPartNode node)
+    {
+        yield return node;
+        foreach (var child in node.ChildArray)
+        {
+            foreach (var nested in Flatten(child))
+            {
+                yield return nested;
+            }
+        }
+    }
     private static float QuantizeHalf(float value) =>
         (float)BitConverter.UInt16BitsToHalf((ushort)BitConverter.HalfToUInt16Bits((Half)value));
 

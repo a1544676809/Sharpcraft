@@ -280,6 +280,7 @@ public static partial class EntityModelResolver
                         or HumanoidMobModelDefinition.SkeletonEntityTypeId
                         or HumanoidMobModelDefinition.DrownedEntityTypeId
                         or HumanoidMobModelDefinition.BoggedEntityTypeId
+                        or HumanoidMobModelDefinition.StrayEntityTypeId
                         or ParchedModelDefinition.ParchedEntityTypeId;
                 var rawBabyHumanoidArmor = baby && !piglin
                     && effectiveKind == EquipmentAssetKind.HumanoidArmorBaby;
@@ -289,6 +290,10 @@ public static partial class EntityModelResolver
                         ? BabyHumanoidArmorModelDefinition.ForSlot(slot)
                         : typeId == HumanoidMobModelDefinition.HuskEntityTypeId
                             ? HuskArmorModelDefinition.ForSlot(slot)
+                            : !baby && typeId == HumanoidMobModelDefinition.WitherSkeletonEntityTypeId
+                                ? WitherSkeletonArmorModelDefinition.ForSlot(slot)
+                                : !baby && typeId == ZombieVillagerModelDefinition.ZombieVillagerEntityTypeId
+                                    ? ZombieVillagerArmorModelDefinition.ForSlot(slot)
                             : typeId == GiantModelDefinition.GiantEntityTypeId
                                 ? GiantArmorModelDefinition.ForSlot(slot)
                                 : typeId == WolfModelDefinition.WolfEntityTypeId
@@ -313,13 +318,11 @@ public static partial class EntityModelResolver
                                                     : null;
                 // B-2 (#228): saddle/decor/harness trees are source-frame; their layers follow the raw frame too.
                 var rawEquipmentTree = rawArmor is null && EquipmentModelTrees.IsRawSourceFrame(effectiveKind);
-                var layerModel = rawArmor is null && !rawEquipmentTree
-                    ? new EntityModelDefinition(layerName, definition.TextureWidth, definition.TextureHeight, PlayerModelDefinition.DefaultFaceTransforms, layerTexture, definition.Scale, textureSelector: selector, additionalTexturePaths: [layerTexture], compiled: EntityModelLayerHelpers.WithTint(
-                            equipmentTree,
-                            state => EntityModelResolver.ResolveEquipmentTint(state, effectiveKind, slot)), baselinePx: 24f, rawSourceFrame: false, sourceFrameBaselinePx: 24f)
-                    : new EntityModelDefinition(layerName, rawArmor?.TextureWidth ?? definition.TextureWidth, rawArmor?.TextureHeight ?? definition.TextureHeight, faceTransforms: null, texturePath: layerTexture, scale: rawArmor?.Scale ?? definition.Scale, textureSelector: selector, additionalTexturePaths: [layerTexture], compiled: EntityModelLayerHelpers.WithTint(
-                            rawArmor?.Compiled ?? equipmentTree,
-                            state => EntityModelResolver.ResolveEquipmentTint(state, effectiveKind, slot)), baselinePx: 0f, rawSourceFrame: true, sourceFrameBaselinePx: 0f);
+                // Every supported equipment layer now resolves a raw source-frame tree (raw armor definition or a
+                // B-2 equipment tree), so the legacy 24 px baseline fallback is gone.
+                var layerModel = new EntityModelDefinition(layerName, rawArmor?.TextureWidth ?? definition.TextureWidth, rawArmor?.TextureHeight ?? definition.TextureHeight, faceTransforms: null, texturePath: layerTexture, scale: rawArmor?.Scale ?? definition.Scale, textureSelector: selector, additionalTexturePaths: [layerTexture], compiled: EntityModelLayerHelpers.WithTint(
+                        rawArmor?.Compiled ?? equipmentTree,
+                        state => EntityModelResolver.ResolveEquipmentTint(state, effectiveKind, slot)), baselinePx: 0f, rawSourceFrame: true, sourceFrameBaselinePx: 0f);
                 customLayers.Add(new EntityRenderLayerDefinition(
                     layerName,
                     EntityGeometryLayerKind.Elytra,
@@ -604,5 +607,3 @@ public static partial class EntityModelResolver
         RegisterVariants(ZombieVillagerModelDefinition.ZombieVillagerEntityTypeId, ZombieVillagerModelDefinition.Variants);
     }
 }
-
-
