@@ -22,15 +22,75 @@ public sealed class WitchHeldPotionTests
     private static string SamplePath(string name) => Path.Combine(
         AppContext.BaseDirectory, "Repro", "Data", name);
 
+    /// <summary>
+    /// Locates the repository root from the running assembly by walking up to the AGENTS.md / Sharpcraft.slnx
+    /// markers, the same way StateMatrixBaseline.FindRepositoryRoot does. No absolute path is baked in.
+    /// </summary>
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(Path.GetFullPath(AppContext.BaseDirectory));
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "AGENTS.md"))
+                || File.Exists(Path.Combine(directory.FullName, "Sharpcraft.slnx")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new DirectoryNotFoundException("repository root (AGENTS.md / Sharpcraft.slnx) not found");
+    }
+
+    /// <summary>
+    /// Reads the jar potion/effect colour table. Data rows are tab separated as kind|id|color|effects; the
+    /// header documents the columns with '|' but the probe writes tabs. A missing or empty file fails the test.
+    /// </summary>
+    private static List<(string Kind, string Id, int Color)> LoadPotionColors()
+    {
+        var path = Path.Combine(
+            FindRepositoryRoot(), "tests", "Sharpcraft.Client.Tests", "Repro", "Data", "potion-colors.reference.txt");
+        Assert.True(File.Exists(path), $"jar colour sample missing: {path}");
+        var rows = new List<(string, string, int)>();
+        foreach (var line in File.ReadLines(path))
+        {
+            if (line.StartsWith('#') || line.Length == 0)
+            {
+                continue;
+            }
+
+            var parts = line.Split('\t');
+            Assert.True(parts.Length >= 3, $"malformed colour sample row: {line}");
+            rows.Add((parts[0], parts[1], int.Parse(parts[2], CultureInfo.InvariantCulture)));
+        }
+
+        Assert.NotEmpty(rows);
+        return rows;
+    }
+
     [Fact]
     public void ProductionPotionColorTableCarriesTheJarVectors()
     {
-        // The production table is generated from the jar sample (not test-only): water is the base colour and
-        // night_vision is effect-derived (distinct from the default).
-        Assert.Equal(-13083194, PotionColorTable.PlainColorByName("water"));
-        Assert.Equal(-13083194, PotionColorTable.PlainColorByName("awkward"));
-        Assert.Equal(-3997850, PotionColorTable.PlainColorByName("night_vision"));
-        Assert.Equal(3402751, PotionColorTable.EffectColorByName("speed"));
+        // The production table must reproduce the jar sample row for row. The sample is the single source of truth:
+        // every expected value is parsed at runtime, so a changed sample turns this test red instead of drifting.
+        var rows = LoadPotionColors();
+        var effectRows = rows.Where(r => r.Kind == "effect").ToArray();
+        var potionRows = rows.Where(r => r.Kind == "potion").ToArray();
+        Assert.Equal(rows.Count, effectRows.Length + potionRows.Length);
+        Assert.NotEmpty(effectRows);
+        Assert.NotEmpty(potionRows);
+
+        foreach (var (_, id, color) in effectRows)
+        {
+            Assert.Equal(color, PotionColorTable.EffectColorByName(id));
+        }
+
+        foreach (var (_, id, color) in potionRows)
+        {
+            Assert.Equal(color, PotionColorTable.PlainColorByName(id));
+        }
+
         Assert.Null(PotionColorTable.PlainColorByName("not_a_potion"));
         Assert.Null(PotionColorTable.EffectColorByName("not_an_effect"));
     }
