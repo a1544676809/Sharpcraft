@@ -97,6 +97,13 @@ public sealed class BlockSpriteMap
         return _atlas.Get(SpriteAtlas.MissingSprite);
     }
 
+    /// <summary>
+    /// The stand-in sprite this map falls back to. Callers that need a defined rectangle but no particular block
+    /// (placeholder geometry, diagnostics) take it from here so they sample the missing sprite instead of the whole
+    /// atlas rectangle zero resolves to (issue 226).
+    /// </summary>
+    public SpriteRect Missing => _atlas.Get(SpriteAtlas.MissingSprite);
+
     /// <summary>Resolves the sprite for a block identifier and face.</summary>
     public SpriteRect ForBlock(Identifier blockId, BlockFace face = BlockFace.Side)
     {

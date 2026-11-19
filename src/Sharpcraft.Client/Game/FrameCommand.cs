@@ -465,10 +465,12 @@ internal static partial class FrameCommand
 
                     if (otherStates.Count > 0)
                     {
+                        // The placeholder merges into the terrain mesh, so its faces go through the block atlas
+                        // table: rect zero is the whole atlas and would paint a shrunken atlas on every box.
                         var mesher = new Sharpcraft.Client.Render.BlockEntityPlaceholderMesher();
                         var placeholderGeometry = mesher.Build(
                             System.Runtime.InteropServices.CollectionsMarshal.AsSpan(otherStates),
-                            new SpriteRect(0, 0, 16, 16, 1));
+                            sprites?.Missing ?? new SpriteRect(0, 0, 16, 16, 1) { RectId = 0, U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f });
 
                         var mergedVertices = new float[mesh.Vertices.Length + placeholderGeometry.VertexFloats];
                         mesh.Vertices.CopyTo(mergedVertices, 0);
