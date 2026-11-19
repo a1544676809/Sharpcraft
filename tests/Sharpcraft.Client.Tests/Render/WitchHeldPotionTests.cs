@@ -167,25 +167,200 @@ public sealed class WitchHeldPotionTests
         Assert.NotNull(layer);
         var produced = ReadAllVertices(layer!.Geometry);
 
+        // Per generated layer the mesher emits south/north (8 vertices) followed by the alpha side quads in the exact
+        // scan order of ItemModelGenerator.bakeSideFaces; 42 overlay + 98 potion side quads => 560 side vertices.
+        const int frontBackPerLayer = 8;
+        const int overlaySideVertices = 42 * 4;
+        const int potionSideVertices = 98 * 4;
+        Assert.Equal(2 * frontBackPerLayer + overlaySideVertices + potionSideVertices, produced.Length);
+        var overlaySide = produced[frontBackPerLayer..(frontBackPerLayer + overlaySideVertices)];
+        var potionStart = frontBackPerLayer + overlaySideVertices + frontBackPerLayer;
+        var potionSide = produced[potionStart..(potionStart + potionSideVertices)];
+
         var sample = File.ReadLines(SamplePath("witch-potion-side.reference.txt"))
             .Where(l => !l.StartsWith('#'))
             .Select(l => l.Split('\t'))
             .ToArray();
         Assert.Equal(560, sample.Length);
-        foreach (var row in sample)
+        var keyed = sample.ToDictionary(row => SideSampleKey(row));
+        Assert.Equal(560, keyed.Count);
+
+        // Key/index binding: every sample layer|polygon|vertex maps to exactly one production vertex index and every
+        // side vertex index is consumed once.
+        var consumed = new HashSet<string>(StringComparer.Ordinal);
+        AssertSideFaceLayer(keyed, "potion_overlay", overlaySide, consumed);
+        AssertSideFaceLayer(keyed, "potion", potionSide, consumed);
+        Assert.Equal(560, consumed.Count);
+
+        // No duplicate or missing side geometry: all (layer, position, UV) signatures are unique.
+        var signatures = overlaySide.Concat(potionSide)
+            .Select(v => $"{MathF.Round(v.Position.X, 5)}|{MathF.Round(v.Position.Y, 5)}|{MathF.Round(v.Position.Z, 5)}|{MathF.Round(v.U, 5)}|{MathF.Round(v.V, 5)}")
+            .ToHashSet(StringComparer.Ordinal);
+        Assert.Equal(560, signatures.Count);
+    }
+
+    [Fact]
+    public void SideFaceKeyedMatcherRejectsWrongUv()
+    {
+        var sample = LoadSideSampleRows();
+        var row = sample.First(r => r[0] == "potion_overlay" && r[1] == "0" && r[2] == "0");
+        var vertex = BuildSideGeometryForTest()[8];
+        Assert.True(SideVertexMatches(row, vertex, uvOffset: 0f));
+        Assert.False(SideVertexMatches(row, vertex, uvOffset: 0.01f));
+    }
+
+    [Fact]
+    public void SideFaceKeyedMatcherRejectsDuplicateProductionVertex()
+    {
+        var vertices = BuildSideGeometryForTest();
+        var overlaySide = vertices[8..(8 + (42 * 4))];
+        var signatures = overlaySide
+            .Select(v => $"{MathF.Round(v.Position.X, 5)}|{MathF.Round(v.Position.Y, 5)}|{MathF.Round(v.Position.Z, 5)}|{MathF.Round(v.U, 5)}|{MathF.Round(v.V, 5)}")
+            .ToHashSet(StringComparer.Ordinal);
+        Assert.Equal(overlaySide.Length, signatures.Count);
+        var duplicated = overlaySide.Append(overlaySide[0]).ToArray();
+        Assert.NotEqual(duplicated.Length, duplicated
+            .Select(v => $"{MathF.Round(v.Position.X, 5)}|{MathF.Round(v.Position.Y, 5)}|{MathF.Round(v.Position.Z, 5)}|{MathF.Round(v.U, 5)}|{MathF.Round(v.V, 5)}")
+            .ToHashSet(StringComparer.Ordinal).Count);
+    }
+
+    [Fact]
+    public void SideFaceSampleKeysAreUniqueAndComplete()
+    {
+        var sample = LoadSideSampleRows();
+        Assert.Equal(560, sample.Length);
+        Assert.Equal(560, sample.Select(SideSampleKey).Distinct(StringComparer.Ordinal).Count());
+        var overlay = sample.Where(r => r[0] == "potion_overlay").ToArray();
+        var potion = sample.Where(r => r[0] == "potion").ToArray();
+        Assert.Equal(42, overlay.Select(r => r[1]).Distinct().Count());
+        Assert.Equal(98, potion.Select(r => r[1]).Distinct().Count());
+        Assert.All(overlay, row => Assert.InRange(int.Parse(row[2], CultureInfo.InvariantCulture), 0, 3));
+        Assert.All(potion, row => Assert.InRange(int.Parse(row[2], CultureInfo.InvariantCulture), 0, 3));
+    }
+
+    private static string SideSampleKey(string[] row) => $"{row[0]}|{row[1]}|{row[2]}";
+
+    private static string[][] LoadSideSampleRows() =>
+        File.ReadLines(SamplePath("witch-potion-side.reference.txt"))
+            .Where(l => !l.StartsWith('#'))
+            .Select(l => l.Split('\t'))
+            .ToArray();
+
+    private static void AssertSideFaceLayer(IReadOnlyDictionary<string, string[]> keyed, string layer,
+        (Vector3 Position, float U, float V, float Red, float Green, float Blue)[] sideVertices,
+        HashSet<string> consumed)
+    {
+        var polygonCount = keyed.Keys.Count(k => k.StartsWith(layer + "|", StringComparison.Ordinal)) / 4;
+        for (var polygon = 0; polygon < polygonCount; polygon++)
         {
-            var world = new Vector3(
-                float.Parse(row[3], CultureInfo.InvariantCulture),
-                float.Parse(row[4], CultureInfo.InvariantCulture),
-                float.Parse(row[5], CultureInfo.InvariantCulture));
-            var expected = new Vector3(-world.X, 1.501f - world.Y, world.Z);
-            var expectedU = QuantizeHalf(float.Parse(row[6], CultureInfo.InvariantCulture));
-            var expectedV = QuantizeHalf(float.Parse(row[7], CultureInfo.InvariantCulture));
-            var tintIndex = int.Parse(row[8], CultureInfo.InvariantCulture);
-            Assert.Contains(produced, v =>
-                (v.Position - expected).Length() <= 1e-5f &&
-                MathF.Abs(v.U - expectedU) <= 1e-5f && MathF.Abs(v.V - expectedV) <= 1e-5f &&
-                (tintIndex == 1 ? MathF.Abs(v.Red - 1f) <= 1e-3f : v.Red > 0f));
+            for (var vertex = 0; vertex < 4; vertex++)
+            {
+                var key = $"{layer}|{polygon}|{vertex}";
+                Assert.True(keyed.TryGetValue(key, out var row), $"missing side sample key {key}");
+                Assert.True(consumed.Add(key), $"duplicate side sample key {key}");
+                var produced = sideVertices[(polygon * 4) + vertex];
+                Assert.True(SideVertexMatches(row!, produced),
+                    $"{key}: sample=({row![3]},{row[4]},{row[5]}) uv=({row[6]},{row[7]}) vs produced={produced.Position} uv=({produced.U},{produced.V})");
+            }
+        }
+    }
+
+    private static bool SideVertexMatches(string[] row, (Vector3 Position, float U, float V, float Red, float Green, float Blue) vertex, float uvOffset = 0f)
+    {
+        var world = new Vector3(
+            float.Parse(row[3], CultureInfo.InvariantCulture),
+            float.Parse(row[4], CultureInfo.InvariantCulture),
+            float.Parse(row[5], CultureInfo.InvariantCulture));
+        var expected = new Vector3(-world.X, 1.501f - world.Y, world.Z);
+        var expectedU = QuantizeHalf(float.Parse(row[6], CultureInfo.InvariantCulture) + uvOffset);
+        var expectedV = QuantizeHalf(float.Parse(row[7], CultureInfo.InvariantCulture) + uvOffset);
+        var tintIndex = int.Parse(row[8], CultureInfo.InvariantCulture);
+        var tintMatches = tintIndex == 1 ? MathF.Abs(vertex.Red - 1f) <= 1e-3f : vertex.Red > 0f;
+        return (vertex.Position - expected).Length() <= 1e-5f
+            && MathF.Abs(vertex.U - expectedU) <= 1e-5f
+            && MathF.Abs(vertex.V - expectedV) <= 1e-5f
+            && tintMatches;
+    }
+
+    private static (Vector3 Position, float U, float V, float Red, float Green, float Blue)[] BuildSideGeometryForTest()
+    {
+        using var fixture = new PotionFixture();
+        var potionModel = EntityModelResolver.ItemModels!.Resolve("minecraft:potion");
+        Assert.NotNull(potionModel);
+        var masks = LoadPotionAlphaMasks();
+        var atlas = ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
+        {
+            ["item/potion_overlay"] = AlphaTexture(masks["potion_overlay"]),
+            ["item/potion"] = AlphaTexture(masks["potion"])
+        });
+        var potionId = EntityModelResolver.Items!.GetId(Sharpcraft.Common.Identifiers.Identifier.Parse("minecraft:potion"));
+        var state = new EntityRenderState(30, WitchModelDefinition.WitchEntityTypeId, 0f, 0f, 0f, 180f, 0f,
+            IsHoldingPotion: true, MainHandItemId: potionId, Scale: 1f);
+        var layer = new WitchHeldPotionMesher().Build([state], [new EntityPose()], atlas, potionModel);
+        Assert.NotNull(layer);
+        return ReadAllVertices(layer!.Geometry);
+    }
+    [Fact]
+    public void CustomPotionColorWinsOverDerivedColor()
+    {
+        using var fixture = new PotionFixture();
+        var potionModel = EntityModelResolver.ItemModels!.Resolve("minecraft:potion");
+        Assert.NotNull(potionModel);
+        var potionId = EntityModelResolver.Items!.GetId(Sharpcraft.Common.Identifiers.Identifier.Parse("minecraft:potion"));
+        var atlas = ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
+        {
+            ["item/potion_overlay"] = new(16, 16, new byte[16 * 16 * 4]),
+            ["item/potion"] = new(16, 16, new byte[16 * 16 * 4])
+        });
+        const int custom = unchecked((int)0xFF123456);
+        var state = new EntityRenderState(20, WitchModelDefinition.WitchEntityTypeId, 0f, 0f, 0f, 180f, 0f,
+            IsHoldingPotion: true, HeldPotionColor: custom, HeldPotionId: 1,
+            HeldPotionEffects: [new PotionEffectInstance(0, 0, Visible: true)],
+            MainHandItemId: potionId, Scale: 1f);
+        var layer = new WitchHeldPotionMesher().Build([state], [new EntityPose()], atlas, potionModel);
+        Assert.NotNull(layer);
+        var produced = ReadAllVertices(layer!.Geometry);
+        Assert.Contains(produced, v => MathF.Abs(v.Red - (0x12 / 255f)) <= 1e-3f
+            && MathF.Abs(v.Green - (0x34 / 255f)) <= 1e-3f
+            && MathF.Abs(v.Blue - (0x56 / 255f)) <= 1e-3f);
+    }
+
+    [Fact]
+    public void PotionBranchKeepsThePotionLayerName()
+    {
+        using var fixture = new PotionFixture();
+        var potionModel = EntityModelResolver.ItemModels!.Resolve("minecraft:potion");
+        Assert.NotNull(potionModel);
+        var potionId = EntityModelResolver.Items!.GetId(Sharpcraft.Common.Identifiers.Identifier.Parse("minecraft:potion"));
+        var atlas = ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
+        {
+            ["item/potion_overlay"] = new(16, 16, new byte[16 * 16 * 4]),
+            ["item/potion"] = new(16, 16, new byte[16 * 16 * 4])
+        });
+        var state = new EntityRenderState(21, WitchModelDefinition.WitchEntityTypeId, 0f, 0f, 0f, 180f, 0f,
+            IsHoldingPotion: true, MainHandItemId: potionId, Scale: 1f);
+        var layer = new WitchHeldPotionMesher().Build([state], [new EntityPose()], atlas, potionModel);
+        Assert.NotNull(layer);
+        Assert.Equal(WitchHeldPotionMesher.LayerName, layer!.Name);
+    }
+
+    [Fact]
+    public void UnknownEffectFallsBackToThePotionColorAndThenToNull()
+    {
+        var registries = new DynamicRegistries();
+        registries.Apply(new Sharpcraft.Common.Identifiers.Identifier("minecraft", "potion"),
+            [new DynamicRegistries.Entry(new Sharpcraft.Common.Identifiers.Identifier("minecraft", "water"), null)]);
+        registries.Apply(new Sharpcraft.Common.Identifiers.Identifier("minecraft", "mob_effect"),
+            [new DynamicRegistries.Entry(new Sharpcraft.Common.Identifiers.Identifier("minecraft", "speed"), null)]);
+        PotionColorTable.Configure(registries);
+        try
+        {
+            Assert.Equal(-13083194, PotionColorTable.Resolve(0, [new PotionEffectInstance(99, 0, Visible: true)]));
+            Assert.Null(PotionColorTable.Resolve(-1, [new PotionEffectInstance(99, 0, Visible: true)]));
+        }
+        finally
+        {
+            PotionColorTable.Configure(null);
         }
     }
 
@@ -235,9 +410,6 @@ public sealed class WitchHeldPotionTests
             ["item/potion_overlay"] = new(16, 16, new byte[16 * 16 * 4]),
             ["item/potion"] = new(16, 16, new byte[16 * 16 * 4])
         });
-        // IsHoldingPotion=false while the main hand still carries an item selects CrossedArmsItemLayer. There is no
-        // jar world keyed sample for the cross item quads yet (R-046 blocker); the pose matrix is keyed separately by
-        // CrossPoseMatchesTheJarSampleMatrix and item quad geometry is covered by the shared item-model path.
         var state = new EntityRenderState(3, WitchModelDefinition.WitchEntityTypeId, 0f, 0f, 0f, 180f, 0f,
             MainHandItemId: potionId, IsHoldingPotion: false, Scale: 1f);
         var layer = new WitchHeldPotionMesher().Build([state], [new EntityPose()], atlas, potionModel);
@@ -245,44 +417,46 @@ public sealed class WitchHeldPotionTests
         Assert.Equal(WitchHeldPotionMesher.CrossLayerName, layer!.Name);
         Assert.True(layer.Geometry.VertexFloats > 0);
     }
-    [Fact]
-    public void CustomPotionColorWinsOverDerivedColor()
-    {
-        using var fixture = new PotionFixture();
-        var potionModel = EntityModelResolver.ItemModels!.Resolve("minecraft:potion");
-        Assert.NotNull(potionModel);
-        var potionId = EntityModelResolver.Items!.GetId(Sharpcraft.Common.Identifiers.Identifier.Parse("minecraft:potion"));
-        var atlas = ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
-        {
-            ["item/potion_overlay"] = new(16, 16, new byte[16 * 16 * 4]),
-            ["item/potion"] = new(16, 16, new byte[16 * 16 * 4])
-        });
-        const int custom = unchecked((int)0xFF123456);
-        var state = new EntityRenderState(20, WitchModelDefinition.WitchEntityTypeId, 0f, 0f, 0f, 180f, 0f,
-            IsHoldingPotion: true, HeldPotionColor: custom, HeldPotionId: 1,
-            HeldPotionEffects: [new PotionEffectInstance(0, 0, Visible: true)],
-            MainHandItemId: potionId, Scale: 1f);
-        var layer = new WitchHeldPotionMesher().Build([state], [new EntityPose()], atlas, potionModel);
-        Assert.NotNull(layer);
-        var produced = ReadAllVertices(layer!.Geometry);
-        Assert.Contains(produced, v => MathF.Abs(v.Red - (0x12 / 255f)) <= 1e-3f
-            && MathF.Abs(v.Green - (0x34 / 255f)) <= 1e-3f
-            && MathF.Abs(v.Blue - (0x56 / 255f)) <= 1e-3f);
-    }
 
     [Fact]
     public void SideFaceQuadCountsMatchTheJarAlphaMasks()
     {
-        var sample = File.ReadLines(SamplePath("witch-potion-side.reference.txt"))
-            .Where(l => !l.StartsWith('#'))
-            .Select(l => l.Split('\t'))
-            .ToArray();
+        var sample = LoadSideSampleRows();
         Assert.Equal(168, sample.Count(r => r[0] == "potion_overlay"));
         Assert.Equal(392, sample.Count(r => r[0] == "potion"));
     }
 
     [Fact]
-    public void PotionBranchKeepsThePotionLayerName()
+    public void SideFaceFrontAndBackVerticesStillMatchTheQuadSample()
+    {
+        var vertices = BuildSideGeometryForTest();
+        var sample = File.ReadLines(SamplePath("witch-potion-quad.reference.txt"))
+            .Where(l => !l.StartsWith('#'))
+            .Select(l => l.Split('\t'))
+            .ToArray();
+        Assert.Equal(16, sample.Length);
+        // First 8 vertices are layer0 south/north, the next 8 are layer1; each quad keeps the keyed sample position/UV.
+        foreach (var row in sample)
+        {
+            // Layer0 occupies 8 front/back + 168 side vertices; layer1 starts after that.
+            var layerStart = row[0] == "potion_overlay" ? 0 : 8 + 168;
+            var polygon = int.Parse(row[2], CultureInfo.InvariantCulture);
+            var vertexIndex = int.Parse(row[3], CultureInfo.InvariantCulture);
+            var produced = vertices[layerStart + (polygon * 4) + vertexIndex];
+            var world = new Vector3(
+                float.Parse(row[4], CultureInfo.InvariantCulture),
+                float.Parse(row[5], CultureInfo.InvariantCulture),
+                float.Parse(row[6], CultureInfo.InvariantCulture));
+            var expected = new Vector3(-world.X, 1.501f - world.Y, world.Z);
+            Assert.True((produced.Position - expected).Length() <= 1e-5f,
+                $"{row[0]}|{polygon}|{vertexIndex}: {produced.Position} vs {expected}");
+            Assert.Equal(QuantizeHalf(float.Parse(row[7], CultureInfo.InvariantCulture)), produced.U);
+            Assert.Equal(QuantizeHalf(float.Parse(row[8], CultureInfo.InvariantCulture)), produced.V);
+        }
+    }
+
+    [Fact]
+    public void PotionTintFallsBackToTheItemDefaultWhenNoPotionIdIsKnown()
     {
         using var fixture = new PotionFixture();
         var potionModel = EntityModelResolver.ItemModels!.Resolve("minecraft:potion");
@@ -293,32 +467,31 @@ public sealed class WitchHeldPotionTests
             ["item/potion_overlay"] = new(16, 16, new byte[16 * 16 * 4]),
             ["item/potion"] = new(16, 16, new byte[16 * 16 * 4])
         });
-        var state = new EntityRenderState(21, WitchModelDefinition.WitchEntityTypeId, 0f, 0f, 0f, 180f, 0f,
+        PotionColorTable.Configure(null);
+        var state = new EntityRenderState(40, WitchModelDefinition.WitchEntityTypeId, 0f, 0f, 0f, 180f, 0f,
             IsHoldingPotion: true, MainHandItemId: potionId, Scale: 1f);
         var layer = new WitchHeldPotionMesher().Build([state], [new EntityPose()], atlas, potionModel);
         Assert.NotNull(layer);
-        Assert.Equal(WitchHeldPotionMesher.LayerName, layer!.Name);
+        var produced = ReadAllVertices(layer!.Geometry);
+        var expectedRed = ((ItemTintSource.PotionDefaultColor >> 16) & 0xFF) / 255f;
+        Assert.Contains(produced, v => MathF.Abs(v.Red - expectedRed) <= 1e-3f);
     }
 
     [Fact]
-    public void UnknownEffectFallsBackToThePotionColorAndThenToNull()
+    public void WitchOffhandItemWithoutMainHandDoesNotProduceALayer()
     {
-        var registries = new DynamicRegistries();
-        registries.Apply(new Sharpcraft.Common.Identifiers.Identifier("minecraft", "potion"),
-            [new DynamicRegistries.Entry(new Sharpcraft.Common.Identifiers.Identifier("minecraft", "water"), null)]);
-        registries.Apply(new Sharpcraft.Common.Identifiers.Identifier("minecraft", "mob_effect"),
-            [new DynamicRegistries.Entry(new Sharpcraft.Common.Identifiers.Identifier("minecraft", "speed"), null)]);
-        PotionColorTable.Configure(registries);
-        try
+        using var fixture = new PotionFixture();
+        var potionModel = EntityModelResolver.ItemModels!.Resolve("minecraft:potion");
+        Assert.NotNull(potionModel);
+        var potionId = EntityModelResolver.Items!.GetId(Sharpcraft.Common.Identifiers.Identifier.Parse("minecraft:potion"));
+        var atlas = ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
         {
-            // Unknown effect id contributes no colour, so a known potion id still resolves to its plain colour.
-            Assert.Equal(-13083194, PotionColorTable.Resolve(0, [new PotionEffectInstance(99, 0, Visible: true)]));
-            Assert.Null(PotionColorTable.Resolve(-1, [new PotionEffectInstance(99, 0, Visible: true)]));
-        }
-        finally
-        {
-            PotionColorTable.Configure(null);
-        }
+            ["item/potion_overlay"] = new(16, 16, new byte[16 * 16 * 4]),
+            ["item/potion"] = new(16, 16, new byte[16 * 16 * 4])
+        });
+        var state = new EntityRenderState(41, WitchModelDefinition.WitchEntityTypeId, 0f, 0f, 0f, 180f, 0f,
+            OffHandItemId: potionId, IsHoldingPotion: true, Scale: 1f);
+        Assert.Null(new WitchHeldPotionMesher().Build([state], [new EntityPose()], atlas, potionModel));
     }
     private static byte[] VarInt(int value)
     {
