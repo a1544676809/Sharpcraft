@@ -7,6 +7,8 @@ using Sharpcraft.Assets;
 using Sharpcraft.Client.Render;
 using Sharpcraft.Client.World;
 using Sharpcraft.Common.Identifiers;
+using Sharpcraft.Common.Network;
+using Sharpcraft.Common.Registries;
 using Sharpcraft.Framework.Rendering;
 using Xunit;
 
@@ -194,6 +196,160 @@ public sealed class HeldSpecialWorldReferenceSampleTests
         var texture = EntityModelResolver.ResolveHeldItemSpecialTexture(state, offhand);
         Assert.NotNull(texture);
         Assert.Contains(texture, ItemInHandMesher.ResolveTextures(state));
+    }
+    [Fact]
+    public void ShieldBaseColorComponentFlowsThroughTheEquipmentPipelineIntoThePatternTint()
+    {
+        using var fixture = new ItemFixture();
+        var shieldId = EntityModelResolver.Items!.GetId(Identifier.Parse("minecraft:shield"));
+        var baseColor = DataComponentTypes.GetId("base_color");
+        var bannerPatterns = DataComponentTypes.GetId("banner_patterns");
+        Assert.True(shieldId > 0 && baseColor >= 0 && bannerPatterns >= 0);
+
+        var body = EquipmentPacketBody(b =>
+        {
+            b.Add(0);                          // main hand, no continuation
+            b.AddRange(VarInt(1));             // count
+            b.AddRange(VarInt(shieldId));
+            b.AddRange(VarInt(2));             // two added components
+            b.AddRange(VarInt(0));             // no removals
+            b.AddRange(VarInt(baseColor));
+            b.AddRange(VarInt(9));             // cyan
+            b.AddRange(VarInt(bannerPatterns));
+            b.AddRange(VarInt(1));             // one layer
+            b.AddRange(VarInt(1));             // square_bottom_left
+            b.AddRange(VarInt(14));            // red dye
+        });
+        var items = new EquipmentItem[SetEquipmentPackets.MaxSlots];
+        Assert.Equal(DecodeStatus.Success, SetEquipmentPackets.TryRead(body, out var entityId, items, out var count, out _));
+        var tracker = new EntityTracker();
+        Assert.True(tracker.Add(new AddedEntity(entityId, Guid.Empty, EntityPlaceholderMesher.PlayerEntityTypeId, 0, 0, 0, 0f, 0f, 0f, 0f, 180f, 0f, 0)));
+        Assert.True(tracker.ApplyEquipment(entityId, items[..count]));
+
+        var state = tracker.Interpolate(0f)[0];
+        Assert.Equal(shieldId, state.MainHandItemId);
+        Assert.Equal(9, state.EquipmentBannerBaseColorAt(0));
+        var patterns = state.EquipmentBannerPatternsAt(0);
+        Assert.NotNull(patterns);
+        Assert.Single(patterns!);
+        Assert.Equal("square_bottom_left", patterns![0].PatternAssetId);
+        Assert.Equal(14, patterns[0].DyeColorId);
+
+        var atlas = ShieldPatternAtlas(state, offhand: false);
+        var layers = new ItemInHandMesher().Build([state], [new EntityPose()], variants: null, atlas);
+        var baseLayer = layers.Single(layer => layer.Name == "held_special_shield_pattern_base_right");
+        AssertLayerMatchesRows(SpecialItemModelDefinition.Shield, baseLayer.Geometry,
+            Load("shield-patterns-held-world.reference.txt").Where(row => row.Layer == "SHIELD_PATTERN_BASE_RIGHT").ToArray(),
+            "SHIELD_PATTERN_BASE_RIGHT");
+        Assert.Equal(DyeColors.DiffuseAt(9), ReadColor(baseLayer.Geometry, 0));
+        var patternLayer = layers.Single(layer => layer.Name == "held_special_shield_pattern_0_right");
+        AssertLayerMatchesRows(SpecialItemModelDefinition.Shield, patternLayer.Geometry,
+            Load("shield-patterns-held-world.reference.txt").Where(row => row.Layer == "SHIELD_PATTERN_0_RIGHT").ToArray(),
+            "SHIELD_PATTERN_0_RIGHT");
+        Assert.Equal(DyeColors.DiffuseAt(14), ReadColor(patternLayer.Geometry, 0));
+    }
+
+    [Fact]
+    public void ShieldWithoutBaseColorFallsBackToWhitePatternTint()
+    {
+        using var fixture = new ItemFixture();
+        var shieldId = EntityModelResolver.Items!.GetId(Identifier.Parse("minecraft:shield"));
+        var bannerPatterns = DataComponentTypes.GetId("banner_patterns");
+        var body = EquipmentPacketBody(b =>
+        {
+            b.Add(0);
+            b.AddRange(VarInt(1));
+            b.AddRange(VarInt(shieldId));
+            b.AddRange(VarInt(1));
+            b.AddRange(VarInt(0));
+            b.AddRange(VarInt(bannerPatterns));
+            b.AddRange(VarInt(1));
+            b.AddRange(VarInt(2));             // stripe_bottom
+            b.AddRange(VarInt(11));            // blue dye
+        });
+        var items = new EquipmentItem[SetEquipmentPackets.MaxSlots];
+        Assert.Equal(DecodeStatus.Success, SetEquipmentPackets.TryRead(body, out var entityId, items, out var count, out _));
+        var tracker = new EntityTracker();
+        Assert.True(tracker.Add(new AddedEntity(entityId, Guid.Empty, EntityPlaceholderMesher.PlayerEntityTypeId, 0, 0, 0, 0f, 0f, 0f, 0f, 180f, 0f, 0)));
+        Assert.True(tracker.ApplyEquipment(entityId, items[..count]));
+        var state = tracker.Interpolate(0f)[0];
+        Assert.Null(state.EquipmentBannerBaseColorAt(0));
+
+        var atlas = ShieldPatternAtlas(state, offhand: false);
+        var layers = new ItemInHandMesher().Build([state], [new EntityPose()], variants: null, atlas);
+        var baseLayer = layers.Single(layer => layer.Name == "held_special_shield_pattern_base_right");
+        Assert.Equal(DyeColors.DiffuseAt(0), ReadColor(baseLayer.Geometry, 0));
+        AssertLayerMatchesRows(SpecialItemModelDefinition.Shield, baseLayer.Geometry,
+            Load("shield-patterns-held-world.reference.txt").Where(row => row.Layer == "SHIELD_PATTERN_BASE_RIGHT").ToArray(),
+            "SHIELD_PATTERN_BASE_RIGHT");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AllSixteenPatternLayersAreEmitted(bool banner)
+    {
+        using var fixture = new ItemFixture();
+        var itemName = banner ? "red_banner" : "shield";
+        var itemId = EntityModelResolver.Items!.GetId(Identifier.Parse("minecraft:" + itemName));
+        var allLayers = new Sharpcraft.Common.Network.BannerPatternLayer[SpecialItemModelDefinition.MaxBannerPatternLayers];
+        for (var index = 0; index < allLayers.Length; index++)
+        {
+            allLayers[index] = new Sharpcraft.Common.Network.BannerPatternLayer(index % 16, BannerPatternTable.AssetAt(index + 1));
+        }
+
+        var slots = new IReadOnlyList<Sharpcraft.Common.Network.BannerPatternLayer>?[] { allLayers, allLayers };
+        var state = new EntityRenderState(13, EntityPlaceholderMesher.PlayerEntityTypeId, 0f, 0f, 0f, 180f, 0f,
+            MainHandItemId: itemId,
+            EquipmentHasBannerPatterns: [true, true],
+            EquipmentBannerPatternLayers: slots,
+            EquipmentBannerBaseColors: [12, 12]);
+        var atlas = banner ? BannerPatternAtlas(allLayers) : ShieldPatternAtlas(state, offhand: false, allLayers);
+        var layers = new ItemInHandMesher().Build([state], [new EntityPose()], variants: null, atlas);
+        var prefix = banner ? "held_special_banner_pattern_" : "held_special_shield_pattern_";
+        Assert.Contains(layers, layer => layer.Name == prefix + "base_right");
+        for (var index = 0; index < SpecialItemModelDefinition.MaxBannerPatternLayers; index++)
+        {
+            Assert.Contains(layers, layer => layer.Name == prefix + index + "_right");
+        }
+    }
+
+    private static byte[] VarInt(int value)
+    {
+        var bytes = new List<byte>();
+        var remaining = (uint)value;
+        while ((remaining & ~0x7Fu) != 0)
+        {
+            bytes.Add((byte)((remaining & 0x7F) | 0x80));
+            remaining >>= 7;
+        }
+
+        bytes.Add((byte)remaining);
+        return bytes.ToArray();
+    }
+
+    private static byte[] EquipmentPacketBody(Action<List<byte>> slot)
+    {
+        var bytes = new List<byte>();
+        bytes.AddRange(VarInt(PacketIds.PlayClientbound.SetEquipment));
+        bytes.AddRange(VarInt(42));
+        slot(bytes);
+        return bytes.ToArray();
+    }
+
+    private static ItemAtlas BannerPatternAtlas(Sharpcraft.Common.Network.BannerPatternLayer[] layers)
+    {
+        var textures = new Dictionary<string, TextureData>(StringComparer.Ordinal)
+        {
+            [SpecialItemModelDefinition.BannerTexture] = new(64, 64, new byte[64 * 64 * 4]),
+            ["entity/banner/base"] = new(64, 64, new byte[64 * 64 * 4])
+        };
+        foreach (var layer in layers)
+        {
+            textures["entity/banner/" + layer.PatternAssetId] = new(64, 64, new byte[64 * 64 * 4]);
+        }
+
+        return ItemAtlas.FromTextures(textures);
     }
     [Fact]
     public void PatternSpritesArePrimedForTheAtlas()
@@ -412,17 +568,27 @@ public sealed class HeldSpecialWorldReferenceSampleTests
             ["entity/banner/stripe_top"] = new(64, 64, new byte[64 * 64 * 4])
         });
 
-    private static ItemAtlas ShieldPatternAtlas(EntityRenderState state, bool offhand)
+    private static ItemAtlas ShieldPatternAtlas(EntityRenderState state, bool offhand,
+        Sharpcraft.Common.Network.BannerPatternLayer[]? extraLayers = null)
     {
         var body = EntityModelResolver.ResolveHeldItemSpecialTexture(state, offhand);
         Assert.NotNull(body);
-        return ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
+        var textures = new Dictionary<string, TextureData>(StringComparer.Ordinal)
         {
             [body!] = new(64, 64, new byte[64 * 64 * 4]),
             ["entity/shield/base"] = new(64, 64, new byte[64 * 64 * 4]),
             ["entity/shield/square_bottom_left"] = new(64, 64, new byte[64 * 64 * 4]),
             ["entity/shield/stripe_top"] = new(64, 64, new byte[64 * 64 * 4])
-        });
+        };
+        if (extraLayers is not null)
+        {
+            foreach (var layer in extraLayers)
+            {
+                textures["entity/shield/" + layer.PatternAssetId] = new(64, 64, new byte[64 * 64 * 4]);
+            }
+        }
+
+        return ItemAtlas.FromTextures(textures);
     }
 
     private static void AssertLayerMatchesRows(EntityModelDefinition model, DynamicGeometry geometry, Row[] rows, string context)
