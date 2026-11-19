@@ -13,8 +13,9 @@ namespace Sharpcraft.Client.Tests.Render;
 
 /// <summary>
 /// B-1 migration of the 83 raw source-frame variants (issue #228): every definition must render in the
-/// source frame, the two available world-frame samples must match production <c>BuildLayers</c> output,
-/// and those samples must equal the source living formula <c>scale(-1,-1,1) * translate(0,-1.501,0)</c>.
+/// source frame, the two available world-frame samples must match production <c>BuildLayers</c> output
+/// per source key, and those samples must equal the source living formula
+/// <c>scale(-1,-1,1) * translate(0,-1.501,0)</c>.
 /// </summary>
 /// <remarks>
 /// World samples: <c>parrot-blue-world-frame.reference.txt</c> (PARROT, blue is a texture-only variant)
@@ -60,31 +61,55 @@ public sealed class VariantRawFrameTests
         Assert.Equal(0f, definition.BaselinePx);
         Assert.Equal(SourceFlipBaselinePx, definition.SourceFrameBaselinePx);
 
-        var atlas = ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
-        {
-            [texturePath] = new(width, height, new byte[width * height * 4])
-        });
+        var atlas = Atlas(texturePath, width, height);
         var state = new EntityRenderState(1, typeId, 0f, 0f, 0f, 180f, 0f, VariantId: variantId);
-        // Bind pose: the jar world samples carry no animation, and yaw 180 makes EntityModelTransform's
-        // 180 - yaw rotation the identity, leaving exactly the source flip + baseline.
-        var layers = new EntityModelMesher().BuildLayers([state], new SpriteRect(0, 0, width, height, 1), width, height,
-            skinAtlas: atlas, variants: EntityVariantTable.Builtin, pose: new EntityPose());
-        var cutout = layers.Single(layer => layer.Kind == EntityGeometryLayerKind.Cutout);
-        var actual = Positions(cutout.Geometry, EntityPlaceholderMesher.ModelScale);
-
         var sample = LoadSample(worldSample);
-        Assert.Equal(sample.Count, actual.Count);
-        AssertMultisetMatches(actual, sample.Select(row => row.Position).ToArray(), "world position");
 
-        // UVs are half-float in the geometry buffer; quantise the sample the same way before comparing.
-        var expectedUvs = sample.Select(row => (QuantizeHalf(row.U), QuantizeHalf(row.V))).OrderBy(v => v.Item1).ThenBy(v => v.Item2).ToArray();
-        var actualUvs = Uvs(cutout.Geometry).OrderBy(v => v.Item1).ThenBy(v => v.Item2).ToArray();
-        for (var i = 0; i < expectedUvs.Length; i++)
+        // Full production layer first: the per-key walk below must consume exactly this vertex count, so
+        // a part the mesher drops (or an unexpected extra part) fails even when every emitted vertex also
+        // appears somewhere in the sample.
+        var full = BuildCutout(state, width, height, atlas, onlyPart: null);
+        Assert.Equal(sample.Count, VertexCount(full));
+
+        // Per-key: group the sample by source part path (both samples have exactly one cube per part);
+        // the production flat part is the path's last segment and each isolated part is meshed through
+        // the real living path. Rows are ordered by (polygon, vertex), which is exactly the raw emit
+        // order inside one cube, so the position AND the UV of the same key are compared together. A
+        // vertex whose position matches one key but whose UV belongs to another fails here.
+        var flatNames = new HashSet<string>(StringComparer.Ordinal);
+        var consumed = 0;
+        foreach (var group in sample.GroupBy(row => row.Key.Part, StringComparer.Ordinal))
         {
-            Assert.True(MathF.Abs(expectedUvs[i].Item1 - actualUvs[i].Item1) <= Tolerance
-                && MathF.Abs(expectedUvs[i].Item2 - actualUvs[i].Item2) <= Tolerance,
-                $"{worldSample}: UV[{i}] expected {expectedUvs[i]}, actual {actualUvs[i]}");
+            var rows = group.ToArray();
+            var flatName = group.Key.Split('/').Last();
+            Assert.True(flatNames.Add(flatName),
+                $"{worldSample}: sample parts '{group.Key}' and another part map to the same production part '{flatName}'");
+            Assert.Single(rows.Select(row => row.Key.Cube).Distinct());
+            Assert.All(rows, row => Assert.InRange(row.Key.Vertex, 0, 3));
+
+            var geometry = BuildCutout(state, width, height, atlas, onlyPart: flatName);
+            Assert.Equal(rows.Length, VertexCount(geometry));
+            var ordered = rows.OrderBy(row => row.Key.Polygon).ThenBy(row => row.Key.Vertex).ToArray();
+            for (var i = 0; i < ordered.Length; i++)
+            {
+                var row = ordered[i];
+                var rawPosition = VertexFieldReader.Position(geometry.Vertices, i);
+                var actualPosition = new Vector3(rawPosition.X, rawPosition.Y, rawPosition.Z) / EntityPlaceholderMesher.ModelScale;
+                Assert.True((actualPosition - row.Position).Length() <= Tolerance,
+                    $"{row.Key}: world position expected {row.Position}, actual {actualPosition}");
+
+                // The geometry buffer stores UVs as half floats; quantise the sample the same way.
+                var uv = VertexFieldReader.Uv(geometry.Vertices, i);
+                var expectedU = QuantizeHalf(row.U);
+                var expectedV = QuantizeHalf(row.V);
+                Assert.True(MathF.Abs(uv.U - expectedU) <= Tolerance && MathF.Abs(uv.V - expectedV) <= Tolerance,
+                    $"{row.Key}: UV expected ({expectedU:F6},{expectedV:F6}), actual ({uv.U:F6},{uv.V:F6})");
+            }
+
+            consumed += rows.Length;
         }
+
+        Assert.Equal(sample.Count, consumed);
     }
 
     [Theory]
@@ -144,60 +169,27 @@ public sealed class VariantRawFrameTests
         }
     }
 
-    private static List<Vector3> Positions(DynamicGeometry geometry, float scale)
-    {
-        var count = geometry.VertexFloats / ChunkMesher.FloatsPerVertex;
-        var result = new List<Vector3>(count);
-        for (var i = 0; i < count; i++)
+    private static ItemAtlas Atlas(string texturePath, int width, int height) =>
+        ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
         {
-            var position = VertexFieldReader.Position(geometry.Vertices, i);
-            result.Add(new Vector3(position.X, position.Y, position.Z) / scale);
-        }
-
-        return result;
-    }
-
-    private static List<(float, float)> Uvs(DynamicGeometry geometry)
-    {
-        var count = geometry.VertexFloats / ChunkMesher.FloatsPerVertex;
-        var result = new List<(float, float)>(count);
-        for (var i = 0; i < count; i++)
-        {
-            var uv = VertexFieldReader.Uv(geometry.Vertices, i);
-            result.Add((uv.U, uv.V));
-        }
-
-        return result;
-    }
+            [texturePath] = new(width, height, new byte[width * height * 4])
+        });
 
     /// <summary>
-    /// Greedy one-to-one matching at <see cref="Tolerance"/>; both sides must be fully consumed, which
-    /// preserves vertex multiplicity (a duplicated/dropped vertex still fails).
+    /// Runs the real production layer path for one entity. <paramref name="onlyPart"/> isolates a single
+    /// flat part (full ancestor frames preserved) so its vertices can be matched key-for-key against the
+    /// source sample.
     /// </summary>
-    private static void AssertMultisetMatches(IReadOnlyList<Vector3> actual, IReadOnlyList<Vector3> expected, string what)
+    private static DynamicGeometry BuildCutout(EntityRenderState state, int width, int height, ItemAtlas atlas, string? onlyPart)
     {
-        Assert.Equal(expected.Count, actual.Count);
-        var used = new bool[expected.Count];
-        foreach (var position in actual)
-        {
-            var match = -1;
-            for (var i = 0; i < expected.Count; i++)
-            {
-                if (used[i] || (expected[i] - position).Length() > Tolerance)
-                {
-                    continue;
-                }
-
-                match = i;
-                break;
-            }
-
-            Assert.True(match >= 0, $"{what}: no source vertex within {Tolerance} of {position}");
-            used[match] = true;
-        }
-
-        Assert.DoesNotContain(false, used);
+        // Bind pose: the jar world samples carry no animation, and yaw 180 makes EntityModelTransform's
+        // 180 - yaw rotation the identity, leaving exactly the source flip + baseline.
+        var layers = new EntityModelMesher().BuildLayers([state], new SpriteRect(0, 0, width, height, 1), width, height,
+            onlyPart: onlyPart, skinAtlas: atlas, variants: EntityVariantTable.Builtin, pose: new EntityPose());
+        return layers.Single(layer => layer.Kind == EntityGeometryLayerKind.Cutout).Geometry;
     }
+
+    private static int VertexCount(DynamicGeometry geometry) => geometry.VertexFloats / ChunkMesher.FloatsPerVertex;
 
     private static List<SampleRow> LoadSample(string fileName)
     {
