@@ -1,0 +1,94 @@
+# Sharpcraft 原版基准样本（reference sample）— B-4 potion/effect 派生色表
+# source: Minecraft 26.3 client (jar sha1 e877b6a07acd633fb3bb475002175cec036e7b87)
+# tool: ref://mc-26.3-analysis/vectors/b-class-source/held-world/PotionColorProbe.java
+# space: ARGB ints from PotionContents.getColorOptional/getColorOr; potion row color = plain-stack tint
+# ref: ref://mc-26.3-analysis/src/net/minecraft/world/item/alchemy/PotionContents.java:122-150 (getColor/getColorOr/getColorOptional)
+# ref: ref://mc-26.3-analysis/src/net/minecraft/client/color/item/Potion.java:22-28 (tint source uses contents.getColorOr(default))
+# ref: ref://mc-26.3-analysis/src/net/minecraft/world/effect/MobEffect.java:45-56 (color field)
+# columns: kind|id|color|effects
+effect	speed	3402751	
+effect	slowness	9154528	
+effect	haste	14270531	
+effect	mining_fatigue	4866583	
+effect	strength	16762624	
+effect	instant_health	16262179	
+effect	instant_damage	11101546	
+effect	jump_boost	16646020	
+effect	nausea	5578058	
+effect	regeneration	13458603	
+effect	resistance	9520880	
+effect	fire_resistance	16750848	
+effect	water_breathing	10017472	
+effect	invisibility	16185078	
+effect	blindness	2039587	
+effect	night_vision	12779366	
+effect	hunger	5797459	
+effect	weakness	4738376	
+effect	poison	8889187	
+effect	wither	7561558	
+effect	health_boost	16284963	
+effect	absorption	2445989	
+effect	saturation	16262179	
+effect	glowing	9740385	
+effect	levitation	13565951	
+effect	luck	5882118	
+effect	unluck	12624973	
+effect	slow_falling	15978425	
+effect	conduit_power	1950417	
+effect	dolphins_grace	8954814	
+effect	bad_omen	745784	
+effect	hero_of_the_village	4521796	
+effect	darkness	2696993	
+effect	trial_omen	1484454	
+effect	raid_omen	14565464	
+effect	wind_charged	12438015	
+effect	weaving	7891290	
+effect	oozing	10092451	
+effect	infested	9214860	
+effect	breath_of_the_nautilus	65518	
+potion	water	-13083194	
+potion	mundane	-13083194	
+potion	thick	-13083194	
+potion	awkward	-13083194	
+potion	night_vision	-3997850	night_vision:0
+potion	long_night_vision	-3997850	night_vision:0
+potion	invisibility	-592138	invisibility:0
+potion	long_invisibility	-592138	invisibility:0
+potion	leaping	-131196	jump_boost:0
+potion	long_leaping	-131196	jump_boost:0
+potion	strong_leaping	-131196	jump_boost:1
+potion	fire_resistance	-26368	fire_resistance:0
+potion	long_fire_resistance	-26368	fire_resistance:0
+potion	swiftness	-13374465	speed:0
+potion	long_swiftness	-13374465	speed:0
+potion	strong_swiftness	-13374465	speed:1
+potion	slowness	-7622688	slowness:0
+potion	long_slowness	-7622688	slowness:0
+potion	strong_slowness	-7622688	slowness:3
+potion	turtle_master	-7503130	slowness:3,resistance:2
+potion	long_turtle_master	-7503130	slowness:3,resistance:2
+potion	strong_turtle_master	-7502362	slowness:5,resistance:3
+potion	water_breathing	-6759744	water_breathing:0
+potion	long_water_breathing	-6759744	water_breathing:0
+potion	healing	-515037	instant_health:0
+potion	strong_healing	-515037	instant_health:1
+potion	harming	-5675670	instant_damage:0
+potion	strong_harming	-5675670	instant_damage:1
+potion	poison	-7888029	poison:0
+potion	long_poison	-7888029	poison:0
+potion	strong_poison	-7888029	poison:1
+potion	regeneration	-3318613	regeneration:0
+potion	long_regeneration	-3318613	regeneration:0
+potion	strong_regeneration	-3318613	regeneration:1
+potion	strength	-14592	strength:0
+potion	long_strength	-14592	strength:0
+potion	strong_strength	-14592	strength:1
+potion	weakness	-12038840	weakness:0
+potion	long_weakness	-12038840	weakness:0
+potion	luck	-10895098	luck:0
+potion	slow_falling	-798791	slow_falling:0
+potion	long_slow_falling	-798791	slow_falling:0
+potion	wind_charged	-4339201	wind_charged:0
+potion	weaving	-8885926	weaving:0
+potion	oozing	-6684765	oozing:0
+potion	infested	-7562356	infested:0

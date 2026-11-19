@@ -177,6 +177,37 @@ public sealed class ItemEntityMesherTests
     }
 
     [Fact]
+    public void GeneratedModelEmitsEachPresentLayerWithLayerIndexTint()
+    {
+        // ItemModelGenerator.LAYERS = [layer0..layer4] and bakes every present layer with tint index = layer index
+        // (ref://mc-26.3-analysis/src/net/minecraft/client/resources/model/cuboid/ItemModelGenerator.java:25,52-71,212).
+        // A generic two-layer generated model must therefore produce two south/north quad pairs: layer0 tint 0,
+        // layer1 tint 1; not a potion-specific special case.
+        var resolution = new ItemModelResolution(
+            "test:two_layer",
+            new Dictionary<string, string>
+            {
+                ["layer0"] = "minecraft:item/base",
+                ["layer1"] = "minecraft:item/overlay"
+            },
+            new Dictionary<ItemDisplayContext, ItemDisplayTransform>());
+        var quads = new List<ItemModelQuad>();
+
+        ItemEntityMesher.CollectQuads(quads, resolution);
+
+        Assert.Equal(4, quads.Count);
+        Assert.Equal(2, quads.Count(q => q.TintIndex == 0));
+        Assert.Equal(2, quads.Count(q => q.TintIndex == 1));
+        Assert.All(quads.Where(q => q.TintIndex == 0), q => Assert.Equal("item/base", q.Texture));
+        Assert.All(quads.Where(q => q.TintIndex == 1), q => Assert.Equal("item/overlay", q.Texture));
+
+        // ResolutionTextures (atlas pre-pass) must prime both layers so the second quad pair has a sprite.
+        var paths = ItemEntityMesher.ResolutionTextures(resolution).ToList();
+        Assert.Contains("item/base", paths);
+        Assert.Contains("item/overlay", paths);
+    }
+
+    [Fact]
     public void ConstantTintDecodesArgbToUnitRgb()
     {
         // oak_leaves declares tints [{ type: minecraft:constant, value: -12012264 }].

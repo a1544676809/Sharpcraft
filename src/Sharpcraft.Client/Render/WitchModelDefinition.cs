@@ -9,10 +9,11 @@ namespace Sharpcraft.Client.Render;
 /// </summary>
 /// <remarks>
 /// Bind pose. The reference starts from <c>VillagerModel.createBodyModel()</c> and replaces only the head/nose;
-/// the jacket is a 0.5-grown outer layer of the body. T-631b adds the held-potion flat item quad attached to the nose
-/// (visible through `IsHoldingPotion`); other hand items and the full crossed-arms layer are still pending. Parts are
-/// declared with the <c>VanillaMeshDefinition</c> DSL and baked via <c>VanillaMeshBake.Bake</c> (T-683) with per-cube
-/// <c>MirrorX: false</c> on the head/body/arms roots; the Pi-based hat rotation and scale are unchanged.
+/// the jacket is a 0.5-grown outer layer of the body. The held potion is rendered by <c>WitchHeldPotionMesher</c>
+/// with the real item model and the source <c>WitchItemLayer</c> pose (B-4 T4b); the former single flat-quad layer was
+/// removed. Parts are declared with the <c>VanillaMeshDefinition</c> DSL and baked via <c>VanillaMeshBake.Bake</c>
+/// (T-683) with per-cube <c>MirrorX: false</c> on the head/body/arms roots; the Pi-based hat rotation and scale are
+/// unchanged.
 /// </remarks>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.witch.WitchModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/witch/WitchModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class WitchModelDefinition
@@ -36,47 +37,6 @@ public static class WitchModelDefinition
         0.9375f,
         baselinePx: 0f,
         rawSourceFrame: true);
-
-    /// <summary>
-    /// Standalone layer model for the held potion quad. It repeats the head/nose pivots so the layer inherits the same
-    /// `head`/`nose` pose names as the base witch model, while sampling the item atlas.
-    /// </summary>
-    public static readonly EntityModelDefinition HeldPotionDefinition = EntityModelDefinition.FromTree(
-        "witch_held_potion",
-        64,
-        128,
-        BuildHeldPotionMesh(),
-        PlayerModelDefinition.DefaultFaceTransforms,
-        PotionTexture,
-        0.9375f,
-        additionalTexturePaths: [PotionTexture]);
-
-    private static VanillaMeshDefinition BuildHeldPotionMesh()
-    {
-        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
-        var head = root.AddOrReplaceChild("head", VanillaPartPose.Zero,
-            new VanillaCubeDefinition("head", 0, 0, 0f, 0f, 0f, 0f, 0f, 0f));
-        var nose = head.AddOrReplaceChild("nose", VanillaPartPose.Offset(0f, -2f, 0f),
-            new VanillaCubeDefinition("nose", 0, 0, 0f, 0f, 0f, 0f, 0f, 0f));
-        nose.AddOrReplaceChild("held_potion", VanillaPartPose.Offset(0f, 0f, -8f),
-            new VanillaCubeDefinition(
-                "held_potion",
-                0,
-                0,
-                -4f,
-                -4f,
-                0f,
-                8f,
-                8f,
-                0f,
-                TexturePath: PotionTexture,
-                TextureWidth: 16,
-                TextureHeight: 16,
-                UvWidth: 16,
-                UvHeight: 16,
-                UsesItemAtlas: true));
-        return new VanillaMeshDefinition(root);
-    }
 
     private static VanillaMeshDefinition BuildWitchMesh()
     {

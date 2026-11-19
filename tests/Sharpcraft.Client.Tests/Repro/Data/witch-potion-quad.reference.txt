@@ -1,0 +1,23 @@
+# source: Minecraft 26.3 client (jar sha1 e877b6a07acd633fb3bb475002175cec036e7b87)
+# tool: ref://mc-26.3-analysis/vectors/b-class-source/held-world/WitchPotionQuadProbe.java
+# space: living world render units (blocks): S(-1,-1,1)*T(0,-1.501,0)*WitchPose*GROUND*(v_px/16)
+# ref: ref://mc-26.3-analysis/src/net/minecraft/client/resources/model/cuboid/ItemModelGenerator.java:25,80-88 (generated sprite box)
+# ref: ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/layers/WitchItemLayer.java:14-27
+# ref: ref://mc-26.3-analysis/src/assets/minecraft/models/item/potion.json (layer0=potion_overlay, layer1=potion)
+# note: only south/north face quads (alpha-independent); sprite side faces are a blocker
+potion_overlay	root	0	0	-0.254073650	1.579627514	-0.191524670	0.000000000	0.000000000	0
+potion_overlay	root	0	1	-0.319772869	1.093894482	-0.290251613	0.000000000	1.000000000	0
+potion_overlay	root	0	2	0.175872624	1.030392766	-0.307659835	1.000000000	1.000000000	0
+potion_overlay	root	0	3	0.241571844	1.516125798	-0.208932891	1.000000000	0.000000000	0
+potion_overlay	root	1	0	0.241298556	1.522385478	-0.239548340	1.000000000	0.000000000	0
+potion_overlay	root	1	1	0.175599337	1.036652446	-0.338275284	1.000000000	1.000000000	0
+potion_overlay	root	1	2	-0.320046157	1.100154161	-0.320867062	0.000000000	1.000000000	0
+potion_overlay	root	1	3	-0.254346937	1.585887194	-0.222140118	0.000000000	0.000000000	0
+potion	root	0	0	-0.254073650	1.579627514	-0.191524670	0.000000000	0.000000000	1
+potion	root	0	1	-0.319772869	1.093894482	-0.290251613	0.000000000	1.000000000	1
+potion	root	0	2	0.175872624	1.030392766	-0.307659835	1.000000000	1.000000000	1
+potion	root	0	3	0.241571844	1.516125798	-0.208932891	1.000000000	0.000000000	1
+potion	root	1	0	0.241298556	1.522385478	-0.239548340	1.000000000	0.000000000	1
+potion	root	1	1	0.175599337	1.036652446	-0.338275284	1.000000000	1.000000000	1
+potion	root	1	2	-0.320046157	1.100154161	-0.320867062	0.000000000	1.000000000	1
+potion	root	1	3	-0.254346937	1.585887194	-0.222140118	0.000000000	0.000000000	1
