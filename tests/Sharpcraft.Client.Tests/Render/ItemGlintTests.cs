@@ -89,27 +89,14 @@ public sealed class ItemGlintTests
     [Fact]
     public void OnlyTridentAndShieldSpecialRenderersHaveGlintCompanions()
     {
-        // Source audit: only TridentSpecialRenderer and ShieldSpecialRenderer submit glint. The other eleven
-        // SpecialModelRenderer implementations accept hasFoil but make zero glint submissions, so the absence of
-        // banner/skull/chest/shulker glint layers is the reference behavior, not an unfinished blocker.
+        // Source audit: only TridentSpecialRenderer and ShieldSpecialRenderer submit glint. B-4 T2 moved those two
+        // models to the ItemInHandMesher raw hand chain, so the resolver's remaining special hand layers
+        // (chest/skull/shulker/banner/pot/conduit) must have no glint companion; the trident/shield glint
+        // companion is asserted in HeldSpecialWorldReferenceSampleTests.
         var layers = EntityModelResolver.Resolve(EntityPlaceholderMesher.PlayerEntityTypeId).RenderLayers!;
-        var glints = layers
-            .Where(layer => layer.Name.EndsWith("_glint", StringComparison.Ordinal))
-            .Select(layer => layer.Name)
-            .OrderBy(name => name, StringComparer.Ordinal)
-            .ToArray();
-        Assert.Equal(
-            [
-                "held_special_shield_left_glint",
-                "held_special_shield_right_glint",
-                "held_special_trident_left_glint",
-                "held_special_trident_right_glint",
-            ],
-            glints);
-        Assert.DoesNotContain(layers, layer =>
-            layer.Name.EndsWith("_glint", StringComparison.Ordinal)
-            && !layer.Name.Contains("shield", StringComparison.Ordinal)
-            && !layer.Name.Contains("trident", StringComparison.Ordinal));
+        var heldSpecial = layers.Where(layer => layer.Name.StartsWith("held_special_", StringComparison.Ordinal)).ToArray();
+        Assert.NotEmpty(heldSpecial);
+        Assert.DoesNotContain(heldSpecial, layer => layer.Name.EndsWith("_glint", StringComparison.Ordinal));
     }
     [Fact]
     public void SpecialFoilTridentAndShieldGetEntityScaleGlint()
@@ -146,15 +133,13 @@ public sealed class ItemGlintTests
                 OffHandItemId: shield,
                 MainHandFoil: ItemFoilType.Standard,
                 OffHandFoil: ItemFoilType.Standard);
-            var mesher = new EntityModelMesher();
-            var layers = mesher.BuildLayers([foil], new SpriteRect(0, 0, 64, 64, 1), 64, 64,
-                variants: null, itemAtlas: atlas);
+            var mesher = new ItemInHandMesher();
+            var layers = mesher.Build([foil], [new EntityPose()], variants: null, atlas);
             AssertSpecialGlint(layers, "held_special_trident_right", GlintTextureTransform.EntityScale);
             AssertSpecialGlint(layers, "held_special_shield_left", GlintTextureTransform.EntityScale);
 
             var plain = foil with { MainHandFoil = ItemFoilType.None, OffHandFoil = ItemFoilType.None };
-            var plainLayers = mesher.BuildLayers([plain], new SpriteRect(0, 0, 64, 64, 1), 64, 64,
-                variants: null, itemAtlas: atlas);
+            var plainLayers = mesher.Build([plain], [new EntityPose()], variants: null, atlas);
             Assert.DoesNotContain(plainLayers, layer => layer.Name.EndsWith("_glint", StringComparison.Ordinal));
             }
             finally
