@@ -91,14 +91,7 @@ public static class TropicalFishModelDefinition
             _ => patternPath,
             fallbackTexture: patternPath,
             tintSelector: static state => state.PatternTint == default ? Vector3.One : state.PatternTint);
-        return new EntityModelDefinition(
-            name,
-            32,
-            32,
-            [.. parts],
-            faceTransforms: null,
-            "entity/fish/" + baseTexture,
-            compiled: compiled);
+        return new EntityModelDefinition(name, 32, 32, faceTransforms: null, texturePath: "entity/fish/" + baseTexture, compiled: compiled);
     }
 
     private static VanillaMeshDefinition BuildSmallMesh()

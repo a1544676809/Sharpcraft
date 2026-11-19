@@ -78,24 +78,8 @@ public static class CopperGolemStatueModelDefinition
     }
 
     private static EntityModelDefinition WithRootPose(EntityModelDefinition source, string name) =>
-        new(
-            name,
-            source.TextureWidth,
-            source.TextureHeight,
-            source.Parts,
-            source.FaceTransforms,
-            source.TexturePath,
-            source.Scale,
-            source.EmissiveTexturePath,
-            source.TextureSelector,
-            source.AdditionalTexturePaths,
-            source.Compiled,
-            source.RenderLayers,
-            // Raw root frame reads root.zRot=PI from StatuePose (source setupAnim), verbatim.
-            applyRootPose: true,
-            baselinePx: 0f,
-            rawSourceFrame: true,
-            sourceFrameBaselinePx: source.SourceFrameBaselinePx);
+        new(name, source.TextureWidth, source.TextureHeight, source.FaceTransforms, source.TexturePath, source.Scale, source.EmissiveTexturePath, source.TextureSelector, source.AdditionalTexturePaths, source.Compiled, source.RenderLayers, // Raw root frame reads root.zRot=PI from StatuePose (source setupAnim), verbatim.
+            applyRootPose: true, baselinePx: 0f, rawSourceFrame: true, sourceFrameBaselinePx: source.SourceFrameBaselinePx);
 
     /// <summary>
     /// Standing layer. Ref: CopperGolemModel.createBodyLayer lines 53-95, plus the statue pose that

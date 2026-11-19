@@ -21,21 +21,13 @@ public static class BabyModelDefinitionsMisc
     private static readonly CompiledEntityModel PolarBearCompiled = VanillaMeshBakery.Build(PolarBearMesh, 64, 64, rawSourceFrame: true);
     private static readonly CompiledEntityModel TurtleCompiled = VanillaMeshBakery.Build(TurtleMesh, 16, 16, modelHeight: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Goat = new(
-        "baby_goat", 64, 64, GoatParts, faceTransforms: null, "entity/goat/goat_baby",
-        compiled: GoatCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Goat = new("baby_goat", 64, 64, faceTransforms: null, texturePath: "entity/goat/goat_baby", compiled: GoatCompiled, baselinePx: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Panda = new(
-        "baby_panda", 64, 64, PandaParts, faceTransforms: null, "entity/panda/panda_baby",
-        compiled: PandaCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Panda = new("baby_panda", 64, 64, faceTransforms: null, texturePath: "entity/panda/panda_baby", compiled: PandaCompiled, baselinePx: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition PolarBear = new(
-        "baby_polar_bear", 64, 64, PolarBearParts, faceTransforms: null, "entity/bear/polarbear_baby",
-        compiled: PolarBearCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition PolarBear = new("baby_polar_bear", 64, 64, faceTransforms: null, texturePath: "entity/bear/polarbear_baby", compiled: PolarBearCompiled, baselinePx: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Turtle = new(
-        "baby_turtle", 16, 16, TurtleParts, faceTransforms: null, texturePath: "entity/turtle/turtle_baby",
-        compiled: TurtleCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Turtle = new("baby_turtle", 16, 16, faceTransforms: null, texturePath: "entity/turtle/turtle_baby", compiled: TurtleCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly IReadOnlyDictionary<int, EntityModelDefinition> Models =
         new Dictionary<int, EntityModelDefinition>
@@ -58,14 +50,7 @@ public static class BabyModelDefinitionsMisc
         {
             if (key != "normal")
             {
-                variants[(97, key)] = new EntityModelDefinition(
-                    "baby_panda_" + key,
-                    64,
-                    64,
-                    PandaParts,
-                    PlayerModelDefinition.DefaultFaceTransforms,
-                    "entity/panda/panda_" + key + "_baby",
-                    compiled: PandaCompiled);
+                variants[(97, key)] = new EntityModelDefinition("baby_panda_" + key, 64, 64, PlayerModelDefinition.DefaultFaceTransforms, "entity/panda/panda_" + key + "_baby", compiled: PandaCompiled);
             }
         }
 

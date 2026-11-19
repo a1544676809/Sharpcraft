@@ -29,8 +29,8 @@ public sealed class PlayerSlimModelTests
     [Fact]
     public void SlimArmsAreThreePixelsWideAndKeepTheWideTextureOffsets()
     {
-        var wide = PlayerModelDefinition.Definition.Parts;
-        var slim = PlayerModelDefinition.SlimDefinition.Parts;
+        var wide = PlayerModelDefinition.Definition.StructuralParts();
+        var slim = PlayerModelDefinition.SlimDefinition.StructuralParts();
 
         var wideLeft = Arm(wide, "left_arm");
         var slimLeft = Arm(slim, "left_arm");
@@ -84,8 +84,8 @@ public sealed class PlayerSlimModelTests
 
         Assert.Equal("entity/player/wide/steve", wide.TextureSelector!(wideState));
         Assert.Equal("entity/player/slim/alex", slim.TextureSelector!(slimState));
-        Assert.Equal(4f, Arm(wide.Parts, "left_arm").Width);
-        Assert.Equal(3f, Arm(slim.Parts, "left_arm").Width);
+        Assert.Equal(4f, Arm(wide.StructuralParts(), "left_arm").Width);
+        Assert.Equal(3f, Arm(slim.StructuralParts(), "left_arm").Width);
 
         var custom = wideState with { PlayerBodyTexture = "skins/custom" };
         Assert.Equal("skins/custom", slim.TextureSelector!(custom));

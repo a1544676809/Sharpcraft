@@ -30,28 +30,9 @@ public static class CatModelDefinition
     private static readonly CompiledEntityModel CompiledModel =
         EntityModelLayerHelpers.WithCollar(BaseCompiled, "entity/cat/cat_collar", inflate: 0.01f);
 
-    public static readonly EntityModelDefinition Definition = new(
-        "cat",
-        64,
-        32,
-        CollarParts,
-        faceTransforms: null,
-        "entity/cat/cat_tabby",
-        0.8f,
-        compiled: CompiledModel,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new("cat", 64, 32, faceTransforms: null, texturePath: "entity/cat/cat_tabby", scale: 0.8f, compiled: CompiledModel, baselinePx: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Ocelot = new(
-        "ocelot",
-        64,
-        32,
-        CollarParts,
-        faceTransforms: null,
-        "entity/cat/ocelot",
-        compiled: CompiledModel,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Ocelot = new("ocelot", 64, 32, faceTransforms: null, texturePath: "entity/cat/ocelot", compiled: CompiledModel, baselinePx: 0f, rawSourceFrame: true);
 
     /// <summary>Registry entry names, in the vanilla bootstrap order used when no registry data is available.</summary>
     public static readonly IReadOnlyList<string> VariantKeys =
@@ -77,17 +58,7 @@ public static class CatModelDefinition
                 continue;
             }
 
-            variants[key] = new EntityModelDefinition(
-                "cat_" + key,
-                64,
-                32,
-                CollarParts,
-                faceTransforms: null,
-                "entity/cat/cat_" + key,
-                0.8f,
-                compiled: CompiledModel,
-                baselinePx: 0f,
-                rawSourceFrame: true);
+            variants[key] = new EntityModelDefinition("cat_" + key, 64, 32, faceTransforms: null, texturePath: "entity/cat/cat_" + key, scale: 0.8f, compiled: CompiledModel, baselinePx: 0f, rawSourceFrame: true);
         }
 
         return variants;

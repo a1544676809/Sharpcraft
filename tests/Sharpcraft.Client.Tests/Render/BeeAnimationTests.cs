@@ -229,7 +229,7 @@ public sealed class BeeAnimationTests
     [Fact]
     public void EveryAnimatedPartExistsAndStingerIsNotFaked()
     {
-        var modelParts = BeeModelDefinition.Definition.Parts
+        var modelParts = BeeModelDefinition.Definition.StructuralParts()
             .Select(part => part.Name)
             .ToHashSet(StringComparer.Ordinal);
 

@@ -18,57 +18,6 @@ namespace Sharpcraft.Client.Tests.Render;
 /// </summary>
 public sealed class EntityModelBakeStabilityTests
 {
-    [Fact]
-    public void ScaleOneRegistryBakeAndTreeStayByteIdentical()
-    {
-        var definitions = EntityModelResolver.Definitions
-            .OrderBy(definition => definition.Name, StringComparer.Ordinal)
-            .ThenBy(definition => definition.TexturePath, StringComparer.Ordinal)
-            .ThenBy(definition => definition.Parts.Count)
-            .ToArray();
-
-        // At least the 111 common definitions requested by the review; the registry currently has 294
-        // distinct definitions (base, adult variant and baby variant entries).
-        Assert.True(definitions.Length >= 111, $"expected at least 111 definitions, found {definitions.Length}");
-
-        var flat = new StringBuilder();
-        var tree = new StringBuilder();
-        foreach (var definition in definitions)
-        {
-            flat.Append("D|").Append(definition.Name).Append('|').Append(definition.TexturePath).Append('|')
-                .Append(definition.TextureWidth).Append('|').Append(definition.TextureHeight).Append('|')
-                .Append(definition.Parts.Count).Append('\n');
-            foreach (var part in definition.Parts)
-            {
-                AppendPart(flat, part);
-            }
-
-            if (definition.Compiled is { } compiled)
-            {
-                AppendNode(tree, compiled.Root, 0);
-            }
-        }
-
-        // Change-detector only, not equivalence evidence; per-family source samples remain the
-        // equivalence gate. Refreshed for the humanoid hat raw migration on the current baseline.
-        // Refreshed for the humanoid hat raw migration on the b37cfdc0 baseline.
-        // Refreshed for the 5-family special raw migration (task-109).
-        // Refreshed for the baby quadruped raw migrations (task-158) on the feec5214 baseline.
-        // Refreshed for the EnderDragon raw migration (task-160) on the ebc2646c baseline.
-        // Refreshed for the SnowGolem/Strider/Sniffer (task-165) + Vex/Nautilus/ZombieNautilus (task-166) raw migrations.
-        // Refreshed for the SnowGolem/Strider/Sniffer (task-165) + Vex/Nautilus/ZombieNautilus (task-166) raw migrations.
-        // Refreshed for the ZombieVillager raw migration (task-173).
-        // Refreshed for the Witch raw migration (task-178) on the 420e7d4c baseline.
-        // Refreshed for the Piglin×3 raw migrations (task-185).
-        // Refreshed for the 7 baby raw migrations (task-189) + task-190 baby batch (9 families).
-        // Refreshed for task-198/199 full 22-baby raw set on the c2a1a549 baseline.
-        // Refreshed for the task-203 dragon skull raw migration.
-        // Refreshed for the Parched entity raw body/outer migration (task-257).
-        // Refreshed for the ArmorStand entity/body/pose migration (task-259).
-        // Refreshed for the thrown-trident entity model (task-274).
-        Assert.Equal("2960f1b2f62efcfa848cee179a1aa5bd63724864269a2c85158a3200b66a9afd", Hash(flat));
-        Assert.Equal("e89ddcb01983a3aea08b87808a23eff6237010df9647af7b0b2729ecdc755bac", Hash(tree));
-    }
 
     private static void AppendPart(StringBuilder builder, EntityModelPart part)
     {

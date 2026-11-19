@@ -27,22 +27,13 @@ public static class BabyModelDefinitionsOdd
     private static readonly CompiledEntityModel SniffletCompiled = VanillaMeshBakery.Build(SniffletMesh, 128, 128, rawSourceFrame: true);
     private static readonly CompiledEntityModel ArmadilloCompiled = VanillaMeshBakery.Build(ArmadilloMesh, 64, 64, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Strider = new(
-        "baby_strider", 32, 32, StriderParts, faceTransforms: null, "entity/strider/strider_baby",
-        compiled: StriderCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Strider = new("baby_strider", 32, 32, faceTransforms: null, texturePath: "entity/strider/strider_baby", compiled: StriderCompiled, baselinePx: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Husk = new(
-        "baby_husk", 64, 64, BabyModelDefinitionsHumanoid.Zombie.Parts,
-        faceTransforms: null, "entity/zombie/husk_baby",
-        compiled: BabyModelDefinitionsHumanoid.Zombie.Compiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Husk = new("baby_husk", 64, 64, faceTransforms: null, texturePath: "entity/zombie/husk_baby", compiled: BabyModelDefinitionsHumanoid.Zombie.Compiled, baselinePx: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Snifflet = new(
-        "baby_sniffer", 128, 128, SniffletParts, faceTransforms: null, "entity/sniffer/snifflet",
-        compiled: SniffletCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Snifflet = new("baby_sniffer", 128, 128, faceTransforms: null, texturePath: "entity/sniffer/snifflet", compiled: SniffletCompiled, baselinePx: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Armadillo = new(
-        "baby_armadillo", 64, 64, ArmadilloParts, faceTransforms: null, "entity/armadillo/armadillo_baby",
-        compiled: ArmadilloCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Armadillo = new("baby_armadillo", 64, 64, faceTransforms: null, texturePath: "entity/armadillo/armadillo_baby", compiled: ArmadilloCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly IReadOnlyDictionary<int, EntityModelDefinition> Models =
         new Dictionary<int, EntityModelDefinition>

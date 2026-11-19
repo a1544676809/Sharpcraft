@@ -129,7 +129,7 @@ public sealed class WitchAnimationTests
 
         // task-178: raw source frame keeps source-literal pivots. Reference nose.setPos(0, 1, -1.5) is absolute;
         // bind pivot is (0, -2, 0), so the additive offset is (0, 3, -1.5) and the target pivot is (0, 1, -1.5).
-        var nosePart = WitchModelDefinition.Definition.Parts.First(part => part.Name == "nose");
+        var nosePart = WitchModelDefinition.Definition.StructuralParts().First(part => part.Name == "nose");
         var noseOffset = holding.Get("nose").Position;
         AssertVec(new Vector3(0f, 3f, -1.5f), noseOffset);
         Assert.Equal(0f, nosePart.PivotX + noseOffset.X, 5);
@@ -166,7 +166,7 @@ public sealed class WitchAnimationTests
     [Fact]
     public void EveryAnimatedPartExistsInTheWitchModel()
     {
-        var modelParts = WitchModelDefinition.Definition.Parts.Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
+        var modelParts = WitchModelDefinition.Definition.StructuralParts().Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
         var pose = Apply(Frame());
 
         Assert.NotEmpty(pose.Offsets);

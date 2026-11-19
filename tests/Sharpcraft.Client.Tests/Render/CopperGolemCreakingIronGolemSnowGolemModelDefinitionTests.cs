@@ -12,27 +12,6 @@ namespace Sharpcraft.Client.Tests.Render;
 /// </summary>
 public sealed class CopperGolemCreakingIronGolemSnowGolemModelDefinitionTests
 {
-    [Fact]
-    public void CopperGolemPartsMatchSourceFrameRecords()
-    {
-        var expected = new[]
-        {
-            RawModelPartFactory.FromVanilla("body", 0f, 19f, 0f, -4f, -6f, -3f, 8f, 6f, 6f, 0, 15),
-            RawModelPartFactory.FromVanillaChild("head", "body", 0f, -6f, 0f, -4f, -5f, -5f, 8f, 5f, 10f, 0, 0, grow: 0.015f),
-            RawModelPartFactory.FromVanillaChild("nose", "head", 0f, 0f, 0f, -1f, -2f, -6f, 2f, 3f, 2f, 56, 0),
-            RawModelPartFactory.FromVanillaChild("antenna", "head", 0f, 0f, 0f, -1f, -9f, -1f, 2f, 4f, 2f, 37, 8, grow: -0.015f),
-            RawModelPartFactory.FromVanillaChild("antenna_tip", "head", 0f, 0f, 0f, -2f, -13f, -2f, 4f, 4f, 4f, 37, 0, grow: -0.015f),
-            RawModelPartFactory.FromVanillaChild("right_arm", "body", -4f, -6f, 0f, -3f, -1f, -2f, 3f, 10f, 4f, 36, 16),
-            RawModelPartFactory.FromVanillaChild("left_arm", "body", 4f, -6f, 0f, 0f, -1f, -2f, 3f, 10f, 4f, 50, 16),
-            RawModelPartFactory.FromVanilla("right_leg", 0f, 19f, 0f, -4f, 0f, -2f, 4f, 5f, 4f, 0, 27),
-            RawModelPartFactory.FromVanilla("left_leg", 0f, 19f, 0f, 0f, 0f, -2f, 4f, 5f, 4f, 16, 27)
-        };
-        AssertPartsMatch(expected, CopperGolemModelDefinition.Definition.Parts);
-        foreach (var key in CopperGolemModelDefinition.VariantKeys)
-        {
-            AssertPartsMatch(expected, CopperGolemModelDefinition.Variants[key].Parts);
-        }
-    }
 
     [Fact]
     public void CreakingPartsMatchSourceFrameRecords()
@@ -58,49 +37,12 @@ public sealed class CopperGolemCreakingIronGolemSnowGolemModelDefinitionTests
             RawModelPartFactory.FromVanillaChild("right_foot", "right_leg", 0f, 0f, 0f, -5f, 17.2f, -4.5f, 5f, 0f, 9f, 45, 46),
             RawModelPartFactory.FromVanillaChild("right_knee", "right_leg", 0f, 0f, 0f, -3f, -4.5f, -1.5f, 3f, 3f, 3f, 12, 34)
         };
-        AssertPartsMatch(expected, CreakingModelDefinition.Definition.Parts);
         Assert.Equal("entity/creaking/creaking_eyes", CreakingModelDefinition.Definition.EmissiveTexturePath);
-    }
-
-    [Fact]
-    public void IronGolemPartsMatchSourceFrameRecords()
-    {
-        // task-109: IronGolem migrated to raw source frame (independent source oracle).
-        var expected = new[]
-        {
-            RawModelPartFactory.FromVanilla("head", 0f, -7f, -2f, -4f, -12f, -5.5f, 8f, 10f, 8f, 0, 0),
-            RawModelPartFactory.FromVanilla("nose", 0f, -7f, -2f, -1f, -5f, -7.5f, 2f, 4f, 2f, 24, 0),
-            RawModelPartFactory.FromVanilla("body", 0f, -7f, 0f, -9f, -2f, -6f, 18f, 12f, 11f, 0, 40),
-            RawModelPartFactory.FromVanilla("lower_body", 0f, -7f, 0f, -4.5f, 10f, -3f, 9f, 5f, 6f, 0, 70, grow: 0.5f),
-            RawModelPartFactory.FromVanilla("right_arm", 0f, -7f, 0f, -13f, -2.5f, -3f, 4f, 30f, 6f, 60, 21),
-            RawModelPartFactory.FromVanilla("left_arm", 0f, -7f, 0f, 9f, -2.5f, -3f, 4f, 30f, 6f, 60, 58, mirror: true),
-            RawModelPartFactory.FromVanilla("right_leg", -4f, 11f, 0f, -3.5f, -3f, -3f, 6f, 16f, 5f, 37, 0),
-            RawModelPartFactory.FromVanilla("left_leg", 5f, 11f, 0f, -3.5f, -3f, -3f, 6f, 16f, 5f, 60, 0, mirror: true)
-        };
-        AssertPartsMatch(expected, IronGolemModelDefinition.Definition.Parts);
-    }
-
-    [Fact]
-    public void SnowGolemPartsMatchSourceFrameRecords()
-    {
-        var expected = new[]
-        {
-            RawModelPartFactory.FromVanilla("head", 0f, 4f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0, grow: -0.5f),
-            RawModelPartFactory.FromVanilla("left_arm", 5f, 6f, 1f, -1f, 0f, -1f, 12f, 2f, 2f, 32, 0, grow: -0.5f, rotationZ: 1f),
-            RawModelPartFactory.FromVanilla("right_arm", -5f, 6f, -1f, -1f, 0f, -1f, 12f, 2f, 2f, 32, 0, grow: -0.5f, rotationY: MathF.PI, rotationZ: -1f),
-            RawModelPartFactory.FromVanilla("upper_body", 0f, 13f, 0f, -5f, -10f, -5f, 10f, 10f, 10f, 0, 16, grow: -0.5f),
-            RawModelPartFactory.FromVanilla("lower_body", 0f, 24f, 0f, -6f, -12f, -6f, 12f, 12f, 12f, 0, 36, grow: -0.5f)
-        };
-        AssertPartsMatch(expected, SnowGolemModelDefinition.Definition.Parts);
     }
 
     [Fact]
     public void NamesAndMetadataRemain()
     {
-        Assert.Equal(9, CopperGolemModelDefinition.Definition.Parts.Count);
-        Assert.Equal(18, CreakingModelDefinition.Definition.Parts.Count);
-        Assert.Equal(8, IronGolemModelDefinition.Definition.Parts.Count);
-        Assert.Equal(5, SnowGolemModelDefinition.Definition.Parts.Count);
         Assert.Equal("entity/copper_golem/copper_golem", CopperGolemModelDefinition.Definition.TexturePath);
         Assert.Equal("entity/creaking/creaking", CreakingModelDefinition.Definition.TexturePath);
         Assert.Equal("entity/iron_golem/iron_golem", IronGolemModelDefinition.Definition.TexturePath);

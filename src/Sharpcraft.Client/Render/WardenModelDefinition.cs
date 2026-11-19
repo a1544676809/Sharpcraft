@@ -25,14 +25,7 @@ public static class WardenModelDefinition
 
     private static readonly CompiledEntityModel CompiledModel = BuildCompiled();
 
-    public static readonly EntityModelDefinition Definition = new(
-        "warden",
-        128,
-        128,
-        BuildParts(),
-        faceTransforms: null,
-        texturePath: "entity/warden/warden",
-        compiled: CompiledModel, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new("warden", 128, 128, faceTransforms: null, texturePath: "entity/warden/warden", compiled: CompiledModel, baselinePx: 0f, rawSourceFrame: true);
 
     private static EntityModelPart[] BuildParts()
     {

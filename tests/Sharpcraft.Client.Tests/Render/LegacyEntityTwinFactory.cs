@@ -53,8 +53,12 @@ internal static class LegacyEntityTwinFactory
         RotationX: -rx, RotationY: -ry, RotationZ: rz,
         Parent: parent);
 
-    public static EntityModelDefinition Creeper() => new(
-        "creeper_legacy", 64, 32,
+    private static EntityModelDefinition Build(string name, int w, int h, EntityModelPart[] parts,
+        string texture, float scale = 1f, float baseline = 24f) =>
+        CompiledPartHelper.Legacy(parts, new EntityModelDefinition(name, w, h,
+            PlayerModelDefinition.DefaultFaceTransforms, texture, scale: scale, baselinePx: baseline, rawSourceFrame: false));
+
+    public static EntityModelDefinition Creeper() => Build("creeper_legacy", 64, 32,
         [
             Root("head", 0f, 6f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0),
             Root("body", 0f, 6f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16),
@@ -63,14 +67,11 @@ internal static class LegacyEntityTwinFactory
             Root("left_front_leg", 2f, 18f, -4f, -2f, 0f, -2f, 4f, 6f, 4f, 0, 16),
             Root("right_front_leg", -2f, 18f, -4f, -2f, 0f, -2f, 4f, 6f, 4f, 0, 16)
         ],
-        PlayerModelDefinition.DefaultFaceTransforms, "entity/creeper/creeper", baselinePx: H, rawSourceFrame: false);
+        "entity/creeper/creeper", baseline: H);
 
-    public static EntityModelDefinition Spider(float scale = 1f, string texture = "entity/spider/spider") => new(
-        "spider_legacy", 64, 32, SpiderParts(),
-        PlayerModelDefinition.DefaultFaceTransforms, texture, scale: scale, baselinePx: H, rawSourceFrame: false);
+    public static EntityModelDefinition Spider(float scale = 1f, string texture = "entity/spider/spider") => Build("spider_legacy", 64, 32, SpiderParts(), texture, scale, H);
 
-    public static EntityModelDefinition Wither() => new(
-        "wither_legacy", 64, 64,
+    public static EntityModelDefinition Wither() => Build("wither_legacy", 64, 64,
         [
             Root("shoulders", 0f, 0f, 0f, -10f, 3.9f, -0.5f, 20f, 3f, 3f, 0, 16, mirrorX: false),
             // Pre-migration conjugated rotations: -0.20420352 / -0.83252203 (see main 2fb0f383).
@@ -83,7 +84,7 @@ internal static class LegacyEntityTwinFactory
             Root("right_head", -8f, 4f, 0f, -4f, -4f, -4f, 6f, 6f, 6f, 32, 0),
             Root("left_head", 10f, 4f, 0f, -4f, -4f, -4f, 6f, 6f, 6f, 32, 0)
         ],
-        PlayerModelDefinition.DefaultFaceTransforms, "entity/wither/wither", baselinePx: H, rawSourceFrame: false);
+        "entity/wither/wither", baseline: H);
 
     private static EntityModelPart[] SpiderParts()
     {

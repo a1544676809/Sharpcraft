@@ -46,11 +46,7 @@ public sealed class EntityModelDefinitionAuditTests
     [Fact]
     public void PartOnlyDefinitionFailsLoudlyInBuildModel()
     {
-        var invalid = new EntityModelDefinition(
-            "part_only",
-            PlayerModelDefinition.Definition.TextureWidth,
-            PlayerModelDefinition.Definition.TextureHeight,
-            PlayerModelDefinition.Definition.Parts);
+        var invalid = new EntityModelDefinition("part_only", PlayerModelDefinition.Definition.TextureWidth, PlayerModelDefinition.Definition.TextureHeight);
         Assert.Null(invalid.Compiled);
 
         var atlas = ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)

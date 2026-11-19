@@ -169,8 +169,9 @@ public sealed class ChestMesher
             Array.Copy(geometry.Vertices, vertices, vertices.Length);
             var indices = new uint[geometry.IndexCount];
             Array.Copy(geometry.Indices, indices, indices.Length);
-            var lidStart = definition.Parts.TakeWhile(part => part.Name != "lid")
-                .Sum(part => System.Numerics.BitOperations.PopCount((uint)part.VisibleSides) * 4);
+            // The compiled tree stores the same per-cube source face mask (VisibleSides) in source order.
+            var lidStart = definition.Compiled!.Cubes.TakeWhile(cube => cube.Name != "lid")
+                .Sum(cube => System.Numerics.BitOperations.PopCount((uint)cube.VisibleSides) * 4);
             var result = new RawChestMesh(vertexCount, lidStart, vertices, indices);
             RawCache[definition] = result;
             return result;

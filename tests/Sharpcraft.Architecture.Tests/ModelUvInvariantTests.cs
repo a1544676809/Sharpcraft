@@ -25,13 +25,13 @@ public sealed class ModelUvInvariantTests
     private const int ElytraWingTextureHeight = 32;
 
     /// <summary>The mesher's per-part effective UV box: explicit overrides when set, else the physical box size.</summary>
-    private static (float D, float W, float H) EffectiveUv(in EntityModelPart part) => (
+    private static (float D, float W, float H) EffectiveUv(in EntityModelCube part) => (
         part.UvDepth > 0 ? part.UvDepth : part.Depth,
         part.UvWidth > 0 ? part.UvWidth : part.Width,
         part.UvHeight > 0 ? part.UvHeight : part.Height);
 
     /// <summary>The eight u/v coordinates of the reference 2·(d+w) × (d+h) box unwrap, in texture pixels.</summary>
-    private static (float U0, float U1, float U2, float U3, float U4, float V0, float V1, float V2) UvSpan(in EntityModelPart part)
+    private static (float U0, float U1, float U2, float U3, float U4, float V0, float V1, float V2) UvSpan(in EntityModelCube part)
     {
         var (d, w, h) = EffectiveUv(part);
         var u0 = part.TextureX;
@@ -73,7 +73,7 @@ public sealed class ModelUvInvariantTests
         var violations = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var definition in definitions)
         {
-            foreach (var part in definition.Parts)
+            foreach (var part in definition.Compiled?.Cubes ?? [])
             {
                 // Only solid cuboids have a full positive-area unwrap; zero-thickness parts (fins, layers, group
                 // pivots) are degenerate and are not gated by this pixel-span invariant.
@@ -269,7 +269,7 @@ public sealed class ModelUvInvariantTests
 
         foreach (var definition in EntityModelResolver.Definitions)
         {
-            foreach (var part in definition.Parts)
+            foreach (var part in definition.Compiled?.Cubes ?? [])
             {
                 if (part.UvWidth <= 0 && part.UvHeight <= 0 && part.UvDepth <= 0)
                 {
@@ -291,8 +291,8 @@ public sealed class ModelUvInvariantTests
         }
     }
 
-    private static EntityModelPart FindElytraLeftWing(EntityModelDefinition definition) =>
-        definition.Parts.Single(part => part.Name == "equipment_Elytra_4_left_wing");
+    private static EntityModelCube FindElytraLeftWing(EntityModelDefinition definition) =>
+        definition.Compiled!.Cubes.Single(part => part.Name == "equipment_Elytra_4_left_wing");
 
     /// <summary>
     /// Mirrors the ElytraWingGeometryTests vertex helper: builds the elytra layer and returns the per-vertex texture-pixel

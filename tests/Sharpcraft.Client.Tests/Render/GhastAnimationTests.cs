@@ -117,7 +117,7 @@ public sealed class GhastAnimationTests
     [Fact]
     public void EveryAnimatedPartExistsInTheGhastModel()
     {
-        var modelParts = GhastModelDefinition.Definition.Parts
+        var modelParts = GhastModelDefinition.Definition.StructuralParts()
             .Select(part => part.Name)
             .ToHashSet(StringComparer.Ordinal);
 

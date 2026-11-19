@@ -287,8 +287,8 @@ public sealed class IllagerAnimationTests
     public void ArmPoseOrdinalsDriveCrossedVersusSeparateVisibility()
     {
         var model = IllagerModelDefinition.Vindicator;
-        var armsRight = model.Parts.First(part => part.Name == "arms_right").VisibleWhen!;
-        var rightArm = model.Parts.First(part => part.Name == "right_arm").VisibleWhen!;
+        var armsRight = model.StructuralParts().First(part => part.Name == "arms_right").VisibleWhen!;
+        var rightArm = model.StructuralParts().First(part => part.Name == "right_arm").VisibleWhen!;
 
         var crossed = new EntityRenderState(Id: 1, TypeId: IllagerModelDefinition.VindicatorEntityTypeId, X: 0f, Y: 0f, Z: 0f, Yaw: 0f, Pitch: 0f, ArmPose: (int)IllagerArmPose.Crossed);
         var attacking = crossed with { ArmPose = (int)IllagerArmPose.Attacking };
@@ -336,14 +336,14 @@ public sealed class IllagerAnimationTests
                      IllagerModelDefinition.Pillager, IllagerModelDefinition.Illusioner
                  })
         {
-            var parts = definition.Parts.Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
+            var parts = definition.StructuralParts().Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
             foreach (var name in expected)
             {
                 Assert.Contains(name, parts);
             }
         }
 
-        var vindicatorParts = IllagerModelDefinition.Vindicator.Parts.Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
+        var vindicatorParts = IllagerModelDefinition.Vindicator.StructuralParts().Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
         foreach (var partName in pose.Offsets.Keys)
         {
             Assert.Contains(partName, vindicatorParts);

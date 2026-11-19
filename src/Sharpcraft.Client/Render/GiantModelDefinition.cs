@@ -11,14 +11,5 @@ public static class GiantModelDefinition
 {
     public const int GiantEntityTypeId = 60;
 
-    public static readonly EntityModelDefinition Definition = new(
-        "giant",
-        64,
-        64,
-        HumanoidMobModelDefinition.Zombie.Parts,
-        faceTransforms: null,
-        texturePath: "entity/zombie/zombie",
-        6f,
-        compiled: HumanoidMobModelDefinition.Zombie.Compiled,
-        baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new("giant", 64, 64, faceTransforms: null, texturePath: "entity/zombie/zombie", scale: 6f, compiled: HumanoidMobModelDefinition.Zombie.Compiled, baselinePx: 0f, rawSourceFrame: true);
 }

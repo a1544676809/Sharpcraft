@@ -290,7 +290,7 @@ public sealed class FoxAnimationTests
     [Fact]
     public void EveryAnimatedPartExistsInTheFoxModel()
     {
-        var modelParts = FoxModelDefinition.Definition.Parts.Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
+        var modelParts = FoxModelDefinition.Definition.StructuralParts().Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
         var proxy = new FoxProxy(new FoxAnimationProvider(FoxModelDefinition.FoxEntityTypeId));
         var state = proxy.Provider.CreateState();
 

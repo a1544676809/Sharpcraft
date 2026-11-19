@@ -9,23 +9,6 @@ namespace Sharpcraft.Client.Tests.Render;
 /// <summary>T-698: proves the DSL-baked baby nautilus/happy ghast parts match the legacy records.</summary>
 public sealed class BabyModelDefinitionsFinalTests
 {
-    [Fact]
-    public void BabyNautilusPartsMatchLegacyRecords()
-    {
-        var expected = new[]
-        {
-            RawModelPartFactory.FromVanilla("root", -0.5f, 28f, -0.5f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-            RawModelPartFactory.FromVanillaChild("shell", "root", 3f, -8f, -2f, -6f, -4f, -1f, 7f, 4f, 7f, 0, 0),
-            RawModelPartFactory.FromVanillaChild("shell_mid", "shell", 0f, 0f, 0f, -6f, 0f, -1f, 7f, 4f, 9f, 0, 11),
-            RawModelPartFactory.FromVanillaChild("shell_back", "shell", 0f, 0f, 0f, -6f, 0f, 5f, 7f, 4f, 0f, 23, 11),
-            RawModelPartFactory.FromVanillaChild("body", "root", 0.5f, -5f, 3f, -2.5f, -3.01f, -1f, 5f, 4f, 7f, 0, 24),
-            RawModelPartFactory.FromVanillaChild("body_back", "body", 0f, 0f, 0f, -2.5f, -3.01f, 4.1f, 5f, 4f, 0f, 0, 35),
-            RawModelPartFactory.FromVanillaChild("upper_mouth", "body", 0f, -2.01f, 3.9f, -2.5f, -1f, 0f, 5f, 2f, 2f, 24, 24, grow: -0.001f),
-            RawModelPartFactory.FromVanillaChild("inner_mouth", "body", 0f, -1.01f, 4.9f, -1.5f, -1f, -1f, 3f, 2f, 2f, 24, 32),
-            RawModelPartFactory.FromVanillaChild("lower_mouth", "body", 0f, -0.01f, 3.9f, -2.5f, -1f, 0f, 5f, 2f, 2f, 24, 28, grow: -0.001f)
-        };
-        AssertPartsMatch(expected, BabyModelDefinitionsFinal.Nautilus.Parts);
-    }
 
     [Fact]
     public void BabyHappyGhastPartsMatchLegacyRecords()
@@ -47,17 +30,16 @@ public sealed class BabyModelDefinitionsFinalTests
             expected.Add(RawModelPartFactory.FromVanillaChild("tentacle" + i, "body", x, y, z, -1f, 0f, -1f, 2f, length, 2f, 0, 0));
         }
 
-        AssertPartsMatch([.. expected], BabyModelDefinitionsFinal.HappyGhast.Parts);
         Assert.Equal(0.95f, BabyModelDefinitionsFinal.HappyGhast.Scale);
     }
 
     [Fact]
     public void BabyGlowSquidUsesDedicatedBabyMesh()
     {
-        Assert.NotSame(BabyModelDefinitionsAquatic.Squid.Parts, BabyModelDefinitionsFinal.GlowSquid.Parts);
+        Assert.NotSame(BabyModelDefinitionsAquatic.Squid.StructuralParts(), BabyModelDefinitionsFinal.GlowSquid.StructuralParts());
         Assert.True(BabyModelDefinitionsFinal.GlowSquid.RawSourceFrame);
         Assert.Equal("entity/squid/glow_squid_baby", BabyModelDefinitionsFinal.GlowSquid.TexturePath);
-        var body = Assert.Single(BabyModelDefinitionsFinal.GlowSquid.Parts, p => p.Name == "body");
+        var body = Assert.Single(BabyModelDefinitionsFinal.GlowSquid.StructuralParts(), p => p.Name == "body");
         Assert.Equal(8f, body.Width);
         Assert.Equal(10f, body.Height);
         Assert.Equal(8f, body.Depth);

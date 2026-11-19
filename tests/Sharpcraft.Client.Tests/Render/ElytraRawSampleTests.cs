@@ -29,10 +29,7 @@ public sealed class ElytraRawSampleTests
         Assert.All(groups, group => Assert.Equal(24, group.Count()));
 
         var layer = EntityModelLayerHelpers.BuildElytraSourceLayer(baby);
-        var definition = new EntityModelDefinition(
-            baby ? "elytra_raw_baby" : "elytra_raw_adult",
-            64, 32, [], texturePath: "entity/equipment/wings/elytra",
-            compiled: layer, baselinePx: 0f, rawSourceFrame: true);
+        var definition = new EntityModelDefinition(baby ? "elytra_raw_baby" : "elytra_raw_adult", 64, 32, texturePath: "entity/equipment/wings/elytra", compiled: layer, baselinePx: 0f, rawSourceFrame: true);
         var atlas = ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
         {
             ["entity/equipment/wings/elytra"] = new(64, 32, new byte[64 * 32 * 4])

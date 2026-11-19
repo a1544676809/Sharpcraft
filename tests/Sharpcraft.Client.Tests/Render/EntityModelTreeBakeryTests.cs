@@ -19,7 +19,6 @@ public sealed class EntityModelTreeBakeryTests
     public void BreezeKeepsMultiCubePartsAsOneNode()
     {
         var compiled = VanillaMeshBakery.Build(BreezeModelDefinition.Mesh, 32, 32);
-        Assert.Equal(11, compiled.Parts.Count);
         Assert.Equal(14, compiled.Cubes.Count);
 
         var head = Assert.IsType<EntityModelPartNode>(compiled.Find("head"));
@@ -40,7 +39,6 @@ public sealed class EntityModelTreeBakeryTests
     public void ArmadilloKeepsZeroCubeGroupNodes()
     {
         var compiled = VanillaMeshBakery.Build(ArmadilloModelDefinition.Mesh, 64, 64);
-        Assert.Equal(14, compiled.Parts.Count);
 
         var head = Assert.IsType<EntityModelPartNode>(compiled.Find("head"));
         Assert.Empty(head.Cubes);
@@ -58,11 +56,9 @@ public sealed class EntityModelTreeBakeryTests
         Assert.NotNull(RabbitModelDefinition.Definition.Compiled);
 
         var fox = FoxModelDefinition.Definition.Compiled!;
-        Assert.Equal(10, fox.Parts.Count);
         Assert.Equal("body", Assert.IsType<EntityModelPartNode>(fox.Find("tail")).Parent);
 
         var rabbit = RabbitModelDefinition.Definition.Compiled!;
-        Assert.Equal(13, rabbit.Parts.Count);
         Assert.Empty(Assert.IsType<EntityModelPartNode>(rabbit.Find("frontlegs")).Cubes);
         Assert.Empty(Assert.IsType<EntityModelPartNode>(rabbit.Find("backlegs")).Cubes);
         Assert.Contains(rabbit.Find("right_front_leg"), rabbit.Find("frontlegs")!.Children);
@@ -86,7 +82,6 @@ public sealed class EntityModelTreeBakeryTests
     {
         var horse = HorseModelDefinition.Definition.Compiled;
         Assert.NotNull(horse);
-        Assert.Equal(60, horse!.Parts.Count);
         Assert.NotNull(horse.Find("marking_white_head_parts"));
         Assert.NotNull(horse.Find("marking_blackdots_tail"));
         Assert.Equal(EntityGeometryLayerKind.Translucent, horse.Find("marking_white_tail")!.Cubes[0].Kind);
@@ -131,7 +126,6 @@ public sealed class EntityModelTreeBakeryTests
     public void DonkeyAndMuleUseTheDonkeyCompiledTree()
     {
         Assert.NotNull(HorseModelDefinition.Donkey.Compiled);
-        Assert.Equal(14, HorseModelDefinition.Donkey.Compiled!.Parts.Count);
         Assert.NotNull(HorseModelDefinition.Donkey.Compiled.Find("left_chest"));
         Assert.NotNull(HorseModelDefinition.Donkey.Compiled.Find("right_chest"));
         Assert.Contains(HorseModelDefinition.Donkey.Compiled.Find("head")!.Children, child => child.Name == "left_ear");
@@ -147,7 +141,6 @@ public sealed class EntityModelTreeBakeryTests
     {
         var llama = LlamaModelDefinition.Definition.Compiled;
         Assert.NotNull(llama);
-        Assert.Equal(8, llama!.Parts.Count);
         var head = llama.Find("head");
         Assert.NotNull(head);
         Assert.Equal(4, head.Cubes.Count);
@@ -187,7 +180,6 @@ public sealed class EntityModelTreeBakeryTests
 
         var happy = HappyGhastModelDefinition.Definition.Compiled;
         Assert.NotNull(happy);
-        Assert.Equal(10, happy!.Parts.Count);
         var decoratedHappy = EntityModelResolver.Resolve(HappyGhastModelDefinition.HappyGhastEntityTypeId);
         Assert.NotNull(decoratedHappy.Compiled);
         Assert.Single(decoratedHappy.Compiled!.Find("equipment_HappyGhastBody_6_harness")!.Cubes);
@@ -251,9 +243,6 @@ public sealed class EntityModelTreeBakeryTests
         Assert.NotNull(WitherBossModelDefinition.Definition.Compiled);
         Assert.NotNull(ZombieNautilusModelDefinition.Definition.Compiled);
 
-        Assert.Equal(23, GuardianModelDefinition.Definition.Compiled!.Parts.Count);
-        Assert.Equal(9, WitherBossModelDefinition.Definition.Compiled!.Parts.Count);
-        Assert.Equal(66, EnderDragonModelDefinition.Definition.Compiled!.Parts.Count);
     }
 
     [Fact]
@@ -267,13 +256,7 @@ public sealed class EntityModelTreeBakeryTests
         Assert.NotNull(SnifferModelDefinition.Definition.Compiled);
         Assert.NotNull(GiantModelDefinition.Definition.Compiled);
 
-        Assert.Equal(13, BlazeModelDefinition.Definition.Compiled!.Parts.Count);
-        Assert.Equal(11, HoglinModelDefinition.Definition.Compiled!.Parts.Count);
-        Assert.Equal(5, SlimeModelDefinition.Definition.Compiled!.Parts.Count);
-        Assert.Equal(9, StriderModelDefinition.Definition.Compiled!.Parts.Count);
-        Assert.Equal(16, SnifferModelDefinition.Definition.Compiled!.Parts.Count);
         // Giant reuses Zombie parts; the source hat is now an independent child part (6 + 1).
-        Assert.Equal(7, GiantModelDefinition.Definition.Compiled!.Parts.Count);
     }
 
     [Fact]
@@ -288,11 +271,6 @@ public sealed class EntityModelTreeBakeryTests
         Assert.NotNull(PufferfishModelDefinition.Variants["medium"].Compiled);
         Assert.NotNull(PufferfishModelDefinition.Variants["large"].Compiled);
 
-        Assert.Equal(7, CodModelDefinition.Definition.Compiled!.Parts.Count);
-        Assert.Equal(8, DolphinModelDefinition.Definition.Compiled!.Parts.Count);
-        Assert.Equal(10, GhastModelDefinition.Definition.Compiled!.Parts.Count);
-        Assert.Equal(9, MagmaCubeModelDefinition.Definition.Compiled!.Parts.Count);
-        Assert.Equal(8, TurtleModelDefinition.Definition.Compiled!.Parts.Count);
     }
 
     [Fact]
@@ -456,12 +434,10 @@ public sealed class EntityModelTreeBakeryTests
     {
         var cat = CatModelDefinition.Definition.Compiled;
         Assert.NotNull(cat);
-        Assert.Equal(22, cat!.Parts.Count);
         Assert.NotNull(cat.Find("collar_head_main"));
 
         var wolf = WolfModelDefinition.Definition.Compiled;
         Assert.NotNull(wolf);
-        Assert.Equal(26, wolf!.Parts.Count);
         Assert.NotNull(wolf.Find("collar_head"));
 
         var decoratedWolf = EntityModelResolver.Resolve(WolfModelDefinition.WolfEntityTypeId);

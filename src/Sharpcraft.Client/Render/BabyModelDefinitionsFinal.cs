@@ -15,20 +15,11 @@ public static class BabyModelDefinitionsFinal
     private static readonly CompiledEntityModel HappyGhastCompiled = VanillaMeshBakery.Build(HappyGhastMesh, 64, 64, rawSourceFrame: true);
     private static readonly CompiledEntityModel GlowSquidCompiled = VanillaMeshBakery.Build(GlowSquidMesh, 32, 32, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Nautilus = new(
-        "baby_nautilus", 64, 64, [.. VanillaMeshBake.Bake(NautilusMesh, 0, 0, rawSourceFrame: true)],
-        faceTransforms: null, "entity/nautilus/nautilus_baby",
-        compiled: NautilusCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Nautilus = new("baby_nautilus", 64, 64, faceTransforms: null, texturePath: "entity/nautilus/nautilus_baby", compiled: NautilusCompiled, baselinePx: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition HappyGhast = new(
-        "baby_happy_ghast", 64, 64, [.. VanillaMeshBake.Bake(HappyGhastMesh, 0, 0, rawSourceFrame: true)],
-        faceTransforms: null, "entity/ghast/happy_ghast_baby", 0.95f,
-        compiled: HappyGhastCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition HappyGhast = new("baby_happy_ghast", 64, 64, faceTransforms: null, texturePath: "entity/ghast/happy_ghast_baby", scale: 0.95f, compiled: HappyGhastCompiled, baselinePx: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition GlowSquid = new(
-        "baby_glow_squid", 32, 32, [.. VanillaMeshBake.Bake(GlowSquidMesh, 0, 0, rawSourceFrame: true)],
-        faceTransforms: null, "entity/squid/glow_squid_baby",
-        compiled: GlowSquidCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition GlowSquid = new("baby_glow_squid", 32, 32, faceTransforms: null, texturePath: "entity/squid/glow_squid_baby", compiled: GlowSquidCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly IReadOnlyDictionary<int, EntityModelDefinition> Models =
         new Dictionary<int, EntityModelDefinition>

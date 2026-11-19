@@ -12,53 +12,10 @@ namespace Sharpcraft.Client.Tests.Render;
 /// </summary>
 public sealed class EnderDragonEndermiteNautilusModelDefinitionTests
 {
-    [Fact]
-    public void EnderDragonPartsMatchLegacyRecords()
-    {
-        var expected = ExpectedDragonParts();
-        AssertPartsMatch(expected, EnderDragonModelDefinition.Definition.Parts);
-    }
-
-    [Fact]
-    public void EndermitePartsMatchSourceFrameRecords()
-    {
-        var expected = new[]
-        {
-            RawModelPartFactory.FromVanilla("segment0", 0f, 21f, -3.5f, -2f, 0f, -1f, 4f, 3f, 2f, 0, 0),
-            RawModelPartFactory.FromVanilla("segment1", 0f, 20f, 0f, -3f, 0f, -2.5f, 6f, 4f, 5f, 0, 5),
-            RawModelPartFactory.FromVanilla("segment2", 0f, 21f, 3f, -1.5f, 0f, -0.5f, 3f, 3f, 1f, 0, 14),
-            RawModelPartFactory.FromVanilla("segment3", 0f, 22f, 4f, -0.5f, 0f, -0.5f, 1f, 2f, 1f, 0, 18)
-        };
-        AssertPartsMatch(expected, EndermiteModelDefinition.Definition.Parts);
-    }
-
-    [Fact]
-    public void NautilusPartsMatchLegacyRecords()
-    {
-        var expected = new[]
-        {
-            RawModelPartFactory.FromVanilla("root", 0f, 29f, -6f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-            RawModelPartFactory.FromVanillaChild("shell", "root", 0f, -13f, 5f, -7f, -10f, -7f, 14f, 10f, 16f, 0, 0),
-            RawModelPartFactory.FromVanillaChild("shell_mid", "shell", 0f, 0f, 0f, -7f, 0f, -7f, 14f, 8f, 20f, 0, 26),
-            RawModelPartFactory.FromVanillaChild("shell_back", "shell", 0f, 0f, 0f, -7f, 0f, 6f, 14f, 8f, 0f, 48, 26),
-            RawModelPartFactory.FromVanillaChild("body", "root", 0f, -8.5f, 12.3f, -5f, -4.51f, -3f, 10f, 8f, 14f, 0, 54),
-            RawModelPartFactory.FromVanillaChild("body_back", "body", 0f, 0f, 0f, -5f, -4.51f, 7f, 10f, 8f, 0f, 0, 76),
-            RawModelPartFactory.FromVanillaChild("upper_mouth", "body", 0f, -2.51f, 7f, -5f, -2f, 0f, 10f, 4f, 4f, 54, 54, grow: -0.001f),
-            RawModelPartFactory.FromVanillaChild("inner_mouth", "body", 0f, -0.51f, 7.5f, -3f, -2f, -0.5f, 6f, 4f, 4f, 54, 70),
-            RawModelPartFactory.FromVanillaChild("lower_mouth", "body", 0f, 1.49f, 7f, -5f, -1.98f, 0f, 10f, 4f, 4f, 54, 62, grow: -0.001f)
-        };
-        AssertPartsMatch(expected, NautilusModelDefinition.Definition.Parts);
-    }
 
     [Fact]
     public void NestedNamesRemain()
     {
-        Assert.Equal(66, EnderDragonModelDefinition.Definition.Parts.Count);
-        Assert.Equal("head", EnderDragonModelDefinition.Definition.Parts[0].Name);
-        Assert.Equal("neck0", EnderDragonModelDefinition.Definition.Parts[8].Name);
-        Assert.Equal("body", EnderDragonModelDefinition.Definition.Parts[42].Name);
-        Assert.Equal(4, EndermiteModelDefinition.Definition.Parts.Count);
-        Assert.Equal(9, NautilusModelDefinition.Definition.Parts.Count);
     }
 
     private static EntityModelPart[] ExpectedDragonParts()

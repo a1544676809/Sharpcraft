@@ -111,7 +111,7 @@ public sealed class VanillaMeshBakeConversionTests
         var partCount = 0;
         foreach (var definition in definitions)
         {
-            foreach (var part in definition.Parts)
+            foreach (var part in definition.StructuralParts())
             {
                 partCount++;
                 Assert.False(string.IsNullOrEmpty(part.Name));

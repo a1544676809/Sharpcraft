@@ -19,16 +19,7 @@ public static class SnifferModelDefinition
     private static readonly CompiledEntityModel SnifferCompiled =
         VanillaMeshBakery.Build(SnifferMesh, 192, 192, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Definition = new(
-        "sniffer",
-        192,
-        192,
-        BuildParts(),
-        faceTransforms: null,
-        "entity/sniffer/sniffer",
-        compiled: SnifferCompiled,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new("sniffer", 192, 192, faceTransforms: null, texturePath: "entity/sniffer/sniffer", compiled: SnifferCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     private static EntityModelPart[] BuildParts()
     {

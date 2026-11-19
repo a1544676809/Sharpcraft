@@ -208,7 +208,7 @@ public sealed class CreakingAnimationTests
     [Fact]
     public void EveryAnimatedPartExistsInTheCreakingModel()
     {
-        var modelParts = CreakingModelDefinition.Definition.Parts.Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
+        var modelParts = CreakingModelDefinition.Definition.StructuralParts().Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
         foreach (var definition in new[]
                  {
                      CreakingAnimations.Walk,

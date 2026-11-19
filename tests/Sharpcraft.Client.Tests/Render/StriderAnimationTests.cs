@@ -215,7 +215,7 @@ public sealed class StriderAnimationTests
     [Fact]
     public void EveryAnimatedPartExistsInTheStriderModel()
     {
-        var modelParts = StriderModelDefinition.Definition.Parts
+        var modelParts = StriderModelDefinition.Definition.StructuralParts()
             .Select(part => part.Name)
             .ToHashSet(StringComparer.Ordinal);
 

@@ -30,14 +30,7 @@ public static class PiglinModelDefinition
         VanillaMeshBakery.Build(PiglinHeadMesh, 64, 64, modelHeight: 0f, texturePath: "entity/piglin/piglin");
 
     /// <summary>Head-only piglin skull definition (head, nose, nostrils and ears), shared with the piglin entity model.</summary>
-    public static readonly EntityModelDefinition Head = new(
-        "piglin_head",
-        64,
-        64,
-        HeadParts,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/piglin/piglin",
-        compiled: HeadCompiled)
+    public static readonly EntityModelDefinition Head = new("piglin_head", 64, 64, PlayerModelDefinition.DefaultFaceTransforms, "entity/piglin/piglin", compiled: HeadCompiled)
     {
         // VanillaMeshBake emits y-up geometry; the skull renderer's source pose includes scale(-1,-1,1).
         // ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/piglin/PiglinModel.java
@@ -121,36 +114,9 @@ public static class PiglinModelDefinition
         return new VanillaMeshDefinition(root);
     }
 
-    public static readonly EntityModelDefinition Definition = new(
-        "piglin",
-        64,
-        64,
-        BuildParts(),
-        faceTransforms: null,
-        "entity/piglin/piglin",
-        compiled: PiglinCompiled,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new("piglin", 64, 64, faceTransforms: null, texturePath: "entity/piglin/piglin", compiled: PiglinCompiled, baselinePx: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Brute = new(
-        "piglin_brute",
-        64,
-        64,
-        BuildParts(),
-        faceTransforms: null,
-        "entity/piglin/piglin_brute",
-        compiled: PiglinCompiled,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Brute = new("piglin_brute", 64, 64, faceTransforms: null, texturePath: "entity/piglin/piglin_brute", compiled: PiglinCompiled, baselinePx: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Zombified = new(
-        "zombified_piglin",
-        64,
-        64,
-        BuildParts(),
-        faceTransforms: null,
-        "entity/piglin/zombified_piglin",
-        compiled: PiglinCompiled,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Zombified = new("zombified_piglin", 64, 64, faceTransforms: null, texturePath: "entity/piglin/zombified_piglin", compiled: PiglinCompiled, baselinePx: 0f, rawSourceFrame: true);
 }

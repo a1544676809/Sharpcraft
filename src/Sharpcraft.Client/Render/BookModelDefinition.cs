@@ -40,16 +40,7 @@ public static class BookModelDefinition
         VanillaMeshBakery.Build(BookMesh, TextureWidth, TextureHeight, modelHeight: 0f, texturePath: TexturePath, rawSourceFrame: true);
 
     /// <summary>Baked book definition shared by lecterns and enchanting tables (raw source frame).</summary>
-    public static readonly EntityModelDefinition Definition = new(
-        name: "book",
-        textureWidth: TextureWidth,
-        textureHeight: TextureHeight,
-        parts: Parts,
-        faceTransforms: null,
-        texturePath: TexturePath,
-        compiled: BookCompiled,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new(name: "book", textureWidth: TextureWidth, textureHeight: TextureHeight, faceTransforms: null, texturePath: TexturePath, compiled: BookCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     /// <summary>Builds the static pose for one <see cref="BookModelState"/>.</summary>
     /// <param name="state">Openness and page-flip values.</param>

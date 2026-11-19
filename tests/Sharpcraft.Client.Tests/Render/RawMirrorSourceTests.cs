@@ -39,7 +39,7 @@ public sealed class RawMirrorSourceTests
     public void MirrorPartMatchesSourceByIdentity(string partName)
     {
         var def = SpiderModelDefinition.Definition;
-        var part = def.Parts.Single(p => p.Name == partName);
+        var part = def.StructuralParts().Single(p => p.Name == partName);
         Assert.True(part.Mirror, $"{partName} must be a real Mirror part");
 
         var rows = File.ReadLines(SamplePath)

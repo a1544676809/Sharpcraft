@@ -69,7 +69,7 @@ public sealed class WardenAnimationTests
     [Fact]
     public void EveryAnimatedPartExistsInTheWardenModel()
     {
-        var modelParts = WardenModelDefinition.Definition.Parts
+        var modelParts = WardenModelDefinition.Definition.StructuralParts()
             .Select(part => part.Name)
             .ToHashSet(StringComparer.Ordinal);
 

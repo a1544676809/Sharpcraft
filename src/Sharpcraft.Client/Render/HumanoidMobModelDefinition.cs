@@ -28,14 +28,7 @@ public static class HumanoidMobModelDefinition
     private static readonly CompiledEntityModel EndermanCompiled =
         VanillaMeshBakery.Build(EndermanMesh, 64, 32, modelHeight: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Enderman = new(
-        "enderman",
-        64,
-        32,
-        [.. VanillaMeshBake.Bake(EndermanMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
-        faceTransforms: null,
-        texturePath: "entity/enderman/enderman", 1f, "entity/enderman/enderman_eyes",
-        compiled: EndermanCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Enderman = new("enderman", 64, 32, faceTransforms: null, texturePath: "entity/enderman/enderman", scale: 1f, emissiveTexturePath: "entity/enderman/enderman_eyes", compiled: EndermanCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildEndermanMesh()
     {
@@ -64,14 +57,7 @@ public static class HumanoidMobModelDefinition
     private static readonly CompiledEntityModel DrownedCompiled =
         VanillaMeshBakery.Build(DrownedMesh, 64, 64, modelHeight: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Drowned = new(
-        "drowned",
-        64,
-        64,
-        [.. VanillaMeshBake.Bake(DrownedMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
-        faceTransforms: null,
-        "entity/zombie/drowned",
-        compiled: DrownedCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Drowned = new("drowned", 64, 64, faceTransforms: null, texturePath: "entity/zombie/drowned", compiled: DrownedCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildDrownedMesh()
     {
@@ -109,15 +95,7 @@ public static class HumanoidMobModelDefinition
     private static readonly CompiledEntityModel HuskCompiled =
         VanillaMeshBakery.Build(HuskMesh, 64, 64, modelHeight: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Husk = new(
-        "husk",
-        64,
-        64,
-        [.. VanillaMeshBake.Bake(HuskMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
-        faceTransforms: null,
-        "entity/zombie/husk",
-        1.0625f,
-        compiled: HuskCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Husk = new("husk", 64, 64, faceTransforms: null, texturePath: "entity/zombie/husk", scale: 1.0625f, compiled: HuskCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildHuskMesh()
     {
@@ -146,14 +124,7 @@ public static class HumanoidMobModelDefinition
     private static readonly CompiledEntityModel SkeletonCompiled =
         VanillaMeshBakery.Build(SkeletonMesh, 64, 32, modelHeight: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Skeleton = new(
-        "skeleton",
-        64,
-        32,
-        [.. VanillaMeshBake.Bake(SkeletonMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
-        faceTransforms: null,
-        "entity/skeleton/skeleton",
-        compiled: SkeletonCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Skeleton = new("skeleton", 64, 32, faceTransforms: null, texturePath: "entity/skeleton/skeleton", compiled: SkeletonCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildSkeletonMesh()
     {
@@ -185,7 +156,7 @@ public static class HumanoidMobModelDefinition
         VanillaMeshBakery.Build(BoggedMesh, 64, 32, modelHeight: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Bogged = WithClothing("bogged", "entity/skeleton/bogged", "entity/skeleton/bogged_overlay", 0.2f,
-        BoggedMesh, BoggedParts, BoggedCompiled);
+        BoggedMesh, BoggedCompiled);
 
     private static VanillaMeshDefinition BuildBoggedMesh()
     {
@@ -217,12 +188,9 @@ public static class HumanoidMobModelDefinition
         string overlayPath,
         float grow,
         VanillaMeshDefinition? baseMesh = null,
-        EntityModelPart[]? baseParts = null,
         CompiledEntityModel? baseCompiled = null)
     {
-        var parts = new List<EntityModelPart>(baseParts ?? Skeleton.Parts);
         var clothingMesh = BuildClothingMesh(overlayPath, grow);
-        parts.AddRange(VanillaMeshBake.Bake(clothingMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true));
         var clothingCompiled = VanillaMeshBakery.Build(clothingMesh, 64, 32, modelHeight: 0f, rawSourceFrame: true);
         var compiled = EntityModelLayerHelpers.WithModelLayer(
             baseCompiled ?? SkeletonCompiled,
@@ -230,9 +198,7 @@ public static class HumanoidMobModelDefinition
             "outer_",
             _ => overlayPath,
             fallbackTexture: overlayPath);
-        return new EntityModelDefinition(
-            name, 64, 32, parts, faceTransforms: null, texturePath,
-            compiled: compiled, baselinePx: 0f, rawSourceFrame: true);
+        return new EntityModelDefinition(name, 64, 32, faceTransforms: null, texturePath: texturePath, compiled: compiled, baselinePx: 0f, rawSourceFrame: true);
     }
 
     /// <summary>
@@ -265,9 +231,7 @@ public static class HumanoidMobModelDefinition
         return new VanillaMeshDefinition(root);
     }
 
-    public static readonly EntityModelDefinition WitherSkeleton = new(
-        "wither_skeleton", 64, 32, Skeleton.Parts, faceTransforms: null,
-        texturePath: "entity/skeleton/wither_skeleton", 1.2f, compiled: SkeletonCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition WitherSkeleton = new("wither_skeleton", 64, 32, faceTransforms: null, texturePath: "entity/skeleton/wither_skeleton", scale: 1.2f, compiled: SkeletonCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     /// <summary>Declarative DSL tree for the zombie's six parts (T-672).</summary>
     private static readonly VanillaMeshDefinition ZombieMesh = BuildZombieMesh();
@@ -275,14 +239,7 @@ public static class HumanoidMobModelDefinition
     private static readonly CompiledEntityModel ZombieCompiled =
         VanillaMeshBakery.Build(ZombieMesh, 64, 64, modelHeight: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Zombie = new(
-        "zombie",
-        64,
-        64,
-        [.. VanillaMeshBake.Bake(ZombieMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
-        faceTransforms: null,
-        "entity/zombie/zombie",
-        compiled: ZombieCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Zombie = new("zombie", 64, 64, faceTransforms: null, texturePath: "entity/zombie/zombie", compiled: ZombieCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildZombieMesh()
     {

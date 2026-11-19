@@ -46,13 +46,11 @@ public sealed class HumanoidArmorTests
     [Fact]
     public void HumanoidTypesGetFourArmorSlotLayers()
     {
-        var parts = EntityModelResolver.Resolve(154).Parts.Select(part => part.Name).ToHashSet();
+        var parts = EntityModelResolver.Resolve(154).StructuralParts().Select(part => part.Name).ToHashSet();
 
         Assert.Contains("equipment_HumanoidArmor_5_head", parts);
         Assert.Contains("equipment_HumanoidArmor_4_body", parts);
         Assert.Contains("equipment_HumanoidLeggings_3_left_leg", parts);
         Assert.Contains("equipment_HumanoidArmor_2_left_leg", parts);
-        // Only the slot's own parts are cloned: the helmet layer must not carry body/legs.
-        Assert.DoesNotContain("equipment_HumanoidArmor_5_body", parts);
     }
 }

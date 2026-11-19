@@ -281,14 +281,14 @@ public sealed class PiglinAnimationTests
 
         foreach (var definition in new[] { PiglinModelDefinition.Definition, PiglinModelDefinition.Brute, PiglinModelDefinition.Zombified })
         {
-            var parts = definition.Parts.Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
+            var parts = definition.StructuralParts().Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
             foreach (var name in expected)
             {
                 Assert.Contains(name, parts);
             }
         }
 
-        var modelParts = PiglinModelDefinition.Definition.Parts.Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
+        var modelParts = PiglinModelDefinition.Definition.StructuralParts().Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
         foreach (var partName in pose.Offsets.Keys)
         {
             Assert.Contains(partName, modelParts);

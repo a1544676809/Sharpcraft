@@ -106,7 +106,7 @@ public sealed class CopperGolemAnimationTests
     [Fact]
     public void EveryAnimatedPartExistsInTheCopperGolemModel()
     {
-        var modelParts = CopperGolemModelDefinition.Definition.Parts
+        var modelParts = CopperGolemModelDefinition.Definition.StructuralParts()
             .Select(part => part.Name)
             .ToHashSet(StringComparer.Ordinal);
 

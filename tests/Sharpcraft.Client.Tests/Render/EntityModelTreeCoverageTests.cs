@@ -56,7 +56,7 @@ public sealed class EntityModelTreeCoverageTests
             // are legal inside a tree (they carry pose/visibility), but the compiled snapshot as a whole must not be
             // empty; BuildElytraLayer can legitimately return an empty tree, yet that is a derived layer model and
             // never a registered definition.
-            if (compiled.Parts.Count == 0)
+            if (compiled.StructuralParts().Count == 0)
             {
                 violations.Add(definition.Name + ": empty Parts");
             }

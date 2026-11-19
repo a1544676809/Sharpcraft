@@ -236,7 +236,7 @@ public sealed class VexAnimationTests
     [Fact]
     public void EveryAnimatedPartExistsInTheVexModel()
     {
-        var modelParts = VexModelDefinition.Definition.Parts
+        var modelParts = VexModelDefinition.Definition.StructuralParts()
             .Select(part => part.Name)
             .ToHashSet(StringComparer.Ordinal);
 

@@ -24,21 +24,13 @@ public static class BabyModelDefinitionsEquine
     private static readonly CompiledEntityModel CamelCompiled = VanillaMeshBakery.Build(CamelMesh, 64, 64, rawSourceFrame: true);
     private static readonly CompiledEntityModel DonkeyCompiled = VanillaMeshBakery.Build(DonkeyMesh, 64, 64, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Horse = new(
-        "baby_horse", 64, 64, HorseParts, faceTransforms: null, "entity/horse/horse_brown_baby",
-        compiled: HorseMarkedCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Horse = new("baby_horse", 64, 64, faceTransforms: null, texturePath: "entity/horse/horse_brown_baby", compiled: HorseMarkedCompiled, baselinePx: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Llama = new(
-        "baby_llama", 64, 64, LlamaParts, faceTransforms: null, "entity/llama/llama_brown_baby",
-        compiled: LlamaCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Llama = new("baby_llama", 64, 64, faceTransforms: null, texturePath: "entity/llama/llama_brown_baby", compiled: LlamaCompiled, baselinePx: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Camel = new(
-        "baby_camel", 64, 64, CamelParts, faceTransforms: null, "entity/camel/camel_baby",
-        compiled: CamelCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Camel = new("baby_camel", 64, 64, faceTransforms: null, texturePath: "entity/camel/camel_baby", compiled: CamelCompiled, baselinePx: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Donkey = new(
-        "baby_donkey", 64, 64, DonkeyParts, faceTransforms: null, "entity/horse/donkey_baby",
-        compiled: DonkeyCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Donkey = new("baby_donkey", 64, 64, faceTransforms: null, texturePath: "entity/horse/donkey_baby", compiled: DonkeyCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly IReadOnlyDictionary<int, EntityModelDefinition> Models =
         new Dictionary<int, EntityModelDefinition>
@@ -73,7 +65,7 @@ public static class BabyModelDefinitionsEquine
         {
             if (key != "brown")
             {
-                variants[(HorseModelDefinition.HorseEntityTypeId, key)] = new("baby_horse_" + key, 64, 64, HorseParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/horse/" + horseFiles[key] + "_baby", compiled: HorseMarkedCompiled);
+                variants[(HorseModelDefinition.HorseEntityTypeId, key)] = new("baby_horse_" + key, 64, 64, PlayerModelDefinition.DefaultFaceTransforms, "entity/horse/" + horseFiles[key] + "_baby", compiled: HorseMarkedCompiled);
             }
         }
 
@@ -81,7 +73,7 @@ public static class BabyModelDefinitionsEquine
         {
             if (key != "brown")
             {
-                variants[(LlamaModelDefinition.LlamaEntityTypeId, key)] = new("baby_llama_" + key, 64, 64, LlamaParts, faceTransforms: null, "entity/llama/llama_" + key + "_baby", compiled: LlamaCompiled, baselinePx: 0f, rawSourceFrame: true);
+                variants[(LlamaModelDefinition.LlamaEntityTypeId, key)] = new("baby_llama_" + key, 64, 64, faceTransforms: null, texturePath: "entity/llama/llama_" + key + "_baby", compiled: LlamaCompiled, baselinePx: 0f, rawSourceFrame: true);
             }
         }
 

@@ -24,27 +24,9 @@ public static class HoglinModelDefinition
     private static readonly CompiledEntityModel HoglinCompiled =
         VanillaMeshBakery.Build(HoglinMesh, 128, 64, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Definition = new(
-        "hoglin",
-        128,
-        64,
-        Parts,
-        faceTransforms: null,
-        "entity/hoglin/hoglin",
-        compiled: HoglinCompiled,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new("hoglin", 128, 64, faceTransforms: null, texturePath: "entity/hoglin/hoglin", compiled: HoglinCompiled, baselinePx: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Zoglin = new(
-        "zoglin",
-        128,
-        64,
-        Parts,
-        faceTransforms: null,
-        "entity/hoglin/zoglin",
-        compiled: HoglinCompiled,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Zoglin = new("zoglin", 128, 64, faceTransforms: null, texturePath: "entity/hoglin/zoglin", compiled: HoglinCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildHoglinMesh()
     {

@@ -115,8 +115,8 @@ public sealed class LlamaAnimationTests
     [Fact]
     public void EveryAnimatedPartExistsInTheLlamaAndTraderLlamaModels()
     {
-        var llamaParts = LlamaModelDefinition.Definition.Parts.Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
-        var traderParts = TraderLlamaModelDefinition.Definition.Parts.Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
+        var llamaParts = LlamaModelDefinition.Definition.StructuralParts().Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
+        var traderParts = TraderLlamaModelDefinition.Definition.StructuralParts().Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
         var pose = Apply(Frame(pitch: 5f, yaw: 45f, walkPos: 0.8f, walkSpeed: 1f));
 
         Assert.NotEmpty(pose.Offsets);

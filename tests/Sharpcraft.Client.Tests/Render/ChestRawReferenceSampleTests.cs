@@ -54,11 +54,11 @@ public sealed class ChestRawReferenceSampleTests
     [Fact]
     public void DoubleHalvesDropTheJoinFace()
     {
-        Assert.All(ChestModelDefinition.DoubleLeft.Parts,
+        Assert.All(ChestModelDefinition.DoubleLeft.StructuralParts(),
             part => Assert.NotEqual(EntityModelVisibleSides.All, part.VisibleSides));
-        Assert.All(ChestModelDefinition.DoubleLeft.Parts,
+        Assert.All(ChestModelDefinition.DoubleLeft.StructuralParts(),
             part => Assert.Equal(0, (int)(part.VisibleSides & EntityModelVisibleSides.West)));
-        Assert.All(ChestModelDefinition.DoubleRight.Parts,
+        Assert.All(ChestModelDefinition.DoubleRight.StructuralParts(),
             part => Assert.Equal(0, (int)(part.VisibleSides & EntityModelVisibleSides.East)));
     }
 

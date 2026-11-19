@@ -41,17 +41,5 @@ public static class GhastModelDefinition
         return new VanillaMeshDefinition(root);
     }
 
-    public static readonly EntityModelDefinition Definition = new(
-        "ghast",
-        64,
-        32,
-        [.. VanillaMeshBake.Bake(GhastMesh, 0, 0, rawSourceFrame: true)],
-        faceTransforms: null,
-        "entity/ghast/ghast",
-        4.5f,
-        textureSelector: state => state.IsCharging ? "entity/ghast/ghast_shooting" : "entity/ghast/ghast",
-        additionalTexturePaths: ["entity/ghast/ghast_shooting"],
-        compiled: GhastCompiled,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new("ghast", 64, 32, faceTransforms: null, texturePath: "entity/ghast/ghast", scale: 4.5f, textureSelector: state => state.IsCharging ? "entity/ghast/ghast_shooting" : "entity/ghast/ghast", additionalTexturePaths: ["entity/ghast/ghast_shooting"], compiled: GhastCompiled, baselinePx: 0f, rawSourceFrame: true);
 }

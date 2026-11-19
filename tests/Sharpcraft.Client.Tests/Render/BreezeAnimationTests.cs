@@ -190,7 +190,7 @@ public sealed class BreezeAnimationTests
     [Fact]
     public void EveryAnimatedBoneExistsInTheBreezeModel()
     {
-        var modelParts = BreezeModelDefinition.Definition.Parts.Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
+        var modelParts = BreezeModelDefinition.Definition.StructuralParts().Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
         foreach (var definition in new[]
                  {
                      BreezeAnimations.Idle,

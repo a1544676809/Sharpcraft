@@ -123,7 +123,7 @@ public sealed class CodAnimationTests
     [Fact]
     public void EveryAnimatedPartExistsInTheCodModel()
     {
-        var modelParts = CodModelDefinition.Definition.Parts
+        var modelParts = CodModelDefinition.Definition.StructuralParts()
             .Select(part => part.Name)
             .ToHashSet(StringComparer.Ordinal);
 

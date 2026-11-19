@@ -157,7 +157,7 @@ public sealed class RabbitAnimationTests
     [Fact]
     public void EveryAnimatedPartExistsInTheRabbitModel()
     {
-        var modelParts = RabbitModelDefinition.Definition.Parts.Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
+        var modelParts = RabbitModelDefinition.Definition.StructuralParts().Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
         var pose = Apply(Frame(idleStarted: true, idleAgeTicks: 10f));
 
         Assert.NotEmpty(pose.Offsets);

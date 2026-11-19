@@ -208,7 +208,7 @@ public sealed class WolfAnimationTests
     [Fact]
     public void EveryAnimatedPartExistsInTheWolfModel()
     {
-        var modelParts = WolfModelDefinition.Definition.Parts.Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
+        var modelParts = WolfModelDefinition.Definition.StructuralParts().Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
         foreach (var part in new[]
                  {
                      "head", "body", "upper_body", "tail",

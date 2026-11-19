@@ -155,7 +155,7 @@ public sealed class VisibleSidesTests
             ]));
         var baked = EntityModelDefinition.FromTree("mask_cube", 64, 64, mesh,
             faceTransforms: null, "entity/test", 1f, baselinePx: 0f, rawSourceFrame: true);
-        var part = baked.Parts.Single(p => p.Name == "cube") with { VisibleSides = mask };
+        var part = baked.StructuralParts().Single(p => p.Name == "cube") with { VisibleSides = mask };
         // Production is compiled-only: rebuild the isolated masked cube as a root-level compiled node.
         // Equivalent to the former flat part-only definition byte-for-byte; both then use compiled Emit.
         var def = CompiledPartHelper.Definition("mask_cube", 64, 64, part, "entity/test");

@@ -46,14 +46,7 @@ public static class SalmonModelDefinition
     /// <summary>Synced variant ids: SMALL, MEDIUM, LARGE.</summary>
     public static readonly IReadOnlyList<string> VariantKeys = ["small", "medium", "large"];
 
-    public static readonly EntityModelDefinition Definition = new(
-        "salmon",
-        32,
-        32,
-        Parts,
-        faceTransforms: null,
-        texturePath: "entity/fish/salmon",
-        compiled: SalmonCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new("salmon", 32, 32, faceTransforms: null, texturePath: "entity/fish/salmon", compiled: SalmonCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants = BuildVariants();
 
@@ -65,15 +58,7 @@ public static class SalmonModelDefinition
             var key = VariantKeys[i];
             variants[key] = key == "medium"
                 ? Definition
-                : new EntityModelDefinition(
-                    "salmon_" + key,
-                    32,
-                    32,
-                    Parts,
-                    faceTransforms: null,
-                    "entity/fish/salmon",
-                    VariantScale[i],
-                    compiled: SalmonCompiled);
+                : new EntityModelDefinition("salmon_" + key, 32, 32, faceTransforms: null, texturePath: "entity/fish/salmon", scale: VariantScale[i], compiled: SalmonCompiled);
         }
 
         return variants;

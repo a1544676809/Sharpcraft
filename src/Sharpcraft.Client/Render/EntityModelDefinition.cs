@@ -8,7 +8,9 @@ using Sharpcraft.Framework.Rendering;
 
 /// <summary>
 /// A render-only entity model definition. This mirrors the role of the reference LayerDefinition/EntityModelSet:
-/// named parts, texture dimensions and per-face UV defaults. It never references entity simulation.
+/// a compiled structural model tree, texture dimensions and per-face UV defaults. Production geometry is
+/// compiled-only; a definition without <see cref="Compiled"/> fails explicitly in the mesher. It never
+/// references entity simulation.
 /// </summary>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.EntityModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/EntityModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class EntityModelDefinition
@@ -17,7 +19,6 @@ public sealed class EntityModelDefinition
         string name,
         int textureWidth,
         int textureHeight,
-        IReadOnlyList<EntityModelPart> parts,
         IReadOnlyDictionary<string, FaceUvTransform>? faceTransforms = null,
         string? texturePath = null,
         float scale = 1f,
@@ -39,7 +40,6 @@ public sealed class EntityModelDefinition
         Name = name;
         TextureWidth = textureWidth;
         TextureHeight = textureHeight;
-        Parts = parts;
         FaceTransforms = faceTransforms ?? new Dictionary<string, FaceUvTransform>();
         TexturePath = texturePath;
         Scale = scale;
@@ -66,7 +66,6 @@ public sealed class EntityModelDefinition
     public string Name { get; }
     public int TextureWidth { get; }
     public int TextureHeight { get; }
-    public IReadOnlyList<EntityModelPart> Parts { get; }
     public IReadOnlyDictionary<string, FaceUvTransform> FaceTransforms { get; }
     public string? TexturePath { get; }
     public float Scale { get; }
@@ -106,7 +105,7 @@ public sealed class EntityModelDefinition
     /// <summary>Textures the selector can return, loaded into the skin atlas up front.</summary>
     public IReadOnlyList<string> AdditionalTexturePaths { get; }
 
-    /// <summary>Structural tree model when the definition has been migrated to the tree path; null uses legacy flat parts.</summary>
+    /// <summary>Compiled structural tree. Production meshing is compiled-only; null is invalid and BuildModel/BuildInto throw InvalidOperationException.</summary>
     public CompiledEntityModel? Compiled { get; }
 
     /// <summary>Explicit render-layer order for this model; defaults to the shared cutout/elytra/translucent/emissive order.</summary>
@@ -131,8 +130,7 @@ public sealed class EntityModelDefinition
     public float SourceFrameBaselinePx { get; }
 
     /// <summary>
-    /// Creates a definition from a declarative mesh: the legacy flat <see cref="Parts"/> remain available for compatibility,
-    /// while <see cref="Compiled"/> is produced once by the structural bakery.
+    /// Creates a definition from a declarative mesh; <see cref="Compiled"/> is produced once by the structural bakery.
     /// </summary>
     public static EntityModelDefinition FromTree(
         string name,
@@ -152,104 +150,60 @@ public sealed class EntityModelDefinition
         float sourceFrameBaselinePx = 24f)
     {
         ArgumentNullException.ThrowIfNull(mesh);
-        // Raw scaled models use the structurally-preserving compiled tree, whose NodeFrame owns the
-        // PartPose scale. The legacy flattened bake has only the restricted static scaled-subtree path.
-        var parts = rawSourceFrame && VanillaMeshBake.HasNonUnitScale(mesh)
-            ? []
-            : VanillaMeshBake.Bake(mesh, 0, 0, baselinePx, rawSourceFrame: rawSourceFrame);
         var compiled = VanillaMeshBakery.Build(mesh, textureWidth, textureHeight, baselinePx, texturePath: texturePath, rawSourceFrame: rawSourceFrame);
-        return new EntityModelDefinition(
-            name,
-            textureWidth,
-            textureHeight,
-            parts,
-            faceTransforms,
-            texturePath,
-            scale,
-            emissiveTexturePath,
-            textureSelector,
-            additionalTexturePaths,
-            compiled,
-            renderLayers,
-            baselinePx: baselinePx,
-            rawSourceFrame: rawSourceFrame,
-            sourceFrameBaselinePx: sourceFrameBaselinePx,
-            applyRootPose: applyRootPose);
+        return new EntityModelDefinition(name, textureWidth, textureHeight, faceTransforms, texturePath, scale, emissiveTexturePath, textureSelector, additionalTexturePaths, compiled, renderLayers, baselinePx: baselinePx, rawSourceFrame: rawSourceFrame, sourceFrameBaselinePx: sourceFrameBaselinePx, applyRootPose: applyRootPose);
     }
 
     public IEnumerable<string> TexturePaths
     {
         get
         {
-            if (TexturePath is { Length: > 0 } main)
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            if (TexturePath is { Length: > 0 } main && seen.Add(main))
             {
                 yield return main;
             }
 
-            if (EmissiveTexturePath is { Length: > 0 } emissive)
+            if (EmissiveTexturePath is { Length: > 0 } emissive && seen.Add(emissive))
             {
                 yield return emissive;
             }
 
             foreach (var additional in AdditionalTexturePaths)
             {
-                if (additional.Length > 0)
+                if (additional.Length > 0 && seen.Add(additional))
                 {
                     yield return additional;
                 }
             }
 
-            foreach (var part in Parts)
+            if (Compiled is not { } compiled)
             {
-                if (part.TexturePath is { Length: > 0 } partTexture)
+                yield break;
+            }
+
+            foreach (var cube in compiled.Cubes)
+            {
+                if (cube.TexturePath is { Length: > 0 } cubeTexture && seen.Add(cubeTexture))
                 {
-                    yield return partTexture;
+                    yield return cubeTexture;
                 }
 
-                if (part.EmissiveTexturePath is { Length: > 0 } partEmissive)
+                if (cube.EmissiveTexturePath is { Length: > 0 } cubeEmissive && seen.Add(cubeEmissive))
                 {
-                    yield return partEmissive;
+                    yield return cubeEmissive;
                 }
 
-                if (part.OverlayLayers is null)
+                if (cube.Overlays is null)
                 {
                     continue;
                 }
 
-                foreach (var layer in part.OverlayLayers)
+                foreach (var layer in cube.Overlays)
                 {
-                    if (layer.TexturePath is { Length: > 0 } overlay)
+                    if (layer.TexturePath is { Length: > 0 } overlay && seen.Add(overlay))
                     {
                         yield return overlay;
-                    }
-                }
-            }
-
-            if (Compiled is { } compiled)
-            {
-                foreach (var cube in compiled.Cubes)
-                {
-                    if (cube.TexturePath is { Length: > 0 } cubeTexture)
-                    {
-                        yield return cubeTexture;
-                    }
-
-                    if (cube.EmissiveTexturePath is { Length: > 0 } cubeEmissive)
-                    {
-                        yield return cubeEmissive;
-                    }
-
-                    if (cube.Overlays is null)
-                    {
-                        continue;
-                    }
-
-                    foreach (var layer in cube.Overlays)
-                    {
-                        if (layer.TexturePath is { Length: > 0 } overlay)
-                        {
-                            yield return overlay;
-                        }
                     }
                 }
             }

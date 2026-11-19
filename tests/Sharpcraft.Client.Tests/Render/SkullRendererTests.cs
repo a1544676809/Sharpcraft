@@ -30,12 +30,11 @@ public sealed class SkullRendererTests
     [Fact]
     public void SkullDefinitionHasTheReferenceHeadBox()
     {
-        Assert.Single(SkullModelDefinition.Definition.Parts);
+        Assert.Single(SkullModelDefinition.Definition.StructuralParts());
         Assert.Equal(64, SkullModelDefinition.Definition.TextureWidth);
         Assert.Equal(32, SkullModelDefinition.Definition.TextureHeight);
-        Assert.Equal("head", SkullModelDefinition.Definition.Parts[0].Name);
         Assert.Equal("entity/skeleton/skeleton", SkullModelDefinition.Definition.TexturePath);
-        var head = SkullModelDefinition.Definition.Parts[0];
+        var head = SkullModelDefinition.Definition.StructuralParts()[0];
         // Raw source frame: the source box addBox(-4,-8,-4,8,8,8) is stored y-down, so the bottom is -8.
         Assert.Equal(0f, head.CentreX);
         Assert.Equal(-8f, head.Bottom);
@@ -54,7 +53,6 @@ public sealed class SkullRendererTests
         Assert.Equal(256, SkullModelDefinition.DragonDefinition.TextureWidth);
         Assert.Equal(256, SkullModelDefinition.DragonDefinition.TextureHeight);
         Assert.Equal("entity/enderdragon/dragon", SkullModelDefinition.DragonDefinition.TexturePath);
-        Assert.Equal(7, SkullModelDefinition.DragonDefinition.Parts.Count);
         Assert.Same(SkullModelDefinition.DragonDefinition, SkullModelDefinition.DefinitionFor(SkullType.Dragon));
 
         var mesher = new SkullRenderer();

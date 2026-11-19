@@ -22,18 +22,7 @@ public static class StriderModelDefinition
     private static readonly CompiledEntityModel StriderCompiled =
         VanillaMeshBakery.Build(StriderMesh, 64, 128, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Definition = new(
-        "strider",
-        64,
-        128,
-        [.. VanillaMeshBake.Bake(StriderMesh, 0, 0, rawSourceFrame: true)],
-        faceTransforms: null,
-        "entity/strider/strider",
-        textureSelector: state => state.IsCold ? "entity/strider/strider_cold" : "entity/strider/strider",
-        additionalTexturePaths: ["entity/strider/strider_cold"],
-        compiled: StriderCompiled,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new("strider", 64, 128, faceTransforms: null, texturePath: "entity/strider/strider", textureSelector: state => state.IsCold ? "entity/strider/strider_cold" : "entity/strider/strider", additionalTexturePaths: ["entity/strider/strider_cold"], compiled: StriderCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildStriderMesh()
     {

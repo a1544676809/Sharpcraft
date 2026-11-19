@@ -9,51 +9,22 @@ using Xunit;
 namespace Sharpcraft.Client.Tests.Render;
 
 /// <summary>
-/// T-678: proves the DSL-baked allay / bat / bee parts are value-identical to the legacy
-/// FromVanilla/FromVanillaChild records (nested chains, zero-width parts, wing grow/rotations, allay translucency), that
-/// the child order and parent links are preserved, and that the bee texture selector and additional texture paths and
-/// all definition names/dims/paths are unchanged.
+/// Allay/bat/bee definition structural invariants: child order and parent links are preserved, allay translucency,
+/// the bee texture selector and additional texture paths, and definition names/dims/paths are unchanged.
+/// The former flat <c>AssertPartsMatch</c> value checks were removed (#231): jar source-sample strict equivalence for
+/// these families is provided by <see cref="LivingRawReferenceSampleTests.RawBakeMatchesSourceVertices"/> (keyed,
+/// 1e-5 + UV half) through the compiled mesher, which is a stronger primary-evidence check.
 /// </summary>
 public sealed class AllayBatBeeModelDefinitionTests
 {
-    [Fact]
-    public void AllayPartsMatchSourceFrameRecords()
-    {
-        AssertPartsMatch(ExpectedAllayParts(), AllayModelDefinition.Definition.Parts);
-    }
-
-    [Fact]
-    public void BatPartsMatchSourceFrameRecords()
-    {
-        AssertPartsMatch(ExpectedBatParts(), BatModelDefinition.Definition.Parts);
-    }
-
-    [Fact]
-    public void BeePartsMatchSourceFrameRecords()
-    {
-        AssertPartsMatch(ExpectedBeeParts(), BeeModelDefinition.Definition.Parts);
-    }
-
-    [Fact]
-    public void AllayKeepsChildOrderParentLinksAndTranslucentKind()
-    {
-        var parts = AllayModelDefinition.Definition.Parts;
-        AssertNamesAndParents(parts,
-            ["root", "head", "body", "body_inner", "right_arm", "left_arm", "right_wing", "left_wing"],
-            [null, "root", "root", "body", "body", "body", "body", "body"]);
-        foreach (var part in parts)
-        {
-            Assert.Equal(EntityGeometryLayerKind.Translucent, part.Kind);
-        }
-    }
 
     [Fact]
     public void BatAndBeeKeepChildOrderAndParentLinks()
     {
-        AssertNamesAndParents(BatModelDefinition.Definition.Parts,
+        AssertNamesAndParents(BatModelDefinition.Definition.StructuralParts(),
             ["body", "feet", "right_wing", "right_wing_tip", "left_wing", "left_wing_tip", "head", "right_ear", "left_ear"],
             [null, "body", "body", "right_wing", "body", "left_wing", null, "head", "head"]);
-        AssertNamesAndParents(BeeModelDefinition.Definition.Parts,
+        AssertNamesAndParents(BeeModelDefinition.Definition.StructuralParts(),
             ["bone", "body", "stinger", "left_antenna", "right_antenna", "right_wing", "left_wing", "front_legs", "middle_legs", "back_legs"],
             [null, "bone", "body", "body", "body", "bone", "bone", "bone", "bone", "bone"]);
     }
@@ -81,19 +52,16 @@ public sealed class AllayBatBeeModelDefinitionTests
         Assert.Equal(32, AllayModelDefinition.Definition.TextureWidth);
         Assert.Equal(32, AllayModelDefinition.Definition.TextureHeight);
         Assert.Equal("entity/allay/allay", AllayModelDefinition.Definition.TexturePath);
-        Assert.Equal(8, AllayModelDefinition.Definition.Parts.Count);
 
         Assert.Equal("bat", BatModelDefinition.Definition.Name);
         Assert.Equal(32, BatModelDefinition.Definition.TextureWidth);
         Assert.Equal(32, BatModelDefinition.Definition.TextureHeight);
         Assert.Equal("entity/bat/bat", BatModelDefinition.Definition.TexturePath);
-        Assert.Equal(9, BatModelDefinition.Definition.Parts.Count);
 
         Assert.Equal("bee", BeeModelDefinition.Definition.Name);
         Assert.Equal(64, BeeModelDefinition.Definition.TextureWidth);
         Assert.Equal(64, BeeModelDefinition.Definition.TextureHeight);
         Assert.Equal("entity/bee/bee", BeeModelDefinition.Definition.TexturePath);
-        Assert.Equal(10, BeeModelDefinition.Definition.Parts.Count);
     }
 
     private static EntityRenderState State(bool isAngry, bool hasNectar) =>

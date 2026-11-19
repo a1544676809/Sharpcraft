@@ -64,7 +64,7 @@ public sealed class BlazeAnimationTests
 
         Assert.True(expected.SetEquals(pose.Offsets.Keys), "the pose must drive exactly the head and all twelve rods");
 
-        var modelParts = BlazeModelDefinition.Definition.Parts.Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
+        var modelParts = BlazeModelDefinition.Definition.StructuralParts().Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
         Assert.True(expected.SetEquals(modelParts), "the driven parts must match the Blaze model definition");
     }
 

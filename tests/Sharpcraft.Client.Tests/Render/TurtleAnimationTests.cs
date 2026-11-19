@@ -166,7 +166,7 @@ public sealed class TurtleAnimationTests
     [Fact]
     public void EveryAnimatedPartExistsInTheTurtleModelAndEggBellyIsNotFaked()
     {
-        var modelParts = TurtleModelDefinition.Definition.Parts
+        var modelParts = TurtleModelDefinition.Definition.StructuralParts()
             .Select(part => part.Name)
             .ToHashSet(StringComparer.Ordinal);
 

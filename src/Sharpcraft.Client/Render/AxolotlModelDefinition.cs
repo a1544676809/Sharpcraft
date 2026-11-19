@@ -25,14 +25,7 @@ public static class AxolotlModelDefinition
     /// <summary>Synced variant ids: LUCY, WILD, GOLD, CYAN, BLUE.</summary>
     public static readonly IReadOnlyList<string> VariantKeys = ["lucy", "wild", "gold", "cyan", "blue"];
 
-    public static readonly EntityModelDefinition Definition = new(
-        "axolotl",
-        64,
-        64,
-        Parts,
-        faceTransforms: null,
-        texturePath: "entity/axolotl/axolotl_lucy",
-        compiled: AxolotlCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new("axolotl", 64, 64, faceTransforms: null, texturePath: "entity/axolotl/axolotl_lucy", compiled: AxolotlCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants = BuildVariants();
 
@@ -50,14 +43,7 @@ public static class AxolotlModelDefinition
                 continue;
             }
 
-            variants[key] = new EntityModelDefinition(
-                "axolotl_" + key,
-                64,
-                64,
-                Parts,
-                faceTransforms: null,
-                "entity/axolotl/axolotl_" + key,
-                compiled: AxolotlCompiled);
+            variants[key] = new EntityModelDefinition("axolotl_" + key, 64, 64, faceTransforms: null, texturePath: "entity/axolotl/axolotl_" + key, compiled: AxolotlCompiled);
         }
 
         return variants;

@@ -202,7 +202,7 @@ public sealed class ParrotAnimationTests
     [Fact]
     public void EveryAnimatedPartExistsInTheParrotModel()
     {
-        var modelParts = ParrotModelDefinition.Definition.Parts.Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
+        var modelParts = ParrotModelDefinition.Definition.StructuralParts().Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
         var pose = Apply(Frame());
 
         Assert.NotEmpty(pose.Offsets);

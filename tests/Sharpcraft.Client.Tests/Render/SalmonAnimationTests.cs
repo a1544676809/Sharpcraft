@@ -104,7 +104,7 @@ public sealed class SalmonAnimationTests
             new HashSet<string>(pose.Offsets.Keys, StringComparer.Ordinal).SetEquals(new[] { "body_back" }),
             "setupAnim only rotates body_back");
 
-        var modelParts = SalmonModelDefinition.Definition.Parts.Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
+        var modelParts = SalmonModelDefinition.Definition.StructuralParts().Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
         Assert.Contains("body_back", modelParts);
         Assert.Contains("body_front", modelParts);
         Assert.Contains("head", modelParts);

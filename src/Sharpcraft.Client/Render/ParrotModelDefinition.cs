@@ -25,14 +25,7 @@ public static class ParrotModelDefinition
 
     private static readonly string[] VariantFiles = ["parrot_red_blue", "parrot_blue", "parrot_green", "parrot_yellow_blue", "parrot_grey"];
 
-    public static readonly EntityModelDefinition Definition = new(
-        "parrot",
-        32,
-        32,
-        Parts,
-        faceTransforms: null,
-        texturePath: "entity/parrot/parrot_red_blue",
-        compiled: ParrotCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new("parrot", 32, 32, faceTransforms: null, texturePath: "entity/parrot/parrot_red_blue", compiled: ParrotCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants = BuildVariants();
 
@@ -50,14 +43,7 @@ public static class ParrotModelDefinition
                 continue;
             }
 
-            variants[VariantKeys[i]] = new EntityModelDefinition(
-                "parrot_" + VariantKeys[i],
-                32,
-                32,
-                Parts,
-                faceTransforms: null,
-                "entity/parrot/" + VariantFiles[i],
-                compiled: ParrotCompiled);
+            variants[VariantKeys[i]] = new EntityModelDefinition("parrot_" + VariantKeys[i], 32, 32, faceTransforms: null, texturePath: "entity/parrot/" + VariantFiles[i], compiled: ParrotCompiled);
         }
 
         return variants;

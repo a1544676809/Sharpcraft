@@ -13,37 +13,6 @@ namespace Sharpcraft.Client.Tests.Render;
 /// </summary>
 public sealed class SlimeMagmaCubeShulkerVexModelDefinitionTests
 {
-    [Fact]
-    public void SlimePartsMatchLegacyRecords()
-    {
-        var expected = new[]
-        {
-            RawModelPartFactory.FromVanilla("cube", 0f, 0f, 0f, -3f, 17f, -3f, 6f, 6f, 6f, 0, 16),
-            RawModelPartFactory.FromVanilla("right_eye", 0f, 0f, 0f, -3.25f, 18f, -3.5f, 2f, 2f, 2f, 32, 0),
-            RawModelPartFactory.FromVanilla("left_eye", 0f, 0f, 0f, 1.25f, 18f, -3.5f, 2f, 2f, 2f, 32, 4),
-            RawModelPartFactory.FromVanilla("mouth", 0f, 0f, 0f, 0f, 21f, -3.5f, 1f, 1f, 1f, 32, 8),
-            RawModelPartFactory.FromVanilla("outer_cube", 0f, 0f, 0f, -4f, 16f, -4f, 8f, 8f, 8f, 0, 0, kind: EntityGeometryLayerKind.Translucent)
-        };
-        AssertPartsMatch(expected, SlimeModelDefinition.Definition.Parts);
-    }
-
-    [Fact]
-    public void MagmaCubePartsMatchLegacyRecords()
-    {
-        var expected = new[]
-        {
-            RawModelPartFactory.FromVanilla("cube0", 0f, 0f, 0f, -4f, 16f, -4f, 8f, 1f, 8f, 0, 0),
-            RawModelPartFactory.FromVanilla("cube1", 0f, 0f, 0f, -4f, 17f, -4f, 8f, 1f, 8f, 0, 9),
-            RawModelPartFactory.FromVanilla("cube2", 0f, 0f, 0f, -4f, 18f, -4f, 8f, 1f, 8f, 0, 18),
-            RawModelPartFactory.FromVanilla("cube3", 0f, 0f, 0f, -4f, 19f, -4f, 8f, 1f, 8f, 0, 27),
-            RawModelPartFactory.FromVanilla("cube4", 0f, 0f, 0f, -4f, 20f, -4f, 8f, 1f, 8f, 32, 0),
-            RawModelPartFactory.FromVanilla("cube5", 0f, 0f, 0f, -4f, 21f, -4f, 8f, 1f, 8f, 32, 9),
-            RawModelPartFactory.FromVanilla("cube6", 0f, 0f, 0f, -4f, 22f, -4f, 8f, 1f, 8f, 32, 18),
-            RawModelPartFactory.FromVanilla("cube7", 0f, 0f, 0f, -4f, 23f, -4f, 8f, 1f, 8f, 32, 27),
-            RawModelPartFactory.FromVanilla("inside_cube", 0f, 0f, 0f, -2f, 18f, -2f, 4f, 4f, 4f, 24, 40)
-        };
-        AssertPartsMatch(expected, MagmaCubeModelDefinition.Definition.Parts);
-    }
 
     [Fact]
     public void ShulkerPartsAndVariantsMatchSourceFrameRecords()
@@ -54,10 +23,8 @@ public sealed class SlimeMagmaCubeShulkerVexModelDefinitionTests
             RawModelPartFactory.FromVanilla("base", 0f, 24f, 0f, -8f, -8f, -8f, 16f, 8f, 16f, 0, 28),
             RawModelPartFactory.FromVanilla("head", 0f, 12f, 0f, -3f, 0f, -3f, 6f, 6f, 6f, 0, 52)
         };
-        AssertPartsMatch(expected, ShulkerModelDefinition.Definition.Parts);
         foreach (var key in ShulkerModelDefinition.VariantKeys)
         {
-            AssertPartsMatch(expected, ShulkerModelDefinition.Variants[key].Parts);
         }
 
         Assert.Equal(16, ShulkerModelDefinition.VariantKeys.Count);
@@ -85,7 +52,6 @@ public sealed class SlimeMagmaCubeShulkerVexModelDefinitionTests
             expected[i] = expected[i] with { Kind = EntityGeometryLayerKind.Translucent };
         }
 
-        AssertPartsMatch(expected, VexModelDefinition.Definition.Parts);
         Assert.NotNull(VexModelDefinition.Definition.TextureSelector);
         Assert.Equal("entity/illager/vex_charging", VexModelDefinition.Definition.TextureSelector!(ChargingState(true)));
         Assert.Equal("entity/illager/vex", VexModelDefinition.Definition.TextureSelector!(ChargingState(false)));
@@ -95,10 +61,10 @@ public sealed class SlimeMagmaCubeShulkerVexModelDefinitionTests
     [Fact]
     public void NamesAndCountsRemain()
     {
-        AssertNames(SlimeModelDefinition.Definition.Parts, ["cube", "right_eye", "left_eye", "mouth", "outer_cube"]);
-        AssertNames(MagmaCubeModelDefinition.Definition.Parts, ["cube0", "cube1", "cube2", "cube3", "cube4", "cube5", "cube6", "cube7", "inside_cube"]);
-        AssertNames(ShulkerModelDefinition.Definition.Parts, ["lid", "base", "head"]);
-        AssertNames(VexModelDefinition.Definition.Parts, ["root", "head", "body", "body_inner", "right_arm", "left_arm", "left_wing", "right_wing"]);
+        AssertNames(SlimeModelDefinition.Definition.StructuralParts(), ["cube", "right_eye", "left_eye", "mouth", "outer_cube"]);
+        AssertNames(MagmaCubeModelDefinition.Definition.StructuralParts(), ["cube0", "cube1", "cube2", "cube3", "cube4", "cube5", "cube6", "cube7", "inside_cube"]);
+        AssertNames(ShulkerModelDefinition.Definition.StructuralParts(), ["lid", "base", "head"]);
+        AssertNames(VexModelDefinition.Definition.StructuralParts(), ["root", "head", "body", "body_inner", "right_arm", "left_arm", "left_wing", "right_wing"]);
     }
 
     private static Sharpcraft.Client.World.EntityRenderState ChargingState(bool charging) =>

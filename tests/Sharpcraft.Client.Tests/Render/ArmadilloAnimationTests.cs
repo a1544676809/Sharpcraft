@@ -118,7 +118,7 @@ public sealed class ArmadilloAnimationTests
     [Fact]
     public void EveryAnimatedPartExistsInTheArmadilloModel()
     {
-        var modelParts = ArmadilloModelDefinition.Definition.Parts.Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
+        var modelParts = ArmadilloModelDefinition.Definition.StructuralParts().Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
         foreach (var definition in new[]
                  {
                      ArmadilloAnimations.RollUp,

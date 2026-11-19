@@ -20,16 +20,7 @@ public static class BabyModelDefinitionsHumanoid
     private static readonly CompiledEntityModel ZombieCompiled =
         VanillaMeshBakery.Build(ZombieMesh, 64, 64, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Zombie = new(
-        "baby_zombie",
-        64,
-        64,
-        ZombieParts,
-        faceTransforms: null,
-        "entity/zombie/zombie_baby",
-        compiled: ZombieCompiled,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Zombie = new("baby_zombie", 64, 64, faceTransforms: null, texturePath: "entity/zombie/zombie_baby", compiled: ZombieCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     private static readonly CompiledEntityModel DrownedCompiled =
         EntityModelLayerHelpers.WithModelLayer(
@@ -39,16 +30,7 @@ public static class BabyModelDefinitionsHumanoid
             _ => "entity/zombie/drowned_outer_layer_baby",
             fallbackTexture: "entity/zombie/drowned_outer_layer_baby");
 
-    public static readonly EntityModelDefinition Drowned = new(
-        "baby_drowned",
-        64,
-        64,
-        BuildDrownedParts(),
-        faceTransforms: null,
-        "entity/zombie/drowned_baby",
-        compiled: DrownedCompiled,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Drowned = new("baby_drowned", 64, 64, faceTransforms: null, texturePath: "entity/zombie/drowned_baby", compiled: DrownedCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     /// <summary>Declarative DSL tree for the baby zombie villager parts (T-674).</summary>
     private static readonly VanillaMeshDefinition ZombieVillagerMesh = BuildZombieVillagerMesh();
@@ -56,16 +38,7 @@ public static class BabyModelDefinitionsHumanoid
     private static readonly CompiledEntityModel ZombieVillagerCompiled =
         VanillaMeshBakery.Build(ZombieVillagerMesh, 64, 64, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition ZombieVillager = new(
-        "baby_zombie_villager",
-        64,
-        64,
-        [.. VanillaMeshBake.Bake(ZombieVillagerMesh, 0, 0, rawSourceFrame: true)],
-        faceTransforms: null,
-        "entity/zombie_villager/zombie_villager_baby",
-        compiled: ZombieVillagerCompiled,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition ZombieVillager = new("baby_zombie_villager", 64, 64, faceTransforms: null, texturePath: "entity/zombie_villager/zombie_villager_baby", compiled: ZombieVillagerCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     /// <summary>Declarative DSL tree for the baby villager parts (T-674).</summary>
     private static readonly VanillaMeshDefinition VillagerMesh = BuildVillagerMesh();
@@ -73,16 +46,7 @@ public static class BabyModelDefinitionsHumanoid
     private static readonly CompiledEntityModel VillagerCompiled =
         VanillaMeshBakery.Build(VillagerMesh, 64, 64, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Villager = new(
-        "baby_villager",
-        64,
-        64,
-        [.. VanillaMeshBake.Bake(VillagerMesh, 0, 0, rawSourceFrame: true)],
-        faceTransforms: null,
-        "entity/villager/villager_baby",
-        compiled: VillagerCompiled,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Villager = new("baby_villager", 64, 64, faceTransforms: null, texturePath: "entity/villager/villager_baby", compiled: VillagerCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly IReadOnlyDictionary<int, EntityModelDefinition> Models =
         new Dictionary<int, EntityModelDefinition>
@@ -101,39 +65,21 @@ public static class BabyModelDefinitionsHumanoid
         foreach (var key in VillagerModelDefinition.VariantKeys)
         {
             var villagerPath = "entity/villager/baby/" + key;
-            variants[(143, key)] = new EntityModelDefinition(
-                "baby_villager_" + key,
-                64,
-                64,
-                EntityModelLayerHelpers.WithCopy(Villager.Parts, villagerPath, static _ => true, 0.05f),
-                faceTransforms: null,
-                "entity/villager/villager_baby",
-                compiled: EntityModelLayerHelpers.WithModelLayer(
+            variants[(143, key)] = new EntityModelDefinition("baby_villager_" + key, 64, 64, faceTransforms: null, texturePath: "entity/villager/villager_baby", compiled: EntityModelLayerHelpers.WithModelLayer(
                     VillagerCompiled,
                     VillagerCompiled,
                     "copy_",
                     _ => villagerPath,
                     fallbackTexture: villagerPath,
-                    inflate: 0.05f),
-                baselinePx: 0f,
-                rawSourceFrame: true);
+                    inflate: 0.05f), baselinePx: 0f, rawSourceFrame: true);
             var zombieVillagerPath = "entity/zombie_villager/baby/" + key;
-            variants[(157, key)] = new EntityModelDefinition(
-                "baby_zombie_villager_" + key,
-                64,
-                64,
-                EntityModelLayerHelpers.WithCopy(ZombieVillager.Parts, zombieVillagerPath, static _ => true, 0.05f),
-                faceTransforms: null,
-                "entity/zombie_villager/zombie_villager_baby",
-                compiled: EntityModelLayerHelpers.WithModelLayer(
+            variants[(157, key)] = new EntityModelDefinition("baby_zombie_villager_" + key, 64, 64, faceTransforms: null, texturePath: "entity/zombie_villager/zombie_villager_baby", compiled: EntityModelLayerHelpers.WithModelLayer(
                     ZombieVillagerCompiled,
                     ZombieVillagerCompiled,
                     "copy_",
                     _ => zombieVillagerPath,
                     fallbackTexture: zombieVillagerPath,
-                    inflate: 0.05f),
-                baselinePx: 0f,
-                rawSourceFrame: true);
+                    inflate: 0.05f), baselinePx: 0f, rawSourceFrame: true);
         }
 
         return variants;

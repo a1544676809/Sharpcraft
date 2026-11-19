@@ -252,7 +252,7 @@ public sealed class RavagerAnimationTests
     [Fact]
     public void EveryProceduralPartExistsInTheRavagerModel()
     {
-        var modelParts = RavagerModelDefinition.Definition.Parts.Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
+        var modelParts = RavagerModelDefinition.Definition.StructuralParts().Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
         foreach (var part in new[]
                  {
                      "neck", "head", "mouth", "right_hind_leg", "left_hind_leg", "right_front_leg", "left_front_leg"

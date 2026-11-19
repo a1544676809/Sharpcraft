@@ -19,16 +19,7 @@ public static class SheepModelDefinition
 
     private static readonly CompiledEntityModel CompiledModel = VanillaMeshBakery.Build(SheepMesh, 64, 32, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Definition = new(
-        "sheep",
-        64,
-        32,
-        [.. VanillaMeshBake.Bake(SheepMesh, 0, 0, rawSourceFrame: true)],
-        faceTransforms: null,
-        "entity/sheep/sheep",
-        compiled: CompiledModel,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new("sheep", 64, 32, faceTransforms: null, texturePath: "entity/sheep/sheep", compiled: CompiledModel, baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildSheepMesh()
     {

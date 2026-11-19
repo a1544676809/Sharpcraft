@@ -125,39 +125,13 @@ public static class SkullModelDefinition
     /// baseline or renderer-local translation is folded in. ref://mc-26.3-analysis/src/net/minecraft/
     /// client/model/object/skull/SkullModel.java:19-24 and SkullBlockRenderer.java:164-168.
     /// </summary>
-    public static readonly EntityModelDefinition Definition = new(
-        name: "skull",
-        textureWidth: TextureWidth,
-        textureHeight: TextureHeight,
-        parts: Parts,
-        faceTransforms: null,
-        texturePath: SkeletonTexture,
-        compiled: SkullCompiled,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new(name: "skull", textureWidth: TextureWidth, textureHeight: TextureHeight, faceTransforms: null, texturePath: SkeletonTexture, compiled: SkullCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     /// <summary>Player head definition with the humanoid head + hat overlay, in the raw source frame.</summary>
-    public static readonly EntityModelDefinition PlayerDefinition = new(
-        name: "player_skull",
-        textureWidth: 64,
-        textureHeight: 64,
-        parts: PlayerParts,
-        faceTransforms: null,
-        texturePath: DefaultPlayerSkinTexture,
-        compiled: PlayerCompiled,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition PlayerDefinition = new(name: "player_skull", textureWidth: 64, textureHeight: 64, faceTransforms: null, texturePath: DefaultPlayerSkinTexture, compiled: PlayerCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     /// <summary>Dragon head definition: six head boxes plus the parented jaw.</summary>
-    public static readonly EntityModelDefinition DragonDefinition = new(
-        name: "dragon_skull",
-        textureWidth: 256,
-        textureHeight: 256,
-        parts: DragonParts,
-        faceTransforms: null,
-        texturePath: DragonTexture,
-        compiled: DragonCompiled,
-        baselinePx: 0f, rawSourceFrame: true)
+    public static readonly EntityModelDefinition DragonDefinition = new(name: "dragon_skull", textureWidth: 256, textureHeight: 256, faceTransforms: null, texturePath: DragonTexture, compiled: DragonCompiled, baselinePx: 0f, rawSourceFrame: true)
     {
         // Source head pose uses PartPose.scaled(0.75); the generic scaled bake emits absolute source-frame
         // cuboids, so the outer skull pose applies without a renderer-local part matrix.

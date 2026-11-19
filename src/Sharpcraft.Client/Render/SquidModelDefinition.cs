@@ -25,14 +25,7 @@ public static class SquidModelDefinition
         faceTransforms: null,
         "entity/squid/squid", baselinePx: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition GlowSquid = new(
-        "glow_squid",
-        64,
-        32,
-        Parts,
-        faceTransforms: null,
-        texturePath: "entity/squid/glow_squid",
-        compiled: Definition.Compiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition GlowSquid = new("glow_squid", 64, 32, faceTransforms: null, texturePath: "entity/squid/glow_squid", compiled: Definition.Compiled, baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildSquidMesh()
     {

@@ -30,24 +30,15 @@ public static class PigModelDefinition
 
     private static readonly CompiledEntityModel ColdCompiled = VanillaMeshBakery.Build(ColdMesh, 64, 64, modelHeight: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Definition = new(
-        "pig",
-        64,
-        64,
-        NormalParts,
-        faceTransforms: null,
-        texturePath: "entity/pig/pig_temperate",
-        compiled: NormalCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new("pig", 64, 64, faceTransforms: null, texturePath: "entity/pig/pig_temperate", compiled: NormalCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     /// <summary>Variant key to definition, keyed by the registry entry name ("temperate", "warm", "cold").</summary>
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants =
         new Dictionary<string, EntityModelDefinition>(StringComparer.Ordinal)
         {
             ["temperate"] = Definition,
-            ["warm"] = new("pig_warm", 64, 64, NormalParts, faceTransforms: null,
-        texturePath: "entity/pig/pig_warm", compiled: NormalCompiled, baselinePx: 0f, rawSourceFrame: true),
-            ["cold"] = new("pig_cold", 64, 64, ColdParts, faceTransforms: null,
-        texturePath: "entity/pig/pig_cold", compiled: ColdCompiled, baselinePx: 0f, rawSourceFrame: true)
+            ["warm"] = new("pig_warm", 64, 64, faceTransforms: null, texturePath: "entity/pig/pig_warm", compiled: NormalCompiled, baselinePx: 0f, rawSourceFrame: true),
+            ["cold"] = new("pig_cold", 64, 64, faceTransforms: null, texturePath: "entity/pig/pig_cold", compiled: ColdCompiled, baselinePx: 0f, rawSourceFrame: true)
         };
 
     /// <summary>

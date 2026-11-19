@@ -138,7 +138,7 @@ public sealed class EndermiteAnimationTests
     [Fact]
     public void EverySegmentExistsInTheEndermiteModel()
     {
-        var modelParts = EndermiteModelDefinition.Definition.Parts.Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
+        var modelParts = EndermiteModelDefinition.Definition.StructuralParts().Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
         var pose = Apply(1.4f);
 
         Assert.Equal(4, pose.Offsets.Count);

@@ -140,7 +140,7 @@ public sealed class TropicalFishAnimationTests
 
         foreach (var (variant, definition) in TropicalFishModelDefinition.Variants)
         {
-            var parts = definition.Parts.Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
+            var parts = definition.StructuralParts().Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
             Assert.True(parts.Contains("tail"), $"variant '{variant}' is missing the animated tail part");
             foreach (var partName in pose.Offsets.Keys)
             {

@@ -101,4 +101,33 @@ public sealed class EntityModelPartEncapsulationTests
         Assert.True(added.Length == 0, "new geometry clone sites in model definitions: " + string.Join(", ", added));
         Assert.True(stale.Length == 0, "clone-site ratchet can shrink: remove these entries: " + string.Join(", ", stale));
     }
+
+    [Fact]
+    public void EntityModelDefinitionHasNoFlatPartsApi()
+    {
+        // #231: the flat Parts data path is removed. EntityModelPart stays only as the production mesher
+        // descriptor; no definition may expose a Parts property or constructor parameter.
+        Assert.DoesNotContain(typeof(EntityModelDefinition).GetProperties(), p => p.Name == "Parts");
+        Assert.DoesNotContain(typeof(EntityModelDefinition).GetConstructors(), c =>
+            c.GetParameters().Any(p => p.Name == "parts" && p.ParameterType == typeof(System.Collections.Generic.IReadOnlyList<EntityModelPart>)));
+
+        var root = RepositoryLocator.Root;
+        var renderRoot = Path.Combine(root, "src", "Sharpcraft.Client", "Render");
+        var offenders = new List<string>();
+        foreach (var file in Directory.EnumerateFiles(renderRoot, "*.cs"))
+        {
+            foreach (var line in File.ReadLines(file))
+            {
+                // definition.Parts / xxxDefinition.Parts flat data access (compiled-tree .Parts is allowed and
+                // is always spelled with a Compiled receiver or the local `model` in layer helpers).
+                if (Regex.IsMatch(line, @"\b\w*EntityModelDefinition\w*\.Parts\b") && !line.Contains("Compiled", StringComparison.Ordinal))
+                {
+                    offenders.Add(Path.GetFileName(file));
+                    break;
+                }
+            }
+        }
+
+        Assert.True(offenders.Count == 0, "flat EntityModelDefinition.Parts data access: " + string.Join(", ", offenders));
+    }
 }

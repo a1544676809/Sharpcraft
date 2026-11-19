@@ -52,16 +52,7 @@ public static class CamelModelDefinition
         return mesh;
     }
 
-    public static readonly EntityModelDefinition Definition = new(
-        "camel",
-        128,
-        128,
-        [.. VanillaMeshBake.Bake(CamelMesh, 0, 0, rawSourceFrame: true)],
-        faceTransforms: null,
-        "entity/camel/camel",
-        compiled: CompiledModel,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new("camel", 128, 128, faceTransforms: null, texturePath: "entity/camel/camel", compiled: CompiledModel, baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildCamelMesh()
     {

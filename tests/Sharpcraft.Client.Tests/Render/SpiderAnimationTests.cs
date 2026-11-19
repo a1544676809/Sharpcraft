@@ -168,8 +168,8 @@ public sealed class SpiderAnimationTests
     [Fact]
     public void EveryAnimatedPartExistsInTheSpiderAndCaveSpiderModels()
     {
-        var spiderParts = SpiderModelDefinition.Definition.Parts.Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
-        var caveParts = CaveSpiderModelDefinition.Definition.Parts.Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
+        var spiderParts = SpiderModelDefinition.Definition.StructuralParts().Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
+        var caveParts = CaveSpiderModelDefinition.Definition.StructuralParts().Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
         var pose = Apply(Frame(walkPos: 0.7f, walkSpeed: 1f));
 
         Assert.NotEmpty(pose.Offsets);

@@ -169,7 +169,7 @@ public sealed class PolarBearAnimationTests
         };
         Assert.True(expected.SetEquals(pose.Offsets.Keys), "every flat model part must be driven");
 
-        var modelParts = PolarBearModelDefinition.Definition.Parts.Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
+        var modelParts = PolarBearModelDefinition.Definition.StructuralParts().Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
         Assert.True(expected.SetEquals(modelParts), "the driven parts must match the Polar Bear model definition");
     }
 

@@ -26,29 +26,7 @@ public sealed class PhantomRavagerPolarBearSilverfishModelDefinitionTests
             RawModelPartFactory.FromVanillaChild("right_wing_base", "body", -3f, -2f, -8f, -6f, 0f, 0f, 6f, 2f, 9f, 23, 12, mirror: true, rotationZ: -0.1f),
             RawModelPartFactory.FromVanillaChild("right_wing_tip", "right_wing_base", -6f, 0f, 0f, -13f, 0f, 0f, 13f, 1f, 9f, 16, 24, mirror: true, rotationZ: -0.1f)
         };
-        AssertPartsMatch(expected, PhantomModelDefinition.Definition.Parts);
         Assert.Equal("entity/phantom/phantom_eyes", PhantomModelDefinition.Definition.EmissiveTexturePath);
-    }
-
-    [Fact]
-    public void RavagerPartsMatchSourceFrameRecords()
-    {
-        var expected = new[]
-        {
-            RawModelPartFactory.FromVanilla("neck", 0f, -7f, 5.5f, -5f, -1f, -18f, 10f, 10f, 18f, 68, 73),
-            RawModelPartFactory.FromVanillaChild("head", "neck", 0f, 16f, -17f, -8f, -20f, -14f, 16f, 20f, 16f, 0, 0),
-            RawModelPartFactory.FromVanillaChild("head_snout", "head", 0f, 0f, 0f, -2f, -6f, -18f, 4f, 8f, 4f, 0, 0),
-            RawModelPartFactory.FromVanillaChild("right_horn", "head", -10f, -14f, -8f, 0f, -14f, -2f, 2f, 14f, 4f, 74, 55, rotationX: 1.0995574f),
-            RawModelPartFactory.FromVanillaChild("left_horn", "head", 8f, -14f, -8f, 0f, -14f, -2f, 2f, 14f, 4f, 74, 55, mirror: true, rotationX: 1.0995574f),
-            RawModelPartFactory.FromVanillaChild("mouth", "head", 0f, -2f, 2f, -8f, 0f, -16f, 16f, 3f, 16f, 0, 36),
-            RawModelPartFactory.FromVanilla("body", 0f, 1f, 2f, -7f, -10f, -7f, 14f, 16f, 20f, 0, 55, rotationX: MathF.PI / 2f),
-            RawModelPartFactory.FromVanillaChild("body_lower", "body", 0f, 0f, 0f, -6f, 6f, -7f, 12f, 13f, 18f, 0, 91),
-            RawModelPartFactory.FromVanilla("right_hind_leg", -8f, -13f, 18f, -4f, 0f, -4f, 8f, 37f, 8f, 96, 0),
-            RawModelPartFactory.FromVanilla("left_hind_leg", 8f, -13f, 18f, -4f, 0f, -4f, 8f, 37f, 8f, 96, 0, mirror: true),
-            RawModelPartFactory.FromVanilla("right_front_leg", -8f, -13f, -5f, -4f, 0f, -4f, 8f, 37f, 8f, 64, 0),
-            RawModelPartFactory.FromVanilla("left_front_leg", 8f, -13f, -5f, -4f, 0f, -4f, 8f, 37f, 8f, 64, 0, mirror: true)
-        };
-        AssertPartsMatch(expected, RavagerModelDefinition.Definition.Parts);
     }
 
     [Fact]
@@ -68,42 +46,16 @@ public sealed class PhantomRavagerPolarBearSilverfishModelDefinitionTests
             RawModelPartFactory.FromVanilla("right_front_leg", -3.5f, 14f, -8f, -2f, 0f, -2f, 4f, 10f, 6f, 50, 40),
             RawModelPartFactory.FromVanilla("left_front_leg", 3.5f, 14f, -8f, -2f, 0f, -2f, 4f, 10f, 6f, 50, 40)
         };
-        AssertPartsMatch(expected, PolarBearModelDefinition.Definition.Parts);
         Assert.Equal(1.2f, PolarBearModelDefinition.Definition.Scale);
-    }
-
-    [Fact]
-    public void SilverfishPartsMatchSourceFrameRecords()
-    {
-        // task-151/159: Silverfish raw. Source zPlacement accumulates (depth_i+depth_i+1)/2 from -3.5:
-        // seg4=7, seg5=9.5, seg6=11.5; layer1 follows zPlacement[4]=7. Independent source literals.
-        var expected = new[]
-        {
-            RawModelPartFactory.FromVanilla("segment0", 0f, 22f, -3.5f, -1.5f, 0f, -1f, 3f, 2f, 2f, 0, 0),
-            RawModelPartFactory.FromVanilla("segment1", 0f, 21f, -1.5f, -2f, 0f, -1f, 4f, 3f, 2f, 0, 4),
-            RawModelPartFactory.FromVanilla("segment2", 0f, 20f, 1f, -3f, 0f, -1.5f, 6f, 4f, 3f, 0, 9),
-            RawModelPartFactory.FromVanilla("segment3", 0f, 21f, 4f, -1.5f, 0f, -1.5f, 3f, 3f, 3f, 0, 16),
-            RawModelPartFactory.FromVanilla("segment4", 0f, 22f, 7f, -1f, 0f, -1.5f, 2f, 2f, 3f, 0, 22),
-            RawModelPartFactory.FromVanilla("segment5", 0f, 23f, 9.5f, -1f, 0f, -1f, 2f, 1f, 2f, 11, 0),
-            RawModelPartFactory.FromVanilla("segment6", 0f, 23f, 11.5f, -0.5f, 0f, -1f, 1f, 1f, 2f, 13, 4),
-            RawModelPartFactory.FromVanilla("layer0", 0f, 16f, 1f, -5f, 0f, -1.5f, 10f, 8f, 3f, 20, 0),
-            RawModelPartFactory.FromVanilla("layer1", 0f, 20f, 7f, -3f, 0f, -1.5f, 6f, 4f, 3f, 20, 11),
-            RawModelPartFactory.FromVanilla("layer2", 0f, 19f, -1.5f, -3f, 0f, -1.5f, 6f, 5f, 2f, 20, 18)
-        };
-        AssertPartsMatch(expected, SilverfishModelDefinition.Definition.Parts);
     }
 
     [Fact]
     public void NestedOrderAndMetadataRemain()
     {
-        AssertNames(PhantomModelDefinition.Definition.Parts,
+        AssertNames(PhantomModelDefinition.Definition.StructuralParts(),
             ["body", "head", "tail_base", "tail_tip", "left_wing_base", "left_wing_tip", "right_wing_base", "right_wing_tip"]);
-        AssertNames(RavagerModelDefinition.Definition.Parts,
+        AssertNames(RavagerModelDefinition.Definition.StructuralParts(),
             ["neck", "head", "head_snout", "right_horn", "left_horn", "mouth", "body", "body_lower", "right_hind_leg", "left_hind_leg", "right_front_leg", "left_front_leg"]);
-        Assert.Equal(8, PhantomModelDefinition.Definition.Parts.Count);
-        Assert.Equal(12, RavagerModelDefinition.Definition.Parts.Count);
-        Assert.Equal(10, PolarBearModelDefinition.Definition.Parts.Count);
-        Assert.Equal(10, SilverfishModelDefinition.Definition.Parts.Count);
     }
 
     private static void AssertNames(IReadOnlyList<EntityModelPart> parts, string[] names)

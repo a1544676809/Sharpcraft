@@ -291,8 +291,8 @@ public sealed class EntityAnimationInfrastructureTests
         var crossed = new EntityRenderState(1, IllagerModelDefinition.VindicatorEntityTypeId, 0, 0, 0, 0, 0, ArmPose: (int)IllagerArmPose.Crossed);
         var open = new EntityRenderState(1, IllagerModelDefinition.VindicatorEntityTypeId, 0, 0, 0, 0, 0, ArmPose: (int)IllagerArmPose.Attacking);
 
-        var armsCross = IllagerModelDefinition.Vindicator.Parts.Single(part => part.Name == "arms_cross");
-        var rightArm = IllagerModelDefinition.Vindicator.Parts.Single(part => part.Name == "right_arm");
+        var armsCross = IllagerModelDefinition.Vindicator.Compiled!.Parts.Single(part => part.Name == "arms_cross");
+        var rightArm = IllagerModelDefinition.Vindicator.Compiled!.Parts.Single(part => part.Name == "right_arm");
 
         Assert.True(armsCross.VisibleWhen!(crossed));
         Assert.False(armsCross.VisibleWhen!(open));

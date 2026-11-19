@@ -14,23 +14,9 @@ public static class BabyModelDefinitionsNether
     private static readonly CompiledEntityModel PiglinCompiled =
         VanillaMeshBakery.Build(PiglinMesh, 64, 64, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Piglin = new(
-        "baby_piglin",
-        64,
-        64,
-        PiglinParts,
-        faceTransforms: null,
-        "entity/piglin/piglin_baby",
-        compiled: PiglinCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Piglin = new("baby_piglin", 64, 64, faceTransforms: null, texturePath: "entity/piglin/piglin_baby", compiled: PiglinCompiled, baselinePx: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition ZombifiedPiglin = new(
-        "baby_zombified_piglin",
-        64,
-        64,
-        PiglinParts,
-        faceTransforms: null,
-        "entity/piglin/zombified_piglin_baby",
-        compiled: PiglinCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition ZombifiedPiglin = new("baby_zombified_piglin", 64, 64, faceTransforms: null, texturePath: "entity/piglin/zombified_piglin_baby", compiled: PiglinCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     private static readonly VanillaMeshDefinition HoglinMesh = BuildHoglinMesh();
 
@@ -39,27 +25,9 @@ public static class BabyModelDefinitionsNether
     private static readonly CompiledEntityModel HoglinCompiled =
         VanillaMeshBakery.Build(HoglinMesh, 64, 64, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Hoglin = new(
-        "baby_hoglin",
-        64,
-        64,
-        HoglinParts,
-        faceTransforms: null,
-        "entity/hoglin/hoglin_baby",
-        compiled: HoglinCompiled,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Hoglin = new("baby_hoglin", 64, 64, faceTransforms: null, texturePath: "entity/hoglin/hoglin_baby", compiled: HoglinCompiled, baselinePx: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Zoglin = new(
-        "baby_zoglin",
-        64,
-        64,
-        HoglinParts,
-        faceTransforms: null,
-        "entity/hoglin/zoglin_baby",
-        compiled: HoglinCompiled,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Zoglin = new("baby_zoglin", 64, 64, faceTransforms: null, texturePath: "entity/hoglin/zoglin_baby", compiled: HoglinCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly IReadOnlyDictionary<int, EntityModelDefinition> Models =
         new Dictionary<int, EntityModelDefinition>

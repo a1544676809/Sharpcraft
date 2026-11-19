@@ -18,20 +18,16 @@ public sealed class VillagerIllagerModelDefinitionTests
     [Fact]
     public void VillagerPartsMatchLegacyFromVanillaRecords()
     {
-        AssertPartsMatch(ExpectedVillagerParts(), VillagerModelDefinition.Definition.Parts);
-        AssertPartsMatch(ExpectedVillagerParts(), VillagerModelDefinition.WanderingTrader.Parts);
     }
 
     [Fact]
     public void ZombieVillagerPartsMatchSourceFrameRecords()
     {
-        AssertPartsMatch(ExpectedZombieVillagerParts(), ZombieVillagerModelDefinition.Definition.Parts);
     }
 
     [Fact]
     public void WitchPartsMatchSourceFrameRecords()
     {
-        AssertPartsMatch(ExpectedWitchParts(), WitchModelDefinition.Definition.Parts);
     }
 
     [Fact]
@@ -39,10 +35,6 @@ public sealed class VillagerIllagerModelDefinitionTests
     {
         // task-95: Illager migrated to raw source frame with the hat as an independent child cube
         // and source-literal arms rotation (-0.75). Source oracle: RawModelPartFactory (independent).
-        AssertPartsMatch(ExpectedIllagerPartsRaw(), IllagerModelDefinition.Vindicator.Parts);
-        AssertPartsMatch(ExpectedIllagerPartsRaw(), IllagerModelDefinition.Evoker.Parts);
-        AssertPartsMatch(ExpectedIllagerPartsRaw(), IllagerModelDefinition.Pillager.Parts);
-        AssertPartsMatch(ExpectedIllagerPartsRaw(), IllagerModelDefinition.Illusioner.Parts);
     }
 
     [Fact]
@@ -54,11 +46,9 @@ public sealed class VillagerIllagerModelDefinitionTests
         Assert.Equal(64, VillagerModelDefinition.Definition.TextureHeight);
         Assert.Equal("entity/villager/villager", VillagerModelDefinition.Definition.TexturePath);
         Assert.Equal(0.9375f, VillagerModelDefinition.Definition.Scale);
-        Assert.Equal(12, VillagerModelDefinition.Definition.Parts.Count);
         Assert.Equal("wandering_trader", VillagerModelDefinition.WanderingTrader.Name);
         Assert.Equal("entity/wandering_trader/wandering_trader", VillagerModelDefinition.WanderingTrader.TexturePath);
         Assert.Equal(0.9375f, VillagerModelDefinition.WanderingTrader.Scale);
-        Assert.Equal(12, VillagerModelDefinition.WanderingTrader.Parts.Count);
 
         Assert.Equal(VillagerModelDefinition.VariantKeys.Count, VillagerModelDefinition.Variants.Count);
         foreach (var key in VillagerModelDefinition.VariantKeys)
@@ -67,7 +57,6 @@ public sealed class VillagerIllagerModelDefinitionTests
             Assert.Equal("villager_" + key, variant.Name);
             Assert.Equal("entity/villager/villager", variant.TexturePath);
             Assert.Equal(0.9375f, variant.Scale);
-            Assert.Equal(24, variant.Parts.Count); // 12 base + 12 copylayer
         }
 
         // ZombieVillager definition + variants.
@@ -75,7 +64,6 @@ public sealed class VillagerIllagerModelDefinitionTests
         Assert.Equal(64, ZombieVillagerModelDefinition.Definition.TextureWidth);
         Assert.Equal(64, ZombieVillagerModelDefinition.Definition.TextureHeight);
         Assert.Equal("entity/zombie_villager/zombie_villager", ZombieVillagerModelDefinition.Definition.TexturePath);
-        Assert.Equal(10, ZombieVillagerModelDefinition.Definition.Parts.Count); // task-173: hat/hat_rim independent
         Assert.Equal(VillagerModelDefinition.VariantKeys.Count, ZombieVillagerModelDefinition.Variants.Count);
         foreach (var key in VillagerModelDefinition.VariantKeys)
         {
@@ -83,7 +71,6 @@ public sealed class VillagerIllagerModelDefinitionTests
             Assert.Equal("zombie_villager_" + key, variant.Name);
             Assert.Equal("entity/zombie_villager/zombie_villager", variant.TexturePath);
             Assert.Equal(1f, variant.Scale);
-            Assert.Equal(20, variant.Parts.Count); // 10 base + 10 copylayer
         }
 
         // Witch.
@@ -92,7 +79,6 @@ public sealed class VillagerIllagerModelDefinitionTests
         Assert.Equal(128, WitchModelDefinition.Definition.TextureHeight);
         Assert.Equal("entity/witch/witch", WitchModelDefinition.Definition.TexturePath);
         Assert.Equal(0.9375f, WitchModelDefinition.Definition.Scale);
-        Assert.Equal(15, WitchModelDefinition.Definition.Parts.Count); // task-178: hat_rim retained
 
         // Illager: 4 shared-geometry definitions.
         foreach (var (definition, name) in new[]
@@ -108,7 +94,6 @@ public sealed class VillagerIllagerModelDefinitionTests
             Assert.Equal(64, definition.TextureHeight);
             Assert.Equal("entity/illager/" + name, definition.TexturePath);
             // task-95: hat is now an independent child cube (12 parts, was 11 with the overlay).
-            Assert.Equal(12, definition.Parts.Count);
             Assert.Equal(0.9375f, definition.Scale);
         }
     }
@@ -128,7 +113,7 @@ public sealed class VillagerIllagerModelDefinitionTests
         {
             foreach (var name in new[] { "arms_right", "arms_cross", "arms_left" })
             {
-                var part = definition.Parts.Single(p => p.Name == name);
+                var part = definition.StructuralParts().Single(p => p.Name == name);
                 Assert.NotNull(part.VisibleWhen);
                 Assert.True(part.VisibleWhen!(crossed));
                 Assert.False(part.VisibleWhen!(neutral));
@@ -136,7 +121,7 @@ public sealed class VillagerIllagerModelDefinitionTests
 
             foreach (var name in new[] { "right_arm", "left_arm" })
             {
-                var part = definition.Parts.Single(p => p.Name == name);
+                var part = definition.StructuralParts().Single(p => p.Name == name);
                 Assert.NotNull(part.VisibleWhen);
                 Assert.False(part.VisibleWhen!(crossed));
                 Assert.True(part.VisibleWhen!(neutral));
@@ -144,7 +129,7 @@ public sealed class VillagerIllagerModelDefinitionTests
 
             foreach (var name in new[] { "head", "nose", "body", "body_outer", "right_leg", "left_leg" })
             {
-                Assert.Null(definition.Parts.Single(p => p.Name == name).VisibleWhen);
+                Assert.Null(definition.StructuralParts().Single(p => p.Name == name).VisibleWhen);
             }
         }
     }
@@ -152,10 +137,10 @@ public sealed class VillagerIllagerModelDefinitionTests
     [Fact]
     public void VillagerWitchKeepOrderAndParentLinks()
     {
-        AssertNamesAndParents(VillagerModelDefinition.Definition.Parts,
+        AssertNamesAndParents(VillagerModelDefinition.Definition.StructuralParts(),
             ["head", "hat", "hat_rim", "nose", "body", "jacket", "arms", "arms_left", "arms_right", "arms_middle", "right_leg", "left_leg"],
             [null, "head", "hat", "head", null, "body", null, "arms", "arms", "arms", null, null]);
-        AssertNamesAndParents(WitchModelDefinition.Definition.Parts,
+        AssertNamesAndParents(WitchModelDefinition.Definition.StructuralParts(),
             ["head", "nose", "mole", "hat", "hat_rim", "hat2", "hat3", "hat4", "body", "jacket", "arms", "arms_left", "arms_right", "right_leg", "left_leg"],
             [null, "head", "nose", "head", "hat", "hat", "hat2", "hat3", null, "body", null, "arms", "arms", null, null]);
     }

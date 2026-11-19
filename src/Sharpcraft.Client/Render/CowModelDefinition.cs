@@ -38,33 +38,17 @@ public static class CowModelDefinition
 
     private static readonly CompiledEntityModel ColdCompiled = VanillaMeshBakery.Build(ColdMesh, 64, 64, modelHeight: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Definition = new(
-        "cow",
-        64,
-        64,
-        NormalParts,
-        faceTransforms: null,
-        texturePath: "entity/cow/cow_temperate",
-        compiled: NormalCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new("cow", 64, 64, faceTransforms: null, texturePath: "entity/cow/cow_temperate", compiled: NormalCompiled, baselinePx: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Mooshroom = new(
-        "mooshroom",
-        64,
-        64,
-        NormalParts,
-        faceTransforms: null,
-        texturePath: "entity/cow/mooshroom_red",
-        compiled: NormalCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Mooshroom = new("mooshroom", 64, 64, faceTransforms: null, texturePath: "entity/cow/mooshroom_red", compiled: NormalCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     /// <summary>Variant key to definition, keyed by the registry entry name.</summary>
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants =
         new Dictionary<string, EntityModelDefinition>(StringComparer.Ordinal)
         {
             ["temperate"] = Definition,
-            ["warm"] = new("cow_warm", 64, 64, WarmParts, faceTransforms: null,
-        texturePath: "entity/cow/cow_warm", compiled: WarmCompiled, baselinePx: 0f, rawSourceFrame: true),
-            ["cold"] = new("cow_cold", 64, 64, ColdParts, faceTransforms: null,
-        texturePath: "entity/cow/cow_cold", compiled: ColdCompiled, baselinePx: 0f, rawSourceFrame: true)
+            ["warm"] = new("cow_warm", 64, 64, faceTransforms: null, texturePath: "entity/cow/cow_warm", compiled: WarmCompiled, baselinePx: 0f, rawSourceFrame: true),
+            ["cold"] = new("cow_cold", 64, 64, faceTransforms: null, texturePath: "entity/cow/cow_cold", compiled: ColdCompiled, baselinePx: 0f, rawSourceFrame: true)
         };
 
     private static VanillaMeshDefinition BuildNormalMesh()

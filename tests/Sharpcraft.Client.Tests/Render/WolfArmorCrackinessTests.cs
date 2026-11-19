@@ -15,7 +15,7 @@ public sealed class WolfArmorCrackinessTests
     public void CrackinessOverlayTracksTheDurabilityLevel()
     {
         var definition = EntityModelResolver.Resolve(WolfModelDefinition.WolfEntityTypeId);
-        var part = definition.Parts.First(p => p.Name == "crackiness_body");
+        var part = definition.StructuralParts().First(p => p.Name == "crackiness_body");
         Assert.NotNull(part.VisibleWhen);
         Assert.NotNull(part.TextureSelector);
 

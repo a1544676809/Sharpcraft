@@ -18,14 +18,7 @@ public static class CodModelDefinition
     private static readonly CompiledEntityModel CodCompiled =
         VanillaMeshBakery.Build(CodMesh, 32, 32, modelHeight: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Definition = new(
-        "cod",
-        32,
-        32,
-        [.. VanillaMeshBake.Bake(CodMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
-        faceTransforms: null,
-        texturePath: "entity/fish/cod",
-        compiled: CodCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new("cod", 32, 32, faceTransforms: null, texturePath: "entity/fish/cod", compiled: CodCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildCodMesh()
     {

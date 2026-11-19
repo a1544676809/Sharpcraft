@@ -114,7 +114,7 @@ public sealed class HappyGhastAnimationTests
     [Fact]
     public void EveryAnimatedPartExistsInTheHappyGhastModel()
     {
-        var modelParts = HappyGhastModelDefinition.Definition.Parts
+        var modelParts = HappyGhastModelDefinition.Definition.StructuralParts()
             .Select(part => part.Name)
             .ToHashSet(StringComparer.Ordinal);
 

@@ -130,7 +130,7 @@ public sealed class SnowGolemAnimationTests
     [Fact]
     public void EveryAnimatedPartExistsInTheSnowGolemModel()
     {
-        var modelParts = SnowGolemModelDefinition.Definition.Parts.Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
+        var modelParts = SnowGolemModelDefinition.Definition.StructuralParts().Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
         var pose = Apply(Frame(pitch: 10f, yaw: 70f));
 
         Assert.NotEmpty(pose.Offsets);

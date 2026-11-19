@@ -32,7 +32,7 @@ public sealed class RawFaceOrderTests
         var full = EntityModelDefinition.FromTree(
             "raw_sheep_probe", 64, 32, mesh, texturePath: "entity/sheep/sheep",
             baselinePx: 0f, rawSourceFrame: true);
-        var leg = full.Parts.Single(part => part.Name == partName);
+        var leg = full.StructuralParts().Single(part => part.Name == partName);
         // SheepModel uses createBodyMesh(12, mirrorLeftLeg:false, mirrorRightLeg:true).
         leg = leg with { Mirror = partName.StartsWith("right_", StringComparison.Ordinal) };
         // Production is compiled-only: rebuild the isolated mirrored leg as a root-level compiled node.

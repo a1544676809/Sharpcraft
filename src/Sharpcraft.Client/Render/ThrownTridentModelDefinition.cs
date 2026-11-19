@@ -39,20 +39,6 @@ public static class ThrownTridentModelDefinition
                 AllCubes: true,
                 GlintScale: GlintTextureTransform.EntityScale),
         };
-        return new EntityModelDefinition(
-            "thrown_trident",
-            baseModel.TextureWidth,
-            baseModel.TextureHeight,
-            baseModel.Parts,
-            baseModel.FaceTransforms,
-            SpecialItemModelDefinition.TridentTexture,
-            1f,
-            textureSelector: null,
-            additionalTexturePaths: [SpecialItemModelDefinition.TridentTexture, ItemInHandMesher.GlintTexture],
-            compiled: baseModel.Compiled,
-            renderLayers: layers,
-            baselinePx: 0f,
-            rawSourceFrame: true,
-            sourceFrameBaselinePx: 0f);
+        return new EntityModelDefinition("thrown_trident", baseModel.TextureWidth, baseModel.TextureHeight, baseModel.FaceTransforms, SpecialItemModelDefinition.TridentTexture, 1f, textureSelector: null, additionalTexturePaths: [SpecialItemModelDefinition.TridentTexture, ItemInHandMesher.GlintTexture], compiled: baseModel.Compiled, renderLayers: layers, baselinePx: 0f, rawSourceFrame: true, sourceFrameBaselinePx: 0f);
     }
 }

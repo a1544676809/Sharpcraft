@@ -206,7 +206,7 @@ public sealed class AllayAnimationTests
     public void EveryAnimatedPartExistsInTheAllayModel()
     {
         var provider = new AllayAnimationProvider(AllayModelDefinition.AllayEntityTypeId);
-        var modelParts = AllayModelDefinition.Definition.Parts.Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
+        var modelParts = AllayModelDefinition.Definition.StructuralParts().Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
         var pose = Apply(provider, provider.CreateState(), Frame(age: 1.7f, walkSpeed: 0.1f));
 
         Assert.NotEmpty(pose.Offsets);

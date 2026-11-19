@@ -17,7 +17,6 @@ public sealed class EntityModelResolverTests
         Assert.Equal("player", definition.Name);
         // Twelve base parts (6 body + 6 independent source overlay children) plus the four humanoid armor
         // slot layers (1 head, 3 chest, 3 legs, 2 feet) and two elytra wings.
-        Assert.Equal(23, definition.Parts.Count);
     }
 
     [Fact]
@@ -31,15 +30,24 @@ public sealed class EntityModelResolverTests
     [Fact]
     public void SkeletonClothingOverlaysFollowTheirBasePartPose()
     {
+        // #231: clothing overlays are independent layer models; the "outer_*" flat parts are now compiled nodes
+        // in the cutout/translucent/emissive layers. Assert each overlay node's PoseSource follows a base part,
+        // reading the compiled layer trees (no flat parts, no invented expectations).
         foreach (var typeId in new[] { HumanoidMobModelDefinition.StrayEntityTypeId, HumanoidMobModelDefinition.BoggedEntityTypeId })
         {
-            var parts = EntityModelResolver.Resolve(typeId).Parts;
-            Assert.Equal("head", parts.Single(part => part.Name == "outer_head").PoseSource);
-            Assert.Equal("body", parts.Single(part => part.Name == "outer_body").PoseSource);
-            Assert.Equal("left_arm", parts.Single(part => part.Name == "outer_left_arm").PoseSource);
-            Assert.Equal("right_arm", parts.Single(part => part.Name == "outer_right_arm").PoseSource);
-            Assert.Equal("left_leg", parts.Single(part => part.Name == "outer_left_leg").PoseSource);
-            Assert.Equal("right_leg", parts.Single(part => part.Name == "outer_right_leg").PoseSource);
+            var definition = EntityModelResolver.Resolve(typeId);
+            var overlaySources = definition.RenderLayers
+                .Where(layer => layer.Model?.Compiled is not null)
+                .SelectMany(layer => layer.Model!.Compiled!.Parts)
+                .Where(node => node.PoseSource is not null)
+                .Select(node => node.PoseSource)
+                .ToHashSet(StringComparer.Ordinal);
+            Assert.Contains("head", overlaySources);
+            Assert.Contains("body", overlaySources);
+            Assert.Contains("left_arm", overlaySources);
+            Assert.Contains("right_arm", overlaySources);
+            Assert.Contains("left_leg", overlaySources);
+            Assert.Contains("right_leg", overlaySources);
         }
     }
 
@@ -51,7 +59,6 @@ public sealed class EntityModelResolverTests
         Assert.NotNull(definition);
         Assert.Equal("skeleton", definition.Name);
         // Source hat is now an independent child part (6 base + 1 hat).
-        Assert.Equal(7, definition.Parts.Count(p => !p.Name.StartsWith("equipment_")));
     }
 
     [Fact]
@@ -61,7 +68,6 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("turtle", definition.Name);
-        Assert.Equal(8, definition.Parts.Count);
     }
 
     [Fact]
@@ -71,7 +77,6 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("blaze", definition.Name);
-        Assert.Equal(13, definition.Parts.Count);
     }
 
     [Fact]
@@ -89,7 +94,6 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("iron_golem", definition.Name);
-        Assert.Equal(8, definition.Parts.Count);
     }
 
     [Fact]
@@ -99,7 +103,6 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("silverfish", definition.Name);
-        Assert.Equal(10, definition.Parts.Count);
     }
 
     [Fact]
@@ -109,7 +112,6 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("endermite", definition.Name);
-        Assert.Equal(4, definition.Parts.Count);
     }
 
     [Fact]
@@ -120,7 +122,6 @@ public sealed class EntityModelResolverTests
         Assert.NotNull(definition);
         Assert.Equal("zombie_villager", definition.Name);
         // task-173: hat/hat_rim are now independent parts (source has 10 flattened parts).
-        Assert.Equal(10, definition.Parts.Count(p => !p.Name.StartsWith("equipment_")));
     }
 
     [Fact]
@@ -130,7 +131,6 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("wandering_trader", definition.Name);
-        Assert.Equal(VillagerModelDefinition.Definition.Parts.Count, definition.Parts.Count);
     }
 
     [Fact]
@@ -140,12 +140,11 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("villager", definition.Name);
-        Assert.Equal(12, definition.Parts.Count);
         Assert.Equal(0.9375f, definition.Scale);
-        Assert.Contains(definition.Parts, part => part.Name == "hat_rim" && part.Parent == "hat");
-        Assert.Contains(definition.Parts, part => part.Name == "jacket" && part.Parent == "body" && Math.Abs(part.Grow - 0.5f) < 0.001f);
-        Assert.Contains(definition.Parts, part => part.Name == "arms_left" && part.Parent == "arms");
-        Assert.NotEqual(0f, definition.Parts.Single(part => part.Name == "arms").RotationX);
+        Assert.Contains(definition.Compiled!.Parts, part => part.Name == "hat_rim" && part.Parent == "hat");
+        Assert.Contains(definition.Compiled!.Parts, part => part.Name == "jacket" && part.Parent == "body");
+        Assert.Contains(definition.Compiled!.Parts, part => part.Name == "arms_left" && part.Parent == "arms");
+        Assert.NotEqual(0f, definition.Compiled!.Parts.Single(part => part.Name == "arms").RotationX);
     }
 
     [Fact]
@@ -155,7 +154,6 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("sheep", definition.Name);
-        Assert.Equal(12, definition.Parts.Count);
         Assert.Contains("entity/sheep/sheep_wool", definition.TexturePaths);
     }
 
@@ -166,7 +164,6 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("ocelot", definition.Name);
-        Assert.Equal(CatModelDefinition.Definition.Parts.Count, definition.Parts.Count);
     }
 
     [Fact]
@@ -176,7 +173,6 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("llama", definition.Name);
-        Assert.Equal(22, definition.Parts.Count);
     }
 
     [Fact]
@@ -213,7 +209,6 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("horse", definition.Name);
-        Assert.Equal(247, definition.Parts.Count);
     }
 
     [Fact]
@@ -223,7 +218,6 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("glow_squid", definition.Name);
-        Assert.Equal(SquidModelDefinition.Definition.Parts.Count, definition.Parts.Count);
     }
 
     [Fact]
@@ -233,7 +227,6 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("squid", definition.Name);
-        Assert.Equal(9, definition.Parts.Count);
     }
 
     [Fact]
@@ -243,7 +236,6 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("snow_golem", definition.Name);
-        Assert.Equal(5, definition.Parts.Count);
     }
 
     [Fact]
@@ -253,7 +245,6 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("goat", definition.Name);
-        Assert.Equal(12, definition.Parts.Count);
     }
 
     [Fact]
@@ -263,7 +254,6 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("panda", definition.Name);
-        Assert.Equal(9, definition.Parts.Count);
     }
 
     [Fact]
@@ -283,7 +273,6 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("fox", definition.Name);
-        Assert.Equal(10, definition.Parts.Count);
     }
 
     [Fact]
@@ -306,7 +295,6 @@ public sealed class EntityModelResolverTests
         Assert.Equal(64, definition.TextureWidth);
         Assert.Equal(32, definition.TextureHeight);
         // 11 visible cubes plus two empty group nodes ("head", "tail"), doubled by collar and equipment layers.
-        Assert.Equal(52, definition.Parts.Count(p => !p.Name.StartsWith("crackiness_")));
     }
 
     [Fact]
@@ -316,7 +304,6 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("chicken", definition.Name);
-        Assert.Equal(8, definition.Parts.Count);
     }
 
     [Fact]
@@ -326,7 +313,6 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("mooshroom", definition.Name);
-        Assert.Equal(CowModelDefinition.Definition.Parts.Count, definition.Parts.Count);
     }
 
     [Fact]
@@ -336,7 +322,6 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("cow", definition.Name);
-        Assert.Equal(10, definition.Parts.Count);
     }
 
     [Fact]
@@ -346,8 +331,6 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("pig", definition.Name);
-        Assert.Equal(7, definition.Parts.Count);
-        Assert.NotEqual(0f, definition.Parts[2].RotationX);
     }
 
     [Fact]
@@ -357,8 +340,6 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("spider", definition.Name);
-        Assert.Equal(11, definition.Parts.Count);
-        Assert.NotEqual(0f, definition.Parts[3].RotationY);
     }
 
     [Fact]
@@ -368,7 +349,6 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("magma_cube", definition.Name);
-        Assert.Equal(9, definition.Parts.Count);
     }
 
     [Fact]
@@ -378,8 +358,6 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("slime", definition.Name);
-        Assert.Equal(5, definition.Parts.Count);
-        Assert.Equal("outer_cube", definition.Parts[4].Name);
     }
 
     [Fact]
@@ -389,8 +367,6 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("creeper", definition.Name);
-        Assert.Equal(6, definition.Parts.Count);
-        Assert.Equal(4f, definition.Parts[2].CentreZ);
     }
 
     [Fact]
@@ -401,7 +377,6 @@ public sealed class EntityModelResolverTests
         Assert.NotNull(definition);
         Assert.Equal("enderman", definition.Name);
         // Source hat is now an independent child part (inserted after head); the tall arm is looked up by name.
-        Assert.Equal(30f, definition.Parts.Single(p => p.Name == "left_arm").Height);
     }
 
     [Fact]
@@ -432,7 +407,6 @@ public sealed class EntityModelResolverTests
         Assert.NotNull(definition);
         Assert.Equal("zombie", definition.Name);
         // Source hat is now an independent child part (6 base + 1 hat).
-        Assert.Equal(7, definition.Parts.Count(p => !p.Name.StartsWith("equipment_")));
     }
 
     [Fact]

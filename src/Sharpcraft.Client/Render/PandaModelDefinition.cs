@@ -39,16 +39,7 @@ public static class PandaModelDefinition
         {
             if (key != "normal")
             {
-                variants[key] = new EntityModelDefinition(
-                    "panda_" + key,
-                    64,
-                    64,
-                    Definition.Parts,
-                    faceTransforms: null,
-                    "entity/panda/panda_" + key,
-                    compiled: Definition.Compiled,
-                    baselinePx: 0f,
-                    rawSourceFrame: true);
+                variants[key] = new EntityModelDefinition("panda_" + key, 64, 64, faceTransforms: null, texturePath: "entity/panda/panda_" + key, compiled: Definition.Compiled, baselinePx: 0f, rawSourceFrame: true);
             }
         }
 

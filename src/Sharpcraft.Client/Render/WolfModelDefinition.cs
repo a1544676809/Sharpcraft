@@ -22,24 +22,11 @@ public static class WolfModelDefinition
     private static readonly CompiledEntityModel CompiledModel =
         EntityModelLayerHelpers.WithCollar(BaseCompiled, "entity/wolf/wolf_collar", inflate: 0f);
 
-    public static readonly EntityModelDefinition Definition = new(
-        "wolf",
-        64,
-        32,
-        EntityModelLayerHelpers.WithCollar(
-            [.. VanillaMeshBake.Bake(WolfMesh, 0, 0, rawSourceFrame: true)],
-            "entity/wolf/wolf_collar"),
-        faceTransforms: null,
-        "entity/wolf/wolf",
-        textureSelector: state => state.IsTame
+    public static readonly EntityModelDefinition Definition = new("wolf", 64, 32, faceTransforms: null, texturePath: "entity/wolf/wolf", textureSelector: state => state.IsTame
             ? "entity/wolf/wolf_tame"
             : state.IsAngry
                 ? "entity/wolf/wolf_angry"
-                : "entity/wolf/wolf",
-        additionalTexturePaths: ["entity/wolf/wolf_tame", "entity/wolf/wolf_angry"],
-        compiled: CompiledModel,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+                : "entity/wolf/wolf", additionalTexturePaths: ["entity/wolf/wolf_tame", "entity/wolf/wolf_angry"], compiled: CompiledModel, baselinePx: 0f, rawSourceFrame: true);
 
     /// <summary>Registry entry names of the wolf variants, in vanilla bootstrap order.</summary>
     public static readonly IReadOnlyList<string> VariantKeys =
@@ -74,18 +61,7 @@ public static class WolfModelDefinition
             var tame = wild + "_tame";
             var angry = wild + "_angry";
             var captured = wild;
-            variants[key] = new EntityModelDefinition(
-                "wolf_" + key,
-                64,
-                32,
-                Definition.Parts,
-                faceTransforms: null,
-                captured,
-                textureSelector: state => state.IsTame ? captured + "_tame" : state.IsAngry ? captured + "_angry" : captured,
-                additionalTexturePaths: [tame, angry],
-                compiled: CompiledModel,
-                baselinePx: 0f,
-                rawSourceFrame: true);
+            variants[key] = new EntityModelDefinition("wolf_" + key, 64, 32, faceTransforms: null, texturePath: captured, textureSelector: state => state.IsTame ? captured + "_tame" : state.IsAngry ? captured + "_angry" : captured, additionalTexturePaths: [tame, angry], compiled: CompiledModel, baselinePx: 0f, rawSourceFrame: true);
         }
 
         return variants;
