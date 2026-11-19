@@ -223,7 +223,9 @@ public static partial class EntityModelResolver
         IReadOnlyList<EntityRenderLayerDefinition>? renderLayers = null;
         var babyArmorLayers = baby &&
             (ReferenceEquals(layers, HumanoidArmorLayers) || ReferenceEquals(layers, PiglinArmorLayers));
-        if ((!baby || babyArmorLayers) && baseCompiled is not null && layers.Length > 0)
+        // Llama baby decor is a source layer too (ModelLayers.LLAMA_BABY_DECOR): baby llama mesh with grow 0.2.
+        var babyDecorLayers = baby && layers.Length == 1 && layers[0].Kind == EquipmentAssetKind.LlamaBody;
+        if ((!baby || babyArmorLayers || babyDecorLayers) && baseCompiled is not null && layers.Length > 0)
         {
             var baseLayerModel = new EntityModelDefinition(definition.Name, definition.TextureWidth, definition.TextureHeight, definition.FaceTransforms, definition.TexturePath, definition.Scale, definition.EmissiveTexturePath, definition.TextureSelector, definition.AdditionalTexturePaths, compiled: baseCompiled, baselinePx: definition.BaselinePx, rawSourceFrame: definition.RawSourceFrame, sourceFrameBaselinePx: definition.SourceFrameBaselinePx);
             var customLayers = new List<EntityRenderLayerDefinition>();
@@ -309,12 +311,14 @@ public static partial class EntityModelResolver
                                                     : piglin
                                                     ? PiglinArmorModelDefinition.ForSlot(slot, baby)
                                                     : null;
-                var layerModel = rawArmor is null
+                // B-2 (#228): saddle/decor/harness trees are source-frame; their layers follow the raw frame too.
+                var rawEquipmentTree = rawArmor is null && EquipmentModelTrees.IsRawSourceFrame(effectiveKind);
+                var layerModel = rawArmor is null && !rawEquipmentTree
                     ? new EntityModelDefinition(layerName, definition.TextureWidth, definition.TextureHeight, PlayerModelDefinition.DefaultFaceTransforms, layerTexture, definition.Scale, textureSelector: selector, additionalTexturePaths: [layerTexture], compiled: EntityModelLayerHelpers.WithTint(
                             equipmentTree,
                             state => EntityModelResolver.ResolveEquipmentTint(state, effectiveKind, slot)), baselinePx: 24f, rawSourceFrame: false, sourceFrameBaselinePx: 24f)
-                    : new EntityModelDefinition(layerName, rawArmor.TextureWidth, rawArmor.TextureHeight, faceTransforms: null, texturePath: layerTexture, scale: rawArmor.Scale, textureSelector: selector, additionalTexturePaths: [layerTexture], compiled: EntityModelLayerHelpers.WithTint(
-                            rawArmor.Compiled!,
+                    : new EntityModelDefinition(layerName, rawArmor?.TextureWidth ?? definition.TextureWidth, rawArmor?.TextureHeight ?? definition.TextureHeight, faceTransforms: null, texturePath: layerTexture, scale: rawArmor?.Scale ?? definition.Scale, textureSelector: selector, additionalTexturePaths: [layerTexture], compiled: EntityModelLayerHelpers.WithTint(
+                            rawArmor?.Compiled ?? equipmentTree,
                             state => EntityModelResolver.ResolveEquipmentTint(state, effectiveKind, slot)), baselinePx: 0f, rawSourceFrame: true, sourceFrameBaselinePx: 0f);
                 customLayers.Add(new EntityRenderLayerDefinition(
                     layerName,
@@ -332,7 +336,7 @@ public static partial class EntityModelResolver
                     EquipmentAssetKind.HumanoidLeggings => EquipmentLayerType.HumanoidLeggings,
                     _ => (EquipmentLayerType?)null
                 };
-                var rawMaterial = rawArmor is not null;
+                var rawMaterial = rawArmor is not null || rawEquipmentTree;
                 var materialCompiled = rawArmor?.Compiled ?? equipmentTree;
                 var materialScale = rawArmor?.Scale ?? definition.Scale;
                 var materialBaseline = rawMaterial ? 0f : 24f;
@@ -481,7 +485,7 @@ public static partial class EntityModelResolver
                         piglin: typeId is (PiglinModelDefinition.PiglinEntityTypeId
                             or PiglinModelDefinition.PiglinBruteEntityTypeId
                             or PiglinModelDefinition.ZombifiedPiglinEntityTypeId))
-                    : EquipmentModelTrees.For(kind);
+                    : EquipmentModelTrees.For(kind, baby);
                 if (equipmentTree is { })
                 {
                     var fixedTexture = typeId == 138 && kind == EquipmentAssetKind.LlamaBody

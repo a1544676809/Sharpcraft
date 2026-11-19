@@ -15,25 +15,28 @@ internal static class EquipmentModelTrees
         VanillaMeshBakery.Build(HorseModelDefinition.BuildBodyMesh(0.1f), 64, 64);
 
     private static readonly CompiledEntityModel EquineSaddle =
-        VanillaMeshBakery.Build(HorseModelDefinition.BuildSaddleMesh(), 64, 64);
+        VanillaMeshBakery.Build(HorseModelDefinition.BuildSaddleMesh(), 64, 64, rawSourceFrame: true);
 
     private static readonly CompiledEntityModel DonkeySaddle =
-        VanillaMeshBakery.Build(HorseModelDefinition.BuildSaddleMesh(donkey: true), 64, 64);
+        VanillaMeshBakery.Build(HorseModelDefinition.BuildSaddleMesh(donkey: true), 64, 64, rawSourceFrame: true);
 
     private static readonly CompiledEntityModel CamelSaddle =
-        VanillaMeshBakery.Build(CamelModelDefinition.BuildSaddleMesh(), 128, 128);
+        VanillaMeshBakery.Build(CamelModelDefinition.BuildSaddleMesh(), 128, 128, rawSourceFrame: true);
 
     private static readonly CompiledEntityModel LlamaDecor =
-        VanillaMeshBakery.Build(LlamaModelDefinition.BuildBodyMesh(0.5f), 128, 64);
+        VanillaMeshBakery.Build(LlamaModelDefinition.BuildBodyMesh(0.5f), 128, 64, rawSourceFrame: true);
+
+    private static readonly CompiledEntityModel LlamaBabyDecor =
+        VanillaMeshBakery.Build(BabyModelDefinitionsEquine.BuildLlamaMesh(0.2f), 64, 64, rawSourceFrame: true);
 
     private static readonly CompiledEntityModel NautilusArmor =
         VanillaMeshBakery.Build(NautilusModelDefinition.BuildBodyMesh(0.01f), 128, 128);
 
     private static readonly CompiledEntityModel NautilusSaddle =
-        VanillaMeshBakery.Build(NautilusModelDefinition.BuildBodyMesh(0.2f, saddleShell: true), 128, 128);
+        VanillaMeshBakery.Build(NautilusModelDefinition.BuildBodyMesh(0.2f, saddleShell: true), 128, 128, rawSourceFrame: true);
 
     private static readonly CompiledEntityModel HappyHarness =
-        VanillaMeshBakery.Build(BuildHappyHarnessMesh(), 64, 64);
+        VanillaMeshBakery.Build(BuildHappyHarnessMesh(), 64, 64, rawSourceFrame: true);
 
     private static readonly CompiledEntityModel WolfArmor =
         VanillaMeshBakery.Build(WolfModelDefinition.BuildBodyMesh(0.2f), 64, 32);
@@ -56,11 +59,11 @@ internal static class EquipmentModelTrees
             return baby ? HumanoidArmorTrees.ForBaby(slot) : HumanoidArmorTrees.For(slot, player);
         }
 
-        return For(kind);
+        return For(kind, baby);
     }
 
     /// <summary>Returns the baked layer model for a supported equipment kind, or null when the kind has no tree yet.</summary>
-    public static CompiledEntityModel? For(EquipmentAssetKind kind) => kind switch
+    public static CompiledEntityModel? For(EquipmentAssetKind kind, bool baby = false) => kind switch
     {
         EquipmentAssetKind.HorseBody => HorseArmor,
         EquipmentAssetKind.HorseSaddle => EquineSaddle,
@@ -69,7 +72,7 @@ internal static class EquipmentModelTrees
         EquipmentAssetKind.SkeletonHorseSaddle => EquineSaddle,
         EquipmentAssetKind.ZombieHorseSaddle => EquineSaddle,
         EquipmentAssetKind.CamelSaddle => CamelSaddle,
-        EquipmentAssetKind.LlamaBody => LlamaDecor,
+        EquipmentAssetKind.LlamaBody => baby ? LlamaBabyDecor : LlamaDecor,
         EquipmentAssetKind.NautilusBody => NautilusArmor,
         EquipmentAssetKind.NautilusSaddle => NautilusSaddle,
         EquipmentAssetKind.HappyGhastBody => HappyHarness,
@@ -86,4 +89,23 @@ internal static class EquipmentModelTrees
             new VanillaCubeDefinition("goggles", 0, 32, -8f, -2.5f, -2.5f, 16f, 5f, 5f, Grow: 0.15f));
         return new VanillaMeshDefinition(root);
     }
+
+    /// <summary>
+    /// True for the equipment kinds whose tree is authored in the reference source frame (B-2 / #228): the resolver
+    /// emits these layers with rawSourceFrame so the living flip/baseline matches the jar probe instead of the legacy
+    /// 24 px bake.
+    /// </summary>
+    public static bool IsRawSourceFrame(EquipmentAssetKind kind) => kind switch
+    {
+        EquipmentAssetKind.HorseSaddle => true,
+        EquipmentAssetKind.DonkeySaddle => true,
+        EquipmentAssetKind.MuleSaddle => true,
+        EquipmentAssetKind.SkeletonHorseSaddle => true,
+        EquipmentAssetKind.ZombieHorseSaddle => true,
+        EquipmentAssetKind.CamelSaddle => true,
+        EquipmentAssetKind.NautilusSaddle => true,
+        EquipmentAssetKind.LlamaBody => true,
+        EquipmentAssetKind.HappyGhastBody => true,
+        _ => false
+    };
 }
