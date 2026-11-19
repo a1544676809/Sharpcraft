@@ -175,8 +175,8 @@ public sealed class EntityVariantTests
 
         Assert.Equal(minX * px, min.X, 4);
         Assert.Equal(maxX * px, max.X, 4);
-        Assert.Equal(22f * px, min.Y, 4);
-        Assert.Equal(24f * px, max.Y, 4);
+        Assert.Equal((22f + (VanillaMeshBake.ReferencePivotHeight - 24f)) * px, min.Y, 4);
+        Assert.Equal((24f + (VanillaMeshBake.ReferencePivotHeight - 24f)) * px, max.Y, 4);
         Assert.Equal(-16f * px, min.Z, 4);
         Assert.Equal(-10f * px, max.Z, 4);
     }

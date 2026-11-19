@@ -76,8 +76,8 @@ public sealed class EntityModelHierarchyTests
         const float px = (1f / 16f) * EntityPlaceholderMesher.ModelScale;
         Assert.Equal(-2.5f * px, min.X, 3);
         Assert.Equal(2.5f * px, max.X, 3);
-        Assert.Equal(6.998f * px, min.Y, 2);
-        Assert.Equal(11.998f * px, max.Y, 2);
+        Assert.Equal((6.998f + (VanillaMeshBake.ReferencePivotHeight - 24f)) * px, min.Y, 2);
+        Assert.Equal((11.998f + (VanillaMeshBake.ReferencePivotHeight - 24f)) * px, max.Y, 2);
         Assert.Equal(-5.478f * px, min.Z, 2);
         Assert.Equal(-0.478f * px, max.Z, 2);
     }
@@ -91,8 +91,8 @@ public sealed class EntityModelHierarchyTests
         const float px = (1f / 16f) * EntityPlaceholderMesher.ModelScale;
         Near(-3.5f * px, min.X);
         Near(3.5f * px, max.X);
-        Near(22f * px, min.Y);
-        Near(30f * px, max.Y);
+        Near((22f + (VanillaMeshBake.ReferencePivotHeight - 24f)) * px, min.Y);
+        Near((30f + (VanillaMeshBake.ReferencePivotHeight - 24f)) * px, max.Y);
         Near(-25f * px, min.Z);
         Near(-6f * px, max.Z);
     }

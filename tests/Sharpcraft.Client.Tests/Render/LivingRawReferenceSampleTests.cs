@@ -248,7 +248,9 @@ public sealed class LivingRawReferenceSampleTests
         {
             Assert.True(def.RawSourceFrame, $"{name}: production definition must be rawSourceFrame");
             Assert.Equal(0f, def.BaselinePx);
-            Assert.Equal(24f, def.SourceFrameBaselinePx);
+            // Source flip baseline: LivingEntityRenderer.scale(-1,-1,1) then translate(0,-1.501,0),
+            // i.e. 24.016 px (1.501 blocks) rather than a 24 px model height.
+            Assert.Equal(VanillaMeshBake.ReferencePivotHeight, def.SourceFrameBaselinePx);
             Assert.Null(def.FaceTransforms is { Count: > 0 } ? def.FaceTransforms : null);
         }
     }
@@ -388,6 +390,11 @@ public sealed class LivingRawReferenceSampleTests
     /// complete world-vertex POSITION multisets compared strictly. UV is excluded here by design
     /// (legacy applies a face-UV calibration; raw uses source UVs verified in check 1).
     /// </summary>
+    /// <remarks>
+    /// The raw living path uses the exact source flip baseline (24.016 px = 1.501 blocks,
+    /// LivingEntityRenderer.translate(0,-1.501,0)); the legacy twin reconstruction uses the same
+    /// corrected height so this check still isolates the flip/frame maths rather than the constant.
+    /// </remarks>
     public static TheoryData<EntityModelDefinition, EntityModelDefinition, int, int, string, EntityRenderState> WorldCases => new()
     {
         { CreeperModelDefinition.Definition, LegacyEntityTwinFactory.Creeper(), 64, 32, "entity/creeper/creeper", new EntityRenderState(1, 32, 10f, 2f, -4f, 45f, 0f) },
@@ -462,7 +469,7 @@ public sealed class LivingRawReferenceSampleTests
         var source = LoadSample("spider-raw-vectors.reference.txt").First();
         var scaled = new Vector3(
             -source.X * 0.7f,
-            24f / 16f - (24.016f * (1f - 0.7f) / 16f + source.Y * 0.7f),
+            VanillaMeshBake.ReferencePivotHeight / 16f - (24.016f * (1f - 0.7f) / 16f + source.Y * 0.7f),
             source.Z * 0.7f);
         var expected = Vector3.Transform(
             scaled,
