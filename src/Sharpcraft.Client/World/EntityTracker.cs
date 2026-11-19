@@ -186,6 +186,8 @@ public sealed class TrackedEntity
     private readonly bool?[] _equipmentHasBannerPatterns = new bool?[8];
     private readonly IReadOnlyList<Sharpcraft.Common.Network.BannerPatternLayer>?[] _equipmentBannerPatternLayers = new IReadOnlyList<Sharpcraft.Common.Network.BannerPatternLayer>?[8];
     private readonly int?[] _equipmentBannerBaseColors = new int?[8];
+    private readonly int?[] _equipmentPotionIds = new int?[8];
+    private readonly IReadOnlyList<Sharpcraft.Common.Network.PotionEffectInstance>?[] _equipmentPotionEffects = new IReadOnlyList<Sharpcraft.Common.Network.PotionEffectInstance>?[8];
     private readonly string?[] _equipmentTrimMaterials = new string?[8];
     private readonly string?[] _equipmentTrimPatterns = new string?[8];
 
@@ -253,6 +255,21 @@ public sealed class TrackedEntity
     /// <summary>All eight banner base-color components, reused by the per-frame render state.</summary>
     public IReadOnlyList<int?> EquipmentBannerBaseColors => _equipmentBannerBaseColors;
 
+    /// <summary>Potion registry id carried by one slot's potion_contents component, or null.</summary>
+    public int? EquipmentPotionIdAt(int slot) =>
+        (uint)slot < (uint)_equipmentPotionIds.Length ? _equipmentPotionIds[slot] : null;
+
+    /// <summary>All eight potion registry ids, reused by the per-frame render state.</summary>
+    public IReadOnlyList<int?> EquipmentPotionIds => _equipmentPotionIds;
+
+    /// <summary>Visible custom effects carried by one slot's potion_contents component, or null.</summary>
+    public IReadOnlyList<Sharpcraft.Common.Network.PotionEffectInstance>? EquipmentPotionEffectsAt(int slot) =>
+        (uint)slot < (uint)_equipmentPotionEffects.Length ? _equipmentPotionEffects[slot] : null;
+
+    /// <summary>All eight visible potion effect lists, reused by the per-frame render state.</summary>
+    public IReadOnlyList<IReadOnlyList<Sharpcraft.Common.Network.PotionEffectInstance>?> EquipmentPotionEffects =>
+        _equipmentPotionEffects;
+
     /// <summary>Trim material registry id for one equipment slot, or null when the item has no trim.</summary>
     public string? EquipmentTrimMaterialAt(int slot) =>
         (uint)slot < (uint)_equipmentTrimMaterials.Length ? _equipmentTrimMaterials[slot] : null;
@@ -294,6 +311,8 @@ public sealed class TrackedEntity
                 : (item.Components.BannerPatternLayers is { Count: > 0 } || item.Components.BaseColorId is not null);
             _equipmentBannerPatternLayers[item.Slot] = item.IsEmpty ? null : item.Components.BannerPatternLayers;
             _equipmentBannerBaseColors[item.Slot] = item.IsEmpty ? null : item.Components.BaseColorId;
+            _equipmentPotionIds[item.Slot] = item.IsEmpty ? null : item.Components.PotionId;
+            _equipmentPotionEffects[item.Slot] = item.IsEmpty ? null : item.Components.PotionEffects;
             EquipmentUpdates++;
         }
     }
@@ -610,6 +629,8 @@ public readonly record struct EntityRenderState(
     double DragonDistanceToEgg = 0,
     bool IsHoldingPotion = false,
     int? HeldPotionColor = null,
+    int HeldPotionId = -1,
+    IReadOnlyList<Sharpcraft.Common.Network.PotionEffectInstance>? HeldPotionEffects = null,
     bool IsPowered = false,
     bool IsSmall = false,
     bool ShowArms = false,

@@ -93,6 +93,13 @@ public sealed class ItemInHandMesher
         for (var index = 0; index < entities.Count; index++)
         {
             var entity = entities[index];
+            // Witch held items are owned by WitchItemLayer (potion or crossed arms) and emitted by
+            // WitchHeldPotionMesher; using the humanoid hand frame here would duplicate them (#245).
+            if (entity.TypeId == WitchModelDefinition.WitchEntityTypeId)
+            {
+                continue;
+            }
+
             var pose = index < poses.Count ? poses[index] : null;
             var model = EntityModelMesher.ResolveEntityModel(entity, variants);
             var entityMatrix = EntityModelTransform.From(entity).ToMatrix();

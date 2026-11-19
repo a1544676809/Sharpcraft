@@ -28,6 +28,7 @@ namespace Sharpcraft.Client.Render;
 public sealed class WitchHeldPotionMesher
 {
     public const string LayerName = "held_potion_item";
+    public const string CrossLayerName = "held_witch_item";
 
     private readonly DynamicGeometry _cutoutGeometry = new();
     private readonly List<ItemModelQuad> _quads = [];
@@ -41,7 +42,7 @@ public sealed class WitchHeldPotionMesher
     {
         ArgumentNullException.ThrowIfNull(entities);
         ArgumentNullException.ThrowIfNull(itemAtlas);
-        if (potionModel is null || EntityModelResolver.ItemModels is not { } models)
+        if (EntityModelResolver.ItemModels is not { } models)
         {
             return null;
         }
@@ -50,11 +51,15 @@ public sealed class WitchHeldPotionMesher
         var vertexFloats = 0;
         var indexCount = 0;
         var grass = models.GrassColormap;
+        var emittedPotion = false;
+        var emittedCross = false;
 
         for (var index = 0; index < entities.Count; index++)
         {
             var entity = entities[index];
-            if (!entity.IsHoldingPotion || entity.TypeId != WitchModelDefinition.WitchEntityTypeId)
+            var itemId = entity.MainHandItemId;
+            if (entity.TypeId != WitchModelDefinition.WitchEntityTypeId || itemId <= 0
+                || EntityModelResolver.Items?.ById(itemId) is not { } item)
             {
                 continue;
             }
@@ -67,27 +72,56 @@ public sealed class WitchHeldPotionMesher
             }
 
             var pose = index < poses.Count ? poses[index] : null;
-            // Source pose (root/head/nose chain + POTION literal transforms) in y-down source render units.
-            var witchPose = WitchHeldItemFrame.PotionSource(root);
-            // ItemDisplayContext.GROUND transform from the potion model's base display (item/generated.json).
-            var display = DisplayForGround(potionModel);
-            // Living-entity flip/baseline (S(-1,-1,1)*T(0,-1.501,0)) plus per-entity yaw/position/scale.
             var entityMatrix = EntityModelTransform.From(entity).ToMatrix();
-            var world = display * witchPose * entityMatrix;
-
-            _quads.Clear();
-            ItemEntityMesher.CollectQuads(_quads, potionModel, itemAtlas as ItemAtlas);
-            foreach (var quad in _quads)
+            if (entity.IsHoldingPotion)
             {
-                if (itemAtlas.Get(quad.Texture) is not { } sprite)
+                // Source WitchItemLayer potion branch: root/head/nose chain + POTION literal transforms.
+                var potion = potionModel ?? models.Resolve("minecraft:potion");
+                if (potion is null)
                 {
                     continue;
                 }
 
-                var tint = TintFor(quad.TintIndex, potionModel, entity, grass);
-                ItemEntityMesher.EmitQuads(
-                    _cutoutGeometry, [quad], world, itemAtlas, potionModel, grass,
-                    ref vertexFloats, ref indexCount, tintOverride: tint);
+                var world = DisplayForGround(potion) * WitchHeldItemFrame.PotionSource(root) * entityMatrix;
+                _quads.Clear();
+                ItemEntityMesher.CollectQuads(_quads, potion, itemAtlas as ItemAtlas);
+                foreach (var quad in _quads)
+                {
+                    if (itemAtlas.Get(quad.Texture) is not { } sprite)
+                    {
+                        continue;
+                    }
+
+                    var tint = TintFor(quad.TintIndex, potion, entity, grass);
+                    ItemEntityMesher.EmitQuads(
+                        _cutoutGeometry, [quad], world, itemAtlas, potion, grass,
+                        ref vertexFloats, ref indexCount, tintOverride: tint);
+                }
+
+                emittedPotion = true;
+                continue;
+            }
+
+            // Source CrossedArmsItemLayer branch: root/arms chain + crossed-arms transforms, then the stack's
+            // ItemDisplayContext.GROUND display and its own model tint sources.
+            foreach (var placement in models.ResolveAll(item.Id.ToString(), entity.IsUsingItem))
+            {
+                var world = DisplayForGround(placement.Model) * WitchHeldItemFrame.CrossSource(root) * entityMatrix;
+                _quads.Clear();
+                ItemEntityMesher.CollectQuads(_quads, placement.Model, itemAtlas as ItemAtlas);
+                foreach (var quad in _quads)
+                {
+                    if (itemAtlas.Get(quad.Texture) is not { } sprite)
+                    {
+                        continue;
+                    }
+
+                    ItemEntityMesher.EmitQuads(
+                        _cutoutGeometry, [quad], world, itemAtlas, placement.Model, grass,
+                        ref vertexFloats, ref indexCount);
+                }
+
+                emittedCross = true;
             }
         }
 
@@ -98,9 +132,9 @@ public sealed class WitchHeldPotionMesher
 
         _cutoutGeometry.VertexFloats = vertexFloats;
         _cutoutGeometry.IndexCount = indexCount;
-        return new EntityGeometryLayer(LayerName, EntityGeometryLayerKind.ItemCutout, 895, _cutoutGeometry, usesItemAtlas: true);
+        var layerName = emittedPotion || !emittedCross ? LayerName : CrossLayerName;
+        return new EntityGeometryLayer(layerName, EntityGeometryLayerKind.ItemCutout, 895, _cutoutGeometry, usesItemAtlas: true);
     }
-
     /// <summary>ItemDisplayContext.GROUND transform from the model's base display (item/generated.json).</summary>
     private static Matrix4x4 DisplayForGround(ItemModelResolution model) =>
         model.Display.TryGetValue(ItemDisplayContext.Ground, out var transform)
@@ -126,10 +160,9 @@ public sealed class WitchHeldPotionMesher
             return source.Evaluate(grass);
         }
 
+        // PotionContents.getColorOr(default): custom colour -> effects/potion registry colour -> item tint default.
         int? argb = entity.HeldPotionColor;
-        // Effect-derived colour needs the potion registry id (DataComponents.POTION_CONTENTS holder) on the render
-        // state; it is not threaded there yet (R-046 blocker). Until then only a stack custom colour or the source
-        // default is available. The jar colour table lives in the test assembly until it has a production consumer.
+        argb ??= PotionColorTable.Resolve(entity.HeldPotionId, entity.HeldPotionEffects);
         argb ??= source.Argb == 0 ? ItemTintSource.PotionDefaultColor : source.Argb;
         return new Vector3(
             ((argb.Value >> 16) & 0xFF) / 255f,

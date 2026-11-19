@@ -319,6 +319,7 @@ internal sealed partial class InteractiveSession
         _live = live;
         Sharpcraft.Common.Registries.TrimRegistryTable.Configure(live?.Registries);
         Sharpcraft.Common.Registries.BannerPatternTable.Configure(live?.Registries);
+        Sharpcraft.Client.Render.PotionColorTable.Configure(live?.Registries);
         _sync = live is null ? null : new PlayerSync();
         // Animation state is created per tracked entity and carried through the render state; the registry lives in the
         // rendering layer so the world model itself stays free of rendering types.
