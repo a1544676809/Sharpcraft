@@ -22,8 +22,9 @@ public readonly record struct EntityModelTransform(
     Vector3 AttachPivot = default,
     // Raw source-frame models are authored in the reference's y-down pixel frame. The reference
     // LivingEntityRenderer applies scale(-1,-1,1) then translate(0,-1.501,0) to place that frame in
-    // the world. We carry the same flip here, plus the equivalent model-height baseline in our world
-    // units (24 px). See docs/analysis/render/entity-coordinate-system.md and issue #102.
+    // the world. We carry the same flip here, plus the equivalent baseline in our world units
+    // (24.016 px = 1.501 blocks, see RawBaselinePx). See docs/analysis/render/entity-coordinate-system.md
+    // and issue #102.
     bool FlipRawSourceFrame = false,
     float RawBaselineWorld = 0f)
 {
@@ -51,8 +52,12 @@ public readonly record struct EntityModelTransform(
             AttachPivot: Vector3.Zero);
     }
 
-    /// <summary>The model-height baseline in pixels the reference renderer folds into the frame flip.</summary>
-    public const float RawBaselinePx = 24f;
+    /// <summary>
+    /// The source flip baseline in pixels: the reference renderer's <c>translate(0,-1.501,0)</c> equals
+    /// 24.016 px in the y-down model frame (1.501 blocks). This is the uniform constant every living
+    /// model uses; it is not a per-model height.
+    /// </summary>
+    public const float RawBaselinePx = VanillaMeshBake.ReferencePivotHeight;
     public static EntityModelTransform From(Sharpcraft.Client.World.EntityRenderState state)
     {
         var size = state.CubeSize <= 0 ? 1 : state.CubeSize;

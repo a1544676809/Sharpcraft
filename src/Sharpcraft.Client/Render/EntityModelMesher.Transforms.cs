@@ -403,9 +403,14 @@ public sealed partial class EntityModelMesher
             target.PivotX + poseOffset.Position.X,
             target.PivotY + poseOffset.Position.Y + yOffset,
             target.PivotZ + poseOffset.Position.Z);
+        // The held-item anchor was fitted against the 24 px legacy bake (#120/#134), so this
+        // compatibility frame keeps that constant even though the living raw baseline is now the
+        // source 24.016 px flip (B-1 / #228). Following the living baseline would shift every held
+        // item by 0.001 block away from the fitted anchor.
+        const float LegacyHandBaselinePx = 24f;
         var legacyPivot = new Vector3(
             -sourcePivot.X,
-            definition.SourceFrameBaselinePx - sourcePivot.Y,
+            LegacyHandBaselinePx - sourcePivot.Y,
             sourcePivot.Z);
         var local = Matrix4x4.CreateScale(new Vector3(
                 1f + poseOffset.Scale.X,

@@ -43,7 +43,7 @@ public static class ParrotModelDefinition
                 continue;
             }
 
-            variants[VariantKeys[i]] = new EntityModelDefinition("parrot_" + VariantKeys[i], 32, 32, faceTransforms: null, texturePath: "entity/parrot/" + VariantFiles[i], compiled: ParrotCompiled);
+            variants[VariantKeys[i]] = new EntityModelDefinition("parrot_" + VariantKeys[i], 32, 32, faceTransforms: null, texturePath: "entity/parrot/" + VariantFiles[i], compiled: ParrotCompiled, baselinePx: 0f, rawSourceFrame: true);
         }
 
         return variants;

@@ -58,7 +58,7 @@ public static class SalmonModelDefinition
             var key = VariantKeys[i];
             variants[key] = key == "medium"
                 ? Definition
-                : new EntityModelDefinition("salmon_" + key, 32, 32, faceTransforms: null, texturePath: "entity/fish/salmon", scale: VariantScale[i], compiled: SalmonCompiled);
+                : new EntityModelDefinition("salmon_" + key, 32, 32, faceTransforms: null, texturePath: "entity/fish/salmon", scale: VariantScale[i], compiled: SalmonCompiled, baselinePx: 0f, rawSourceFrame: true);
         }
 
         return variants;

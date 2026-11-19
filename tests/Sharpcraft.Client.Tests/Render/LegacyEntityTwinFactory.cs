@@ -24,7 +24,12 @@ namespace Sharpcraft.Client.Tests.Render;
 /// </summary>
 internal static class LegacyEntityTwinFactory
 {
-    private const float H = 24f;
+    // Pre-migration Sharpcraft baked with a 24 px model height (1.500 blocks). The raw living path now
+    // uses the exact source flip baseline (24.016 px = 1.501 blocks, LivingEntityRenderer translate
+    // (0,-1.501,0)), so this reconstruction uses the same corrected height: every part formula below
+    // shifts by +0.016 px and the final world by +0.001 block, which is the documented source correction
+    // (issue #228 B-1). Everything else stays the pre-migration literal.
+    private const float H = VanillaMeshBake.ReferencePivotHeight;
 
     private static EntityModelPart Root(string name, float px, float py, float pz, float minX, float minY, float minZ,
         float w, float h, float d, int tx, int ty, bool mirror = false, bool mirrorX = true,

@@ -43,7 +43,7 @@ public static class ShulkerModelDefinition
         var variants = new Dictionary<string, EntityModelDefinition>(StringComparer.Ordinal);
         foreach (var key in VariantKeys)
         {
-            variants[key] = new EntityModelDefinition("shulker_" + key, 64, 64, faceTransforms: null, texturePath: "entity/shulker/shulker_" + key, compiled: Definition.Compiled);
+            variants[key] = new EntityModelDefinition("shulker_" + key, 64, 64, faceTransforms: null, texturePath: "entity/shulker/shulker_" + key, compiled: Definition.Compiled, baselinePx: 0f, rawSourceFrame: true);
         }
 
         return variants;

@@ -14,13 +14,14 @@ namespace Sharpcraft.Client.Tests.Render;
 /// <summary>
 /// Live-path layer-scale regression for raw source-frame models (#141/R-034). The source layer bake applies
 /// MeshTransformer.scaling(factor) to the root pose: yOffset = 24.016*(1-factor) pixels before the entity flip.
-/// The reference sample is model-space (y-down); the live path flips y and applies the 24 px baseline, so
-/// expected world = (-x, 24/16 - y, z) at modelScale 1.
+/// The reference sample is model-space (y-down); the live path flips y and applies the source flip baseline
+/// (24.016 px = 1.501 blocks, LivingEntityRenderer.translate(0,-1.501,0)), so expected world =
+/// (-x, 24.016/16 - y, z) at modelScale 1.
 /// </summary>
 public sealed class RawLayerScaleOffsetTests
 {
-    private const float BaselineBlocks = 24f / 16f;
-    private const float LayerPivotPx = 24.016f;
+    private const float BaselineBlocks = VanillaMeshBake.ReferencePivotHeight / 16f;
+    private const float LayerPivotPx = VanillaMeshBake.ReferencePivotHeight;
 
     [Fact]
     public void HappyGhastLayerScaleLiveWorldMatchesEverySourceVertex()

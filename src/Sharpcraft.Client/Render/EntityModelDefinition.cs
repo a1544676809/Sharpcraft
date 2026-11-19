@@ -30,7 +30,10 @@ public sealed class EntityModelDefinition
         bool applyRootPose = false,
         float baselinePx = 24f,
         bool rawSourceFrame = false,
-        float sourceFrameBaselinePx = 24f)
+        // Reference LivingEntityRenderer flips y then translates by -1.501 blocks, i.e. 24.016 px
+        // (VanillaMeshBake.ReferencePivotHeight), not 24 px. Using the exact source constant keeps
+        // raw living world coordinates equivalent to the jar probe at 1e-5 (#228 B-1).
+        float sourceFrameBaselinePx = VanillaMeshBake.ReferencePivotHeight)
     {
         if (rawSourceFrame && baselinePx != 0f)
         {
@@ -121,11 +124,13 @@ public sealed class EntityModelDefinition
     public bool RawSourceFrame { get; }
 
     /// <summary>
-    /// For raw source-frame models, the model height (in pixels) whose reflection the entity transform
-    /// owns on behalf of the reference renderer. This is the y-down height the legacy bake used to fold
-    /// into geometry (24 for the standard skeleton, 25 for Enderman, 0 for parts authored without a
-    /// baseline). It is carried here only so the transform can place raw vertices at the same final
-    /// world coordinates; the bake itself uses no baseline for raw models.
+    /// For raw source-frame models, the model-space baseline (in pixels) whose reflection the entity
+    /// transform owns on behalf of the reference renderer. The reference
+    /// <c>LivingEntityRenderer</c> applies <c>scale(-1,-1,1)</c> then <c>translate(0,-1.501,0)</c>,
+    /// i.e. a 24.016 px (1.501 block) baseline for every living model. Layers that are positioned
+    /// relative to an already-placed model pass 0 instead. It is carried here only so the transform
+    /// can place raw vertices at the source world coordinates; the bake itself uses no baseline for
+    /// raw models.
     /// </summary>
     public float SourceFrameBaselinePx { get; }
 
@@ -147,7 +152,7 @@ public sealed class EntityModelDefinition
         float baselinePx = 24f,
         bool rawSourceFrame = false,
         bool applyRootPose = false,
-        float sourceFrameBaselinePx = 24f)
+        float sourceFrameBaselinePx = VanillaMeshBake.ReferencePivotHeight)
     {
         ArgumentNullException.ThrowIfNull(mesh);
         var compiled = VanillaMeshBakery.Build(mesh, textureWidth, textureHeight, baselinePx, texturePath: texturePath, rawSourceFrame: rawSourceFrame);
