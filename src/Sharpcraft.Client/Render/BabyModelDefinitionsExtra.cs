@@ -60,7 +60,7 @@ public static class BabyModelDefinitionsExtra
         {
             if (key != "tabby")
             {
-                variants[(CatModelDefinition.CatEntityTypeId, key)] = new("baby_cat_" + key, 32, 32, PlayerModelDefinition.DefaultFaceTransforms, "entity/cat/cat_" + key + "_baby", compiled: CatCompiled);
+                variants[(CatModelDefinition.CatEntityTypeId, key)] = new("baby_cat_" + key, 32, 32, PlayerModelDefinition.DefaultFaceTransforms, "entity/cat/cat_" + key + "_baby", compiled: CatCompiled, baselinePx: 0f, rawSourceFrame: true);
             }
         }
 
@@ -79,10 +79,10 @@ public static class BabyModelDefinitionsExtra
             var tame = "entity/wolf/" + file + "_tame_baby";
             var angry = "entity/wolf/" + file + "_angry_baby";
             var captured = wild;
-            variants[(WolfModelDefinition.WolfEntityTypeId, key)] = new("baby_wolf_" + key, 32, 32, PlayerModelDefinition.DefaultFaceTransforms, captured, textureSelector: state => state.IsTame ? tame : state.IsAngry ? angry : captured, additionalTexturePaths: [tame, angry], compiled: WolfCompiled);
+            variants[(WolfModelDefinition.WolfEntityTypeId, key)] = new("baby_wolf_" + key, 32, 32, PlayerModelDefinition.DefaultFaceTransforms, captured, textureSelector: state => state.IsTame ? tame : state.IsAngry ? angry : captured, additionalTexturePaths: [tame, angry], compiled: WolfCompiled, baselinePx: 0f, rawSourceFrame: true);
         }
 
-        variants[(FoxModelDefinition.FoxEntityTypeId, "snow")] = new("baby_fox_snow", 32, 32, PlayerModelDefinition.DefaultFaceTransforms, "entity/fox/fox_snow_baby", textureSelector: state => state.IsSleeping ? "entity/fox/fox_snow_sleep_baby" : "entity/fox/fox_snow_baby", additionalTexturePaths: ["entity/fox/fox_snow_sleep_baby"], compiled: FoxCompiled);
+        variants[(FoxModelDefinition.FoxEntityTypeId, "snow")] = new("baby_fox_snow", 32, 32, PlayerModelDefinition.DefaultFaceTransforms, "entity/fox/fox_snow_baby", textureSelector: state => state.IsSleeping ? "entity/fox/fox_snow_sleep_baby" : "entity/fox/fox_snow_baby", additionalTexturePaths: ["entity/fox/fox_snow_sleep_baby"], compiled: FoxCompiled, baselinePx: 0f, rawSourceFrame: true);
 
         var rabbitFiles = new Dictionary<string, string>(StringComparer.Ordinal)
         {
@@ -98,7 +98,7 @@ public static class BabyModelDefinitionsExtra
         {
             if (key != "brown")
             {
-                variants[(RabbitModelDefinition.RabbitEntityTypeId, key)] = new("baby_rabbit_" + key, 32, 32, PlayerModelDefinition.DefaultFaceTransforms, "entity/rabbit/" + rabbitFiles[key] + "_baby", compiled: RabbitCompiled);
+                variants[(RabbitModelDefinition.RabbitEntityTypeId, key)] = new("baby_rabbit_" + key, 32, 32, PlayerModelDefinition.DefaultFaceTransforms, "entity/rabbit/" + rabbitFiles[key] + "_baby", compiled: RabbitCompiled, baselinePx: 0f, rawSourceFrame: true);
             }
         }
 

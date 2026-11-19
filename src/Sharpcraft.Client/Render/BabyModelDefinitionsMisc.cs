@@ -50,7 +50,7 @@ public static class BabyModelDefinitionsMisc
         {
             if (key != "normal")
             {
-                variants[(97, key)] = new EntityModelDefinition("baby_panda_" + key, 64, 64, PlayerModelDefinition.DefaultFaceTransforms, "entity/panda/panda_" + key + "_baby", compiled: PandaCompiled);
+                variants[(97, key)] = new EntityModelDefinition("baby_panda_" + key, 64, 64, PlayerModelDefinition.DefaultFaceTransforms, "entity/panda/panda_" + key + "_baby", compiled: PandaCompiled, baselinePx: 0f, rawSourceFrame: true);
             }
         }
 

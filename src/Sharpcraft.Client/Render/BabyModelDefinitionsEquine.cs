@@ -65,7 +65,7 @@ public static class BabyModelDefinitionsEquine
         {
             if (key != "brown")
             {
-                variants[(HorseModelDefinition.HorseEntityTypeId, key)] = new("baby_horse_" + key, 64, 64, PlayerModelDefinition.DefaultFaceTransforms, "entity/horse/" + horseFiles[key] + "_baby", compiled: HorseMarkedCompiled);
+                variants[(HorseModelDefinition.HorseEntityTypeId, key)] = new("baby_horse_" + key, 64, 64, PlayerModelDefinition.DefaultFaceTransforms, "entity/horse/" + horseFiles[key] + "_baby", compiled: HorseMarkedCompiled, baselinePx: 0f, rawSourceFrame: true);
             }
         }
 
