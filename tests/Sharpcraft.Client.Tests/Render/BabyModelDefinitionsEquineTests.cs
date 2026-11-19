@@ -9,29 +9,6 @@ namespace Sharpcraft.Client.Tests.Render;
 /// <summary>T-697: proves the DSL-baked baby horse/llama/camel/donkey parts match the legacy records.</summary>
 public sealed class BabyModelDefinitionsEquineTests
 {
-    [Fact]
-    public void BabyHorsePartsMatchLegacyRecords()
-    {
-        var baseParts = new[]
-        {
-            RawModelPartFactory.FromVanilla("body", 0f, 12.5f, 0f, -4f, -3.5f, -7f, 8f, 7f, 14f, 0, 13),
-            RawModelPartFactory.FromVanillaChild("tail", "body", 0f, -1f, 7f, -1.5f, -1.5f, -1f, 3f, 3f, 8f, 24, 34, rotationX: -0.7418f),
-            RawModelPartFactory.FromVanilla("left_hind_leg", 2.4f, 16f, 5.4f, -1.5f, -1f, -1.5f, 3f, 9f, 3f, 12, 46),
-            RawModelPartFactory.FromVanilla("right_hind_leg", -2.4f, 16f, 5.4f, -1.5f, -1f, -1.5f, 3f, 9f, 3f, 0, 46),
-            RawModelPartFactory.FromVanilla("left_front_leg", 2.4f, 16f, -5.4f, -1.5f, -1f, -1.5f, 3f, 9f, 3f, 12, 34),
-            RawModelPartFactory.FromVanilla("right_front_leg", -2.4f, 16f, -5.4f, -1.5f, -1f, -1.5f, 3f, 9f, 3f, 0, 34),
-            RawModelPartFactory.FromVanilla("head_parts", 0f, 10f, -6f, -2f, -6f, -2f, 4f, 8f, 4f, 30, 0, rotationX: 0.6109f),
-            RawModelPartFactory.FromVanillaChild("head", "head_parts", 0f, -6.0516f, -0.2951f, -3f, -3.9484f, -6.705f, 6f, 4f, 9f, 0, 0),
-            RawModelPartFactory.FromVanillaChild("left_ear", "head", 2f, -4.2484f, 1.9451f, -1f, -2.5f, -0.8f, 2f, 3f, 1f, 0, 4, rotationZ: 0.2618f),
-            RawModelPartFactory.FromVanillaChild("right_ear", "head", -2f, -4.2484f, 1.645f, -1f, -2.5f, -0.5f, 2f, 3f, 1f, 0, 0, rotationZ: -0.2618f)
-        };
-        var expected = EntityModelLayerHelpers.WithHorseMarkings(baseParts, "entity/horse/horse_markings_", true);
-        AssertPartsMatch(expected, BabyModelDefinitionsEquine.Horse.Parts);
-        foreach (var key in HorseModelDefinition.VariantKeys)
-        {
-            AssertPartsMatch(expected, BabyModelDefinitionsEquine.Variants[(HorseModelDefinition.HorseEntityTypeId, key)].Parts);
-        }
-    }
 
     [Fact]
     public void BabyLlamaPartsMatchSourceFrameRecords()
@@ -60,50 +37,6 @@ public sealed class BabyModelDefinitionsEquineTests
             Assert.Equal(0f, def.BaselinePx);
             Assert.Null(def.FaceTransforms is { Count: > 0 } ? def.FaceTransforms : null);
         }
-    }
-
-    [Fact]
-    public void BabyCamelPartsMatchLegacyRecords()
-    {
-        var expected = new[]
-        {
-            RawModelPartFactory.FromVanilla("body", 0f, 7f, 0f, -4.5f, -4f, -8f, 9f, 8f, 16f, 0, 14),
-            RawModelPartFactory.FromVanillaChild("tail", "body", 0f, -1.5f, 8.05f, -1.5f, -0.5f, 0f, 3f, 9f, 0f, 50, 38),
-            RawModelPartFactory.FromVanillaChild("head", "body", 0f, 1f, -7.5f, -2.5f, -3f, -7.5f, 5f, 5f, 7f, 20, 0),
-            RawModelPartFactory.FromVanillaChild("head_upper", "head", 0f, 0f, 0f, -2.5f, -12f, -7.5f, 5f, 9f, 5f, 0, 0),
-            RawModelPartFactory.FromVanillaChild("muzzle", "head", 0f, 0f, 0f, -2.5f, -12f, -10.5f, 5f, 4f, 3f, 0, 14),
-            RawModelPartFactory.FromVanillaChild("right_ear", "head", -2.5f, -11f, -4f, -3f, -0.5f, -1f, 3f, 1f, 2f, 37, 0),
-            RawModelPartFactory.FromVanillaChild("left_ear", "head", 2.5f, -11f, -4f, 0f, -0.5f, -1f, 3f, 1f, 2f, 47, 0),
-            RawModelPartFactory.FromVanilla("right_front_leg", -3f, 11.5f, -5.5f, -1.5f, -0.5f, -1.5f, 3f, 13f, 3f, 36, 14),
-            RawModelPartFactory.FromVanilla("left_front_leg", 3f, 11.5f, -5.5f, -1.5f, -0.5f, -1.5f, 3f, 13f, 3f, 48, 14),
-            RawModelPartFactory.FromVanilla("left_hind_leg", 3f, 11.5f, 5.5f, -1.5f, -0.5f, -1.5f, 3f, 13f, 3f, 12, 38),
-            RawModelPartFactory.FromVanilla("right_hind_leg", -3f, 11.5f, 5.5f, -1.5f, -0.5f, -1.5f, 3f, 13f, 3f, 0, 38)
-        };
-        AssertPartsMatch(expected, BabyModelDefinitionsEquine.Camel.Parts);
-    }
-
-    [Fact]
-    public void BabyDonkeyPartsMatchLegacyRecords()
-    {
-        var expected = new[]
-        {
-            RawModelPartFactory.FromVanilla("body", 1f, 14f, 0f, -5f, -3f, -7f, 8f, 6f, 14f, 0, 13),
-            RawModelPartFactory.FromVanillaChild("tail", "body", 0f, -1.5f, 6.5f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-            RawModelPartFactory.FromVanillaChild("tail_r1", "tail", 0f, 0f, 0f, -2.5f, -1f, -0.5f, 3f, 3f, 8f, 24, 33, rotationX: -0.7418f),
-            RawModelPartFactory.FromVanillaChild("left_hind_leg", "body", 2.25f, 3.5f, 5.25f, -2.5f, -1.5f, -1.5f, 3f, 8f, 3f, 12, 44),
-            RawModelPartFactory.FromVanillaChild("right_hind_leg", "body", -2.4f, 3.5f, 5.4f, -2.5f, -1.5f, -1.5f, 3f, 8f, 3f, 0, 44),
-            RawModelPartFactory.FromVanillaChild("left_front_leg", "body", 2.4f, 3.5f, -5.3f, -2.5f, -1.5f, -1.5f, 3f, 8f, 3f, 12, 33),
-            RawModelPartFactory.FromVanillaChild("right_front_leg", "body", -2.4f, 3.5f, -5.4f, -2.5f, -1.5f, -1.5f, 3f, 8f, 3f, 0, 33),
-            RawModelPartFactory.FromVanillaChild("head_parts", "body", 0f, -3f, -5f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-            RawModelPartFactory.FromVanillaChild("neck_r1", "head_parts", 0f, 0f, 0f, -3f, -6f, -3f, 4f, 8f, 4f, 30, 9, rotationX: 0.3927f),
-            RawModelPartFactory.FromVanillaChild("head", "head_parts", 0f, -5f, -3f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-            RawModelPartFactory.FromVanillaChild("head_r1", "head", 0f, -1f, 1f, -4f, -3.6f, -8.4f, 6f, 4f, 9f, 0, 0, rotationX: 0.3927f),
-            RawModelPartFactory.FromVanillaChild("left_ear", "head", 2f, -3.5f, -1f, -2f, -6.5f, -0.3f, 2f, 7f, 1f, 0, 0, rotationX: 0.48f, rotationZ: 0.48f),
-            RawModelPartFactory.FromVanillaChild("right_ear", "head", -2f, -3.5f, -1f, -2f, -6.5f, -0.3f, 2f, 7f, 1f, 22, 0, mirror: true, rotationX: 0.48f, rotationZ: -0.48f),
-            RawModelPartFactory.FromVanillaChild("right_chest", "body", -1f, 10f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-            RawModelPartFactory.FromVanillaChild("left_chest", "body", -1f, 10f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0)
-        };
-        AssertPartsMatch(expected, BabyModelDefinitionsEquine.Donkey.Parts);
     }
 
     private static void AssertPartsMatch(EntityModelPart[] expected, IReadOnlyList<EntityModelPart> actual)

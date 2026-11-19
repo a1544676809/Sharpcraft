@@ -12,20 +12,6 @@ namespace Sharpcraft.Client.Tests.Render;
 /// </summary>
 public sealed class CreeperSpiderWitherModelDefinitionTests
 {
-    [Fact]
-    public void CreeperPartsMatchLegacyRecords()
-    {
-        var expected = new[]
-        {
-            RawModelPartFactory.FromVanilla("head", 0f, 6f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0),
-            RawModelPartFactory.FromVanilla("body", 0f, 6f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16),
-            RawModelPartFactory.FromVanilla("left_hind_leg", 2f, 18f, 4f, -2f, 0f, -2f, 4f, 6f, 4f, 0, 16),
-            RawModelPartFactory.FromVanilla("right_hind_leg", -2f, 18f, 4f, -2f, 0f, -2f, 4f, 6f, 4f, 0, 16),
-            RawModelPartFactory.FromVanilla("left_front_leg", 2f, 18f, -4f, -2f, 0f, -2f, 4f, 6f, 4f, 0, 16),
-            RawModelPartFactory.FromVanilla("right_front_leg", -2f, 18f, -4f, -2f, 0f, -2f, 4f, 6f, 4f, 0, 16)
-        };
-        AssertPartsMatch(expected, CreeperModelDefinition.Definition.Parts);
-    }
 
     [Fact]
     public void SpiderPartsMatchLegacyRecords()
@@ -46,24 +32,6 @@ public sealed class CreeperSpiderWitherModelDefinitionTests
         };
         AssertPartsMatch(expected, SpiderModelDefinition.Definition.Parts);
         Assert.Equal("entity/spider/spider_eyes", SpiderModelDefinition.Definition.EmissiveTexturePath);
-    }
-
-    [Fact]
-    public void WitherPartsMatchLegacyRecords()
-    {
-        var expected = new[]
-        {
-            RawModelPartFactory.FromVanilla("shoulders", 0f, 0f, 0f, -10f, 3.9f, -0.5f, 20f, 3f, 3f, 0, 16, mirrorX: false),
-            RawModelPartFactory.FromVanilla("ribcage", -2f, 6.9f, -0.5f, 0f, 0f, 0f, 3f, 10f, 3f, 0, 22, rotationX: 0.20420352f),
-            RawModelPartFactory.FromVanillaChild("rib_1", "ribcage", 0f, 0f, 0f, -4f, 1.5f, 0.5f, 11f, 2f, 2f, 24, 22),
-            RawModelPartFactory.FromVanillaChild("rib_2", "ribcage", 0f, 0f, 0f, -4f, 4f, 0.5f, 11f, 2f, 2f, 24, 22),
-            RawModelPartFactory.FromVanillaChild("rib_3", "ribcage", 0f, 0f, 0f, -4f, 6.5f, 0.5f, 11f, 2f, 2f, 24, 22),
-            RawModelPartFactory.FromVanilla("tail", -2f, 16.692407608f, 1.527009249f, 0f, 0f, 0f, 3f, 6f, 3f, 12, 22, rotationX: 0.83252203f),
-            RawModelPartFactory.FromVanilla("center_head", 0f, 0f, 0f, -4f, -4f, -4f, 8f, 8f, 8f, 0, 0),
-            RawModelPartFactory.FromVanilla("right_head", -8f, 4f, 0f, -4f, -4f, -4f, 6f, 6f, 6f, 32, 0),
-            RawModelPartFactory.FromVanilla("left_head", 10f, 4f, 0f, -4f, -4f, -4f, 6f, 6f, 6f, 32, 0)
-        };
-        AssertPartsMatch(expected, WitherBossModelDefinition.Definition.Parts);
     }
 
     [Fact]

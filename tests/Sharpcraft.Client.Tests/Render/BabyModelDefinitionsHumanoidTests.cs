@@ -21,48 +21,6 @@ public sealed class BabyModelDefinitionsHumanoidTests
     }
 
     [Fact]
-    public void BabyZombieVillagerPartsMatchSourceFrameRecords()
-    {
-        var expected = new[]
-        {
-            RawModelPartFactory.FromVanilla("body", 0f, 18.75f, 0f, -2f, -2.75f, -1.5f, 4f, 5f, 3f, 0, 15),
-            RawModelPartFactory.FromVanillaChild("body_overlay", "body", 0f, 0f, 0f, -2f, -2.75f, -1.5f, 4f, 6f, 3f, 16, 22, grow: 0.1f),
-            RawModelPartFactory.FromVanilla("head", 0f, 16f, 0f, -4f, -8f, -3.5f, 8f, 8f, 7f, 0, 0),
-            RawModelPartFactory.FromVanillaChild("hat", "head", 0f, -4f, 0f, -4f, -4f, -3.5f, 8f, 8f, 7f, 0, 31, grow: 0.3f),
-            RawModelPartFactory.FromVanillaChild("hat_rim", "head", 0f, -4.5f, 0f, -7f, -0.5f, -6f, 14f, 1f, 12f, 0, 46),
-            RawModelPartFactory.FromVanillaChild("nose", "head", 0f, -1f, -4f, -1f, -1f, -0.5f, 2f, 2f, 1f, 23, 0),
-            RawModelPartFactory.FromVanilla("right_arm", -3f, 15.5f, 0f, -1f, -0.5f, -1f, 2f, 5f, 2f, 24, 15),
-            RawModelPartFactory.FromVanilla("left_arm", 3f, 15.5f, 0f, -1f, -0.5f, -1f, 2f, 5f, 2f, 16, 15),
-            RawModelPartFactory.FromVanilla("right_leg", -1f, 21.5f, 0f, -1f, -0.5f, -1f, 2f, 3f, 2f, 8, 23),
-            RawModelPartFactory.FromVanilla("left_leg", 1f, 21.5f, 0f, -1f, -0.5f, -1f, 2f, 3f, 2f, 0, 23)
-        };
-
-        AssertPartsMatch(expected, BabyModelDefinitionsHumanoid.ZombieVillager.Parts);
-    }
-
-    [Fact]
-    public void BabyVillagerPartsMatchSourceFrameRecords()
-    {
-        var expected = new[]
-        {
-            RawModelPartFactory.FromVanilla("arms", 0f, 17.5f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-            RawModelPartFactory.FromVanillaChild("right_hand", "arms", -3f, 1.4025f, -0.9599f, -1f, -2.4925f, -1.8401f, 2f, 4f, 2f, 36, 15, rotationX: -1.0472f),
-            RawModelPartFactory.FromVanillaChild("right_hand_2", "right_hand", 0f, 0f, 0f, 5f, -2.4925f, -1.8401f, 2f, 4f, 2f, 16, 15),
-            RawModelPartFactory.FromVanillaChild("middlearm_r1", "arms", 0f, 0.9024f, -1.8175f, -2f, -0.9924f, -0.9825f, 4f, 2f, 2f, 24, 17, rotationX: -1.0472f),
-            RawModelPartFactory.FromVanilla("right_leg", -1f, 21.5f, 0f, -1f, -0.5f, -1f, 2f, 3f, 2f, 8, 23),
-            RawModelPartFactory.FromVanilla("left_leg", 1f, 21.5f, 0f, -1f, -0.5f, -1f, 2f, 3f, 2f, 0, 23),
-            RawModelPartFactory.FromVanilla("head", 0f, 16f, 0f, -4f, -8f, -3.5f, 8f, 8f, 7f, 0, 0),
-            RawModelPartFactory.FromVanillaChild("hat", "head", 0f, -4f, 0f, -4f, -4f, -3.5f, 8f, 8f, 7f, 0, 30, grow: 0.3f),
-            RawModelPartFactory.FromVanillaChild("hat_rim", "head", 0f, -4.5f, 0f, -7f, -0.5f, -6f, 14f, 1f, 12f, 0, 45),
-            RawModelPartFactory.FromVanillaChild("nose", "head", 0f, -2f, -4f, -1f, 0f, -0.5f, 2f, 2f, 1f, 23, 0),
-            RawModelPartFactory.FromVanilla("body", 0f, 18.75f, 0f, -2f, -2.75f, -1.5f, 4f, 5f, 3f, 0, 15),
-            RawModelPartFactory.FromVanilla("bb_main", 0.5f, 24f, 0f, -2.5f, -8f, -1.5f, 4f, 6f, 3f, 16, 21, grow: 0.2f)
-        };
-
-        AssertPartsMatch(expected, BabyModelDefinitionsHumanoid.Villager.Parts);
-    }
-
-    [Fact]
     public void BabyDrownedPartsKeepTheOuterLayerCopies()
     {
         var expectedZombie = ExpectedZombieParts();

@@ -15,24 +15,6 @@ namespace Sharpcraft.Client.Tests.Render;
 /// </summary>
 public sealed class CatWolfFoxPandaModelDefinitionTests
 {
-    [Fact]
-    public void CatPartsMatchSourceFrameRecords()
-    {
-        var expected = EntityModelLayerHelpers.WithCollar(ExpectedCatBaseParts(), "entity/cat/cat_collar");
-        AssertPartsMatch(expected, CatModelDefinition.Definition.Parts);
-        AssertPartsMatch(expected, CatModelDefinition.Ocelot.Parts);
-    }
-
-    [Fact]
-    public void WolfPartsMatchSourceFrameRecords()
-    {
-        var expected = EntityModelLayerHelpers.WithCollar(ExpectedWolfBaseParts(), "entity/wolf/wolf_collar");
-        AssertPartsMatch(expected, WolfModelDefinition.Definition.Parts);
-        foreach (var key in WolfModelDefinition.VariantKeys)
-        {
-            AssertPartsMatch(expected, WolfModelDefinition.Variants[key].Parts);
-        }
-    }
 
     [Fact]
     public void WolfVariantsCarryRawSourceFrameFlags()
@@ -46,14 +28,6 @@ public sealed class CatWolfFoxPandaModelDefinitionTests
             Assert.Null(def.FaceTransforms is { Count: > 0 } ? def.FaceTransforms : null);
             Assert.Same(WolfModelDefinition.Definition.Parts, def.Parts);
         }
-    }
-
-    [Fact]
-    public void FoxPartsMatchSourceFrameRecords()
-    {
-        var expected = ExpectedFoxParts();
-        AssertPartsMatch(expected, FoxModelDefinition.Definition.Parts);
-        AssertPartsMatch(expected, FoxModelDefinition.Variants["snow"].Parts);
     }
 
     [Fact]

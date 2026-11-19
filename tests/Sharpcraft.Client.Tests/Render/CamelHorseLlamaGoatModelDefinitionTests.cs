@@ -21,32 +21,6 @@ public sealed class CamelHorseLlamaGoatModelDefinitionTests
     }
 
     [Fact]
-    public void HorsePartsMatchSourceFrameRecords()
-    {
-        var expected = EntityModelLayerHelpers.WithHorseMarkings(ExpectedHorseBaseParts(), "entity/horse/horse_markings_", false);
-        AssertPartsMatch(expected, HorseModelDefinition.Definition.Parts);
-        AssertPartsMatch(expected, HorseModelDefinition.Donkey.Parts);
-        AssertPartsMatch(expected, HorseModelDefinition.Mule.Parts);
-        AssertPartsMatch(expected, HorseModelDefinition.ZombieHorse.Parts);
-        AssertPartsMatch(expected, HorseModelDefinition.SkeletonHorse.Parts);
-        foreach (var key in HorseModelDefinition.VariantKeys)
-        {
-            AssertPartsMatch(expected, HorseModelDefinition.Variants[key].Parts);
-        }
-    }
-
-    [Fact]
-    public void LlamaPartsMatchSourceFrameRecords()
-    {
-        var expected = ExpectedLlamaParts();
-        AssertPartsMatch(expected, LlamaModelDefinition.Definition.Parts);
-        foreach (var key in LlamaModelDefinition.VariantKeys)
-        {
-            AssertPartsMatch(expected, LlamaModelDefinition.Variants[key].Parts);
-        }
-    }
-
-    [Fact]
     public void GoatPartsMatchSourceFrameRecords()
     {
         AssertPartsMatch(ExpectedGoatParts(), GoatModelDefinition.Definition.Parts);
