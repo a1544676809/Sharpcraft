@@ -73,7 +73,7 @@ public sealed class WitchHeldPotionMesher
             var display = DisplayForGround(potionModel);
             // Living-entity flip/baseline (S(-1,-1,1)*T(0,-1.501,0)) plus per-entity yaw/position/scale.
             var entityMatrix = EntityModelTransform.From(entity).ToMatrix();
-            var world = witchPose * display * entityMatrix;
+            var world = display * witchPose * entityMatrix;
 
             _quads.Clear();
             ItemEntityMesher.CollectQuads(_quads, potionModel, itemAtlas as ItemAtlas);
@@ -108,8 +108,10 @@ public sealed class WitchHeldPotionMesher
             : Matrix4x4.Identity;
 
     /// <summary>
-    /// Resolves the tint of a generated layer: a stack custom colour (potion contents), then the potion id's
-    /// effect-derived colour table, then the item model default. Layer index maps to tint index.
+    /// Resolves the tint of a generated layer: the stack custom colour (PotionContents.custom_color) first, then the
+    /// item model default. The effect-derived branch needs the potion registry id on the render state and is a
+    /// registered blocker (R-046); the jar colour table is kept in the test assembly until it has a real consumer.
+    /// Layer index maps to tint index.
     /// </summary>
     private Vector3 TintFor(int tintIndex, ItemModelResolution model, EntityRenderState entity, GrassColorMap? grass)
     {
@@ -127,7 +129,7 @@ public sealed class WitchHeldPotionMesher
         int? argb = entity.HeldPotionColor;
         // Effect-derived colour needs the potion registry id (DataComponents.POTION_CONTENTS holder) on the render
         // state; it is not threaded there yet (R-046 blocker). Until then only a stack custom colour or the source
-        // default is available. PotionColorTable holds the jar vectors and is unit-tested, but has no consumer here.
+        // default is available. The jar colour table lives in the test assembly until it has a production consumer.
         argb ??= source.Argb == 0 ? ItemTintSource.PotionDefaultColor : source.Argb;
         return new Vector3(
             ((argb.Value >> 16) & 0xFF) / 255f,

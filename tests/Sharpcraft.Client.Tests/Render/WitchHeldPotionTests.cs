@@ -3,7 +3,11 @@
 
 using System.Globalization;
 using System.Numerics;
+using Sharpcraft.Assets;
+using Sharpcraft.Client.Assets;
 using Sharpcraft.Client.Render;
+using Sharpcraft.Client.World;
+using Sharpcraft.Framework.Rendering;
 using Xunit;
 
 namespace Sharpcraft.Client.Tests.Render;
@@ -155,5 +159,150 @@ public sealed class WitchHeldPotionTests
         Assert.NotNull(source);
         Assert.Equal(ItemTintKind.Potion, source!.Value.Kind);
         Assert.Equal(ItemTintSource.PotionDefaultColor, source.Value.Argb);
+    }
+
+    [Fact]
+    public void ProductionMesherMatchesJarQuadWorldSampleKeyedAndConsumesCustomTint()
+    {
+        // Production keyed verification of WitchHeldPotionMesher.Build (not a formula re-computation): the 16 sample
+        // vertices (south/north faces of both layers) must each appear in the mesher's emitted geometry at 1e-5 with
+        // half-quantized UVs. Sprite alpha side faces are additional (blocker R-046) and are simply not in the sample.
+        using var fixture = new PotionFixture();
+        var potionModel = EntityModelResolver.ItemModels!.Resolve("minecraft:potion");
+        Assert.NotNull(potionModel);
+
+        var atlas = ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
+        {
+            ["item/potion_overlay"] = new(16, 16, new byte[16 * 16 * 4]),
+            ["item/potion"] = new(16, 16, new byte[16 * 16 * 4])
+        });
+        const int customColor = unchecked((int)0xFF2A7F1E);
+        // EntityModelTransform.From applies YawDegrees = 180 - state.Yaw and Scale = state.Scale. Use Yaw=180, Scale=1
+        // so the entity matrix is identity (the jar quad sample excludes entity yaw/scale), leaving pose*display only.
+        var state = new EntityRenderState(1, WitchModelDefinition.WitchEntityTypeId, 0f, 0f, 0f, 180f, 0f,
+            IsHoldingPotion: true, HeldPotionColor: customColor, Scale: 1f);
+        var layer = new WitchHeldPotionMesher().Build([state], [new EntityPose()], atlas, potionModel);
+        Assert.NotNull(layer);
+        Assert.Equal(WitchHeldPotionMesher.LayerName, layer!.Name);
+
+        var sample = File.ReadLines(SamplePath("witch-potion-quad.reference.txt"))
+            .Where(l => !l.StartsWith('#'))
+            .Select(l => l.Split('\t'))
+            .ToArray();
+        Assert.Equal(16, sample.Length);
+
+        var produced = ReadAllVertices(layer.Geometry);
+        // The mesher emits item geometry in the source frame without the living flip; map jar world sample back:
+        // (-x, 1.501 - y, z), same as HeldSpecialWorldReferenceSampleTests (level renderer applies the flip later).
+        foreach (var row in sample)
+        {
+            var world = new Vector3(
+                float.Parse(row[4], CultureInfo.InvariantCulture),
+                float.Parse(row[5], CultureInfo.InvariantCulture),
+                float.Parse(row[6], CultureInfo.InvariantCulture));
+            var expected = new Vector3(-world.X, 1.501f - world.Y, world.Z);
+            var expectedU = QuantizeHalf(float.Parse(row[7], CultureInfo.InvariantCulture));
+            var expectedV = QuantizeHalf(float.Parse(row[8], CultureInfo.InvariantCulture));
+            Assert.Contains(produced, v =>
+                (v.Position - expected).Length() <= 1e-5f &&
+                MathF.Abs(v.U - expectedU) <= 1e-5f && MathF.Abs(v.V - expectedV) <= 1e-5f);
+        }
+
+        // Tint consumption: the potion tint source is declared only on layer0 (potion_overlay, tint index 0), so the
+        // 8 overlay vertices carry the stack custom colour while the 8 bottle vertices (tint index 1, no source) stay
+        // white — the reference behaviour (ItemStackRenderState.tintLayers only on the overlay quad's tint index).
+        var expectedRed = ((customColor >> 16) & 0xFF) / 255f;
+        var expectedGreen = ((customColor >> 8) & 0xFF) / 255f;
+        var expectedBlue = (customColor & 0xFF) / 255f;
+        var overlayRows = sample.Where(r => r[9] == "0").ToArray();
+        var bottleRows = sample.Where(r => r[9] == "1").ToArray();
+        Assert.Equal(8, overlayRows.Length);
+        Assert.Equal(8, bottleRows.Length);
+        foreach (var row in overlayRows)
+        {
+            var world = new Vector3(
+                float.Parse(row[4], CultureInfo.InvariantCulture),
+                float.Parse(row[5], CultureInfo.InvariantCulture),
+                float.Parse(row[6], CultureInfo.InvariantCulture));
+            var expected = new Vector3(-world.X, 1.501f - world.Y, world.Z);
+            var v = Assert.Single(produced, p =>
+                (p.Position - expected).Length() <= 1e-5f &&
+                MathF.Abs(p.Red - expectedRed) <= 1e-3f &&
+                MathF.Abs(p.Green - expectedGreen) <= 1e-3f &&
+                MathF.Abs(p.Blue - expectedBlue) <= 1e-3f);
+        }
+        foreach (var row in bottleRows)
+        {
+            var world = new Vector3(
+                float.Parse(row[4], CultureInfo.InvariantCulture),
+                float.Parse(row[5], CultureInfo.InvariantCulture),
+                float.Parse(row[6], CultureInfo.InvariantCulture));
+            var expected = new Vector3(-world.X, 1.501f - world.Y, world.Z);
+            Assert.Single(produced, p =>
+                (p.Position - expected).Length() <= 1e-5f &&
+                MathF.Abs(p.Red - 1f) <= 1e-3f &&
+                MathF.Abs(p.Green - 1f) <= 1e-3f &&
+                MathF.Abs(p.Blue - 1f) <= 1e-3f);
+        }
+    }
+
+    private static (Vector3 Position, float U, float V, float Red, float Green, float Blue)[] ReadAllVertices(DynamicGeometry geometry)
+    {
+        var count = geometry.VertexFloats / ChunkMesher.FloatsPerVertex;
+        var result = new (Vector3, float, float, float, float, float)[count];
+        for (var i = 0; i < count; i++)
+        {
+            var o = i * ChunkMesher.FloatsPerVertex;
+            var packedColor = BitConverter.SingleToUInt32Bits(geometry.Vertices[o + 3]);
+            var packedUv = BitConverter.SingleToUInt32Bits(geometry.Vertices[o + 4]);
+            result[i] = (
+                new Vector3(geometry.Vertices[o], geometry.Vertices[o + 1], geometry.Vertices[o + 2]),
+                (float)BitConverter.UInt16BitsToHalf((ushort)(packedUv & 0xFFFF)),
+                (float)BitConverter.UInt16BitsToHalf((ushort)(packedUv >> 16)),
+                (packedColor & 0xFF) / 255f,
+                ((packedColor >> 8) & 0xFF) / 255f,
+                ((packedColor >> 16) & 0xFF) / 255f);
+        }
+        return result;
+    }
+
+    private static float QuantizeHalf(float value) => (float)BitConverter.UInt16BitsToHalf(BitConverter.HalfToUInt16Bits((Half)value));
+
+    /// <summary>Temp resource stack with the real two-layer potion item model (data-only), like HeldSpecialWorldReferenceSampleTests.ItemFixture.</summary>
+    private sealed class PotionFixture : IDisposable
+    {
+        private readonly string _root;
+        private readonly Sharpcraft.Client.Render.ItemModelResolver _previous;
+        private readonly ResourceManager _resources;
+
+        public PotionFixture()
+        {
+            _root = Path.Combine(Path.GetTempPath(), "sharpcraft-potion-test-" + Guid.NewGuid().ToString("N"));
+            Write("assets/minecraft/items/potion.json",
+                """{"model":{"type":"minecraft:model","model":"minecraft:item/potion","tints":[{"type":"minecraft:potion","default":-13083194}]}}""");
+            Write("assets/minecraft/models/item/potion.json",
+                """{"parent":"minecraft:item/generated","textures":{"layer0":"minecraft:item/potion_overlay","layer1":"minecraft:item/potion"}}""");
+            Write("assets/minecraft/models/item/generated.json",
+                """{"display":{"ground":{"rotation":[0,0,0],"translation":[0,2,0],"scale":[0.5,0.5,0.5]}}}""");
+            var stack = new AssetStack { Policy = MissingResourcePolicy.Warn, Warn = _ => { } }
+                .Add(new DirectoryAssetSource(_root, "potion-test"));
+            _resources = new ResourceManager(stack, 1);
+            _previous = EntityModelResolver.ItemModels!;
+            EntityModelResolver.ItemModels = new ItemModelResolver(_resources);
+        }
+
+        public void Dispose()
+        {
+            EntityModelResolver.ItemModels = _previous;
+            _resources.Dispose();
+            if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
+        }
+
+        private void Write(string relative, string json)
+        {
+            var path = Path.Combine(_root, relative);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, json);
+        }
     }
 }

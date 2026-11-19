@@ -3,15 +3,14 @@
 
 using System.Globalization;
 
-namespace Sharpcraft.Client.Render;
+namespace Sharpcraft.Client.Tests.Render;
 
 /// <summary>
-/// Source-derived potion tint table: maps a potion's registry path to the ARGB colour of a plain stack of that potion.
-/// Values are the jar golden vectors in <c>potion-colors.reference.txt</c> (PotionContents.getColorOr / getColorOptional).
-/// A stack's custom colour (ItemComponentInfo.PotionColor) takes precedence; the potion id supplies the
-/// effect-derived colour when no custom colour is present; the model's default is the final fallback.
+/// Test-only parser for the jar potion-colours sample. This was deliberately kept OUT of the production assembly:
+/// a potion registry id is not carried on EntityRenderState yet, so there is no production consumer for an
+/// effect-derived colour (R-046 blocker). When that id is threaded through, promote this to a production table with a
+/// real consumer and a ref:// source mapping.
 /// </summary>
-[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.item.alchemy.PotionContents", "ref://mc-26.3-analysis/src/net/minecraft/world/item/alchemy/PotionContents.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "plain-stack colours from jar probe; custom effects (stack-specific effect lists) are not resolved")]
 public sealed class PotionColorTable
 {
     private readonly Dictionary<string, int> _potionColors;
