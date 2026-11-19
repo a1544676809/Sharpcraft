@@ -12,8 +12,8 @@ namespace Sharpcraft.Client.Tests.Render;
 /// part data verbatim (pivot/rotation/cube/UV/mirror/face mask/selectors) into a root-level node per part,
 /// preserving each part's Parent string so Emit's base-pivot subtraction matches the legacy flat path.
 /// No meshing maths are reimplemented here: the production compiled Emit path produces the vertices, so a
-/// jar source sample remains an independent oracle for the test. Verified byte-identical to the former flat
-/// path for root parts and for nested parts (e.g. villager nose->head) and with non-unit layer scale.
+/// jar source sample remains an independent oracle for the test. The helper feeds the same baked part data
+/// into compiled nodes; repository tests verify the resulting geometry, not an external byte-equality claim.
 /// </summary>
 internal static class CompiledPartHelper
 {
