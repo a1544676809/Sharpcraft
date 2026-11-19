@@ -22,15 +22,57 @@ public sealed class WitchHeldPotionTests
     private static string SamplePath(string name) => Path.Combine(
         AppContext.BaseDirectory, "Repro", "Data", name);
 
+    /// <summary>
+    /// Reads the jar potion/effect colour table from the test output directory, the same way every other
+    /// reference-sample test locates its data. Data rows are tab separated as kind|id|color|effects; the
+    /// header documents the columns with '|' but the probe writes tabs. A missing or empty file fails the test.
+    /// </summary>
+    private static List<(string Kind, string Id, int Color)> LoadPotionColors()
+    {
+        var path = SamplePath("potion-colors.reference.txt");
+        Assert.True(File.Exists(path), $"jar colour sample missing: {path}");
+        var rows = new List<(string, string, int)>();
+        foreach (var line in File.ReadLines(path))
+        {
+            if (line.StartsWith('#') || line.Length == 0)
+            {
+                continue;
+            }
+
+            var parts = line.Split('\t');
+            Assert.True(parts.Length >= 3, $"malformed colour sample row: {line}");
+            rows.Add((parts[0], parts[1], int.Parse(parts[2], CultureInfo.InvariantCulture)));
+        }
+
+        Assert.NotEmpty(rows);
+        return rows;
+    }
+
     [Fact]
     public void ProductionPotionColorTableCarriesTheJarVectors()
     {
-        // The production table is generated from the jar sample (not test-only): water is the base colour and
-        // night_vision is effect-derived (distinct from the default).
-        Assert.Equal(-13083194, PotionColorTable.PlainColorByName("water"));
-        Assert.Equal(-13083194, PotionColorTable.PlainColorByName("awkward"));
-        Assert.Equal(-3997850, PotionColorTable.PlainColorByName("night_vision"));
-        Assert.Equal(3402751, PotionColorTable.EffectColorByName("speed"));
+        // The production table must reproduce the jar sample row for row. The sample is the single source of truth:
+        // every expected value is parsed at runtime, so a changed sample turns this test red instead of drifting.
+        var rows = LoadPotionColors();
+        var effectRows = rows.Where(r => r.Kind == "effect").ToArray();
+        var potionRows = rows.Where(r => r.Kind == "potion").ToArray();
+        // Counts come from the jar probe that produced the sample, not from the file we are reading:
+        // a truncated sample or a changed kind must fail rather than silently shrink the assertion set.
+        Assert.Equal(86, rows.Count);
+        Assert.Equal(40, effectRows.Length);
+        Assert.Equal(46, potionRows.Length);
+        Assert.Equal(rows.Count, effectRows.Length + potionRows.Length);
+
+        foreach (var (_, id, color) in effectRows)
+        {
+            Assert.Equal(color, PotionColorTable.EffectColorByName(id));
+        }
+
+        foreach (var (_, id, color) in potionRows)
+        {
+            Assert.Equal(color, PotionColorTable.PlainColorByName(id));
+        }
+
         Assert.Null(PotionColorTable.PlainColorByName("not_a_potion"));
         Assert.Null(PotionColorTable.EffectColorByName("not_an_effect"));
     }
