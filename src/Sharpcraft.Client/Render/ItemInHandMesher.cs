@@ -29,9 +29,10 @@ public sealed class ItemInHandMesher
     // Held special raw hand-chain output: trident/shield/chest/head/banner/banner_flag (12 slots), then the banner
     // pattern overlay (base + up to 6 layers per hand = 14 slots) and the shield pattern overlay (14 slots).
     // Only the trident/shield slots emit a foil glint companion.
-    private const int HeldSpecialSlotCount = 40;
     private const int BannerPatternSlotBase = 12;
-    private const int ShieldPatternSlotBase = 26;
+    private const int PatternLayerSlots = (SpecialItemModelDefinition.MaxBannerPatternLayers + 1) * 2;
+    private const int ShieldPatternSlotBase = BannerPatternSlotBase + PatternLayerSlots;
+    private const int HeldSpecialSlotCount = ShieldPatternSlotBase + PatternLayerSlots;
     private static readonly string[] HeldSpecialLayerNames = CreateHeldSpecialLayerNames();
     private readonly DynamicGeometry[] _heldSpecialCutout = CreateGeometryBuffer(HeldSpecialSlotCount);
     private readonly DynamicGeometry[] _heldSpecialGlint = CreateGeometryBuffer(HeldSpecialSlotCount);

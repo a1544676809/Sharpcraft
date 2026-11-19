@@ -33,7 +33,13 @@ public static class SpecialItemModelDefinition
     /// the largest layer count reachable through normal gameplay, and it is the bound baked here. Layers beyond six can
     /// only come from externally edited components and are dropped.
     /// </summary>
-    public const int MaxBannerPatternLayers = 6;
+    /// <summary>
+    /// Reference <c>BannerRenderer.MAX_PATTERNS = 16</c> (BannerRenderer.java:39) and the submit loop
+    /// <c>maskIndex &lt; 16</c> (BannerRenderer.java:208): a held banner/shield renders up to sixteen pattern layers.
+    /// The loom only adds up to six (LoomMenu.hasMaxPatterns), but externally edited components can carry more and the
+    /// renderer must not drop them (#244 review).
+    /// </summary>
+    public const int MaxBannerPatternLayers = 16;
 
     public static readonly EntityModelDefinition BannerStanding = EntityModelDefinition.FromTree(
         "special_banner_standing", 64, 64, BuildBannerMesh(standing: true),
