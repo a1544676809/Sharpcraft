@@ -98,7 +98,8 @@ public sealed record ItemModelResolution(
     IReadOnlyDictionary<string, string>? SpecialProperties = null,
     IReadOnlyList<ItemModelElement>? Elements = null,
     IReadOnlyList<ItemTintSource>? Tints = null,
-    bool ForcesTranslucency = false)
+    bool ForcesTranslucency = false,
+    Matrix4x4 LocalTransform = default)
 {
     /// <summary>Resolved cuboids of the model, empty when the model has no <c>elements</c>.</summary>
     public IReadOnlyList<ItemModelElement> Cuboids => Elements ?? [];
@@ -285,6 +286,19 @@ public sealed class ItemModelResolver
     /// The optional <c>transformation</c> block of a model element. The reference <c>Transformation.getMatrix</c> is
     /// column-vector <c>T·L·S·R</c>, so a row-vector product applies the right rotation first and the translation last.
     /// </summary>
+    /// <summary>
+    /// Composes a nested model's own <c>transformation</c> onto the resolved child. The reference applies the wrapper
+    /// transform outside the child, so in row-vector order the child's local transform comes first.
+    /// </summary>
+    private static ItemModelResolution? ComposeNested(JsonElement parent, ItemModelResolution? child) =>
+        child is null
+            ? null
+            : child with
+            {
+                LocalTransform = (child.LocalTransform == default ? Matrix4x4.Identity : child.LocalTransform) *
+                    TransformationOf(parent)
+            };
+
     private static Matrix4x4 TransformationOf(JsonElement model)
     {
         if (!model.TryGetProperty("transformation", out var element) || element.ValueKind != JsonValueKind.Object)
@@ -372,29 +386,29 @@ public sealed class ItemModelResolver
                     return null;
                 }
 
-                return resolvedModel with { Tints = ParseTints(model) };
+                return resolvedModel with { Tints = ParseTints(model), LocalTransform = TransformationOf(model) };
             case "minecraft:select":
-                return TryResolveNested(model, "fallback", depth, usingItem) ??
+                return ComposeNested(model, TryResolveNested(model, "fallback", depth, usingItem) ??
                        (model.TryGetProperty("cases", out var cases) && cases.ValueKind == JsonValueKind.Array
                            ? ResolveFirstCase(cases, depth, usingItem)
-                           : null);
+                           : null));
             case "minecraft:condition":
             {
                 // Reference ItemModelUtils.conditional: the shield picks its "blocking" model while the holder uses it.
                 var usingItemProperty = model.TryGetProperty("property", out var propertyElement) &&
                                         propertyElement.ValueKind == JsonValueKind.String &&
                                         propertyElement.GetString() == "minecraft:using_item";
-                return usingItemProperty && usingItem
+                return ComposeNested(model, usingItemProperty && usingItem
                     ? TryResolveNested(model, "on_true", depth, usingItem) ??
                       TryResolveNested(model, "on_false", depth, usingItem)
                     : TryResolveNested(model, "on_false", depth, usingItem) ??
-                      TryResolveNested(model, "on_true", depth, usingItem);
+                      TryResolveNested(model, "on_true", depth, usingItem));
             }
             case "minecraft:range_dispatch":
-                return TryResolveNested(model, "fallback", depth, usingItem) ??
+                return ComposeNested(model, TryResolveNested(model, "fallback", depth, usingItem) ??
                        (model.TryGetProperty("entries", out var entries) && entries.ValueKind == JsonValueKind.Array
                            ? ResolveFirstCase(entries, depth, usingItem)
-                           : null);
+                           : null));
             case "minecraft:composite":
                 return model.TryGetProperty("models", out var models) && models.ValueKind == JsonValueKind.Array
                     ? ResolveFirstCase(models, depth, usingItem)
@@ -427,7 +441,12 @@ public sealed class ItemModelResolver
                     }
                 }
 
-                return baseModel with { SpecialRendererType = rendererType, SpecialProperties = properties };
+                return baseModel with
+                {
+                    SpecialRendererType = rendererType,
+                    SpecialProperties = properties,
+                    LocalTransform = TransformationOf(model)
+                };
             default:
                 // special/selectors with unsupported properties deliberately fall back to no drawable model.
                 return null;

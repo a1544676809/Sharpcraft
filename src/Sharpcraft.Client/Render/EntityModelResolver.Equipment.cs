@@ -379,54 +379,6 @@ public static partial class EntityModelResolver
             (rgb & 0xFF) / 255f);
     }
 
-    private static void AddSpecialHeadLayers(List<EntityRenderLayerDefinition> layers)
-    {
-        layers.Add(new EntityRenderLayerDefinition(
-            "held_special_head_right",
-            EntityGeometryLayerKind.Cutout,
-            60,
-            SpecialItemModelDefinition.HeldSkullRight,
-            TexturePath: null,
-            TextureSelector: state => ResolveHeldItemSpecialTexture(state, offhand: false),
-            VisibleWhen: state => ResolveHeldItemSpecial(state, offhand: false) is "minecraft:head" or "minecraft:player_head",
-            AllCubes: true,
-            UsesItemAtlas: true));
-        layers.Add(new EntityRenderLayerDefinition(
-            "held_special_head_left",
-            EntityGeometryLayerKind.Cutout,
-            61,
-            SpecialItemModelDefinition.HeldSkullLeft,
-            TexturePath: null,
-            TextureSelector: state => ResolveHeldItemSpecialTexture(state, offhand: true),
-            VisibleWhen: state => ResolveHeldItemSpecial(state, offhand: true) is "minecraft:head" or "minecraft:player_head",
-            AllCubes: true,
-            UsesItemAtlas: true));
-    }
-
-    private static void AddSpecialChestLayers(List<EntityRenderLayerDefinition> layers)
-    {
-        layers.Add(new EntityRenderLayerDefinition(
-            "held_special_chest_right",
-            EntityGeometryLayerKind.Cutout,
-            62,
-            SpecialItemModelDefinition.HeldChestRight,
-            TexturePath: null,
-            TextureSelector: state => ResolveHeldItemSpecialTexture(state, offhand: false),
-            VisibleWhen: state => ResolveHeldItemSpecial(state, offhand: false) == "minecraft:chest",
-            AllCubes: true,
-            UsesItemAtlas: true));
-        layers.Add(new EntityRenderLayerDefinition(
-            "held_special_chest_left",
-            EntityGeometryLayerKind.Cutout,
-            63,
-            SpecialItemModelDefinition.HeldChestLeft,
-            TexturePath: null,
-            TextureSelector: state => ResolveHeldItemSpecialTexture(state, offhand: true),
-            VisibleWhen: state => ResolveHeldItemSpecial(state, offhand: true) == "minecraft:chest",
-            AllCubes: true,
-            UsesItemAtlas: true));
-    }
-
     private static void AddSpecialShulkerLayers(List<EntityRenderLayerDefinition> layers)
     {
         layers.Add(new EntityRenderLayerDefinition(
@@ -488,13 +440,8 @@ public static partial class EntityModelResolver
 
     private static void AddSpecialBannerPotConduitLayers(List<EntityRenderLayerDefinition> layers)
     {
-        // Banner body and flag are two reference models sharing the banner_base sprite.
-        AddSpecialPair(layers, "banner", "minecraft:banner",
-            SpecialItemModelDefinition.BannerStanding, SpecialItemModelDefinition.BannerStanding, 66,
-            (state, offhand) => ResolveHeldItemSpecialTexture(state, offhand));
-        AddSpecialPair(layers, "banner_flag", "minecraft:banner",
-            SpecialItemModelDefinition.BannerFlagStanding, SpecialItemModelDefinition.BannerFlagStanding, 68,
-            (state, offhand) => ResolveHeldItemSpecialTexture(state, offhand));
+        // Banner body/flag are emitted by ItemInHandMesher through the raw hand chain (B-4 T3); the pattern overlay
+        // still uses the resolver layer until its per-pattern sprites move to the same path.
         AddSpecialPair(layers, "banner_patterns", "minecraft:banner",
             SpecialItemModelDefinition.BannerFlagPatternsRight, SpecialItemModelDefinition.BannerFlagPatternsLeft, 80,
             (state, offhand) => ResolveHeldItemPatternSprites(state, offhand).Count > 0
