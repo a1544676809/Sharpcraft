@@ -1066,7 +1066,7 @@ task-144 用 jar `HeadTree` probe 逐族分析 Bogged/Witch/ZombieVillager/Pigli
 - **修复**：`EquipmentModelTrees` 中上述 6 个 tree 加 `rawSourceFrame: true`（几何/纹理/pivot 不变）；新增 `LlamaBabyDecor`（baby llama mesh grow 0.2，`BabyModelDefinitionsEquine.BuildLlamaMesh(0.2f)`，64×64）。resolver 对 `EquipmentModelTrees.IsRawSourceFrame(kind)` 的层用 `baselinePx: 0f, rawSourceFrame: true, sourceFrameBaselinePx: 0f`（层相对已摆放实体，同 armor raw 层），trim/glint 的 `rawMaterial` 同步；baby 非 humanoid 装备层仅对 `LlamaBody` 放行（`babyDecorLayers`），其余 baby 装备层维持原行为。
 - **源样本**：`tests/Sharpcraft.Client.Tests/Repro/Data/{equine-saddle,camel-saddle,nautilus-saddle,llama-decor,happy-ghast-harness}-raw-vectors.reference.txt`（`RawRenderUnitProbe`，model-space raw render units；equine 文件含 5 个 source layer，llama 文件含 adult/baby 两 layer）。llama decor 的 `u=1.046875` 越界 UV 是源 `texOffs` 真值，保留不改。
 - **验证**：`MountEquipmentRawReferenceSampleTests` 20 cases——production `BuildLayers` 层按 `layer|part|cube|polygon|vertex` 逐 key 位置 1e-5 + UV half 1e-5（每个 sample cube 映射到唯一 compiled cube，`onlyPart` 隔离后按 polygon/vertex 顺序比较，位置与 UV 同 key 绑定）；full layer 顶点数覆盖；`EntitiesWithoutEquipmentEmitNoEquipmentLayer` 断言非 saddled 无层；`LlamaAdultAndBabyDecorUseDistinctRawTrees` 断言 adult 128×64/ baby 64×64、compiled tree 不共享。成人 llama decor 用 node 内多 cube 顺序，camel `/body/head` 与 baby llama `/head` 用显式 source cube→node 映射（不猜）；donkey/mule/llama 的 chest 与 equine saddle line/camel reins 由 `HasChest`/`IsVehicle` 状态打开，与 jar probe 的整层烘焙一致。
-- **未改**：其它 B 类（humanoid armor 回退）、`EquipmentModelParts` legacy 结构树、held_special/held_potion。pig/strider/camel_husk saddle 已由 #234 补齐（见下节）。
+- **未改**：其它 B 类（humanoid armor 回退）、held_special/held_potion。`EquipmentModelParts` legacy 结构树已由 #246（R-047 清理）删除（见文末）。pig/strider/camel_husk saddle 已由 #234 补齐（见下节）。
 
 ### Issue #228 B-3：stray / wither skeleton / zombie villager armor raw 迁移
 
@@ -1075,7 +1075,7 @@ task-144 用 jar `HeadTree` probe 逐族分析 Bogged/Witch/ZombieVillager/Pigli
 - **resolver**：stray 加入 `rawAdultHumanoidArmor` 复用 player raw 定义；wither skeleton / zombie villager 各接独立 raw 定义（`!baby` 限定）。三者 armor 层及其 trim/glint 材质层全部 `baselinePx: 0f, rawSourceFrame: true, sourceFrameBaselinePx: 0f`；装备层 legacy 24px 分支删除。
 - **源样本**：`tests/Sharpcraft.Client.Tests/Repro/Data/{stray,wither-skeleton,zombie-villager}-armor-{helmet,chestplate,leggings,boots}-raw-vectors.reference.txt`（12 个，`RawRenderUnitProbe`）。
 - **验证**：`HumanoidArmorSetRawReferenceSampleTests` 扩展 stray/wither skeleton（定义级 8 样本 + 生产层逐 key 8 cases）；`CreatureArmorRawReferenceSampleTests` 扩展 zombie villager（定义级 4 样本 + 生产层逐 key 4 cases）；另有 `ProductionMigratedArmorMaterialLayersFollowRawGeometry` 断言三类 4 slot 的 armor/trim/glint 层 raw、baseline 0、几何顶点数一致。生产层比较按 `layer|part|cube|polygon|vertex` 位置 1e-5 + UV half 1e-5（每 sample part 映射到唯一 compiled cube，`onlyPart` 隔离后按 polygon/vertex 顺序，位置与 UV 同 key 绑定），world 反变换 `sample = world / ModelScale`。
-- **未改**：其它 armor/实体、baby zombie villager 的 baby armor、held_special/held_potion、`EquipmentModelParts` legacy 结构树。
+- **未改**：其它 armor/实体、baby zombie villager 的 baby armor、held_special/held_potion。`EquipmentModelParts` legacy 结构树已由 #246（R-047 清理）删除（见文末）。
 
 ### Issue #234：pig / strider / camel_husk 鞍具
 
@@ -1101,6 +1101,12 @@ task-144 用 jar `HeadTree` probe 逐族分析 Bogged/Witch/ZombieVillager/Pigli
 - **样本 / 验证**：复制 `chest-held-world.reference.txt`（CHEST_RIGHT/LEFT，每手 72 顶点）、`skull-held-world.reference.txt`（SKULL_RIGHT/LEFT，每手 24）、`banner-held-world.reference.txt`（BANNER_RIGHT/LEFT，每手 48 body 顶点）入仓；`HeldSpecialWorldReferenceSampleTests` 新增 6 个 keyed case（RIGHT/LEFT），production 逐 key 位置 1e-5 + UV half 1e-5，非 foil 无 glint。banner flag 无 world 样本，仅结构同帧（R-045）；banner patterns 仍 resolver。
 - **未改**：shulker/pot/conduit/end cube、其它 special renderer、witch potion、普通 held item。
 
+### Issue #246 / R-047：清理 EquipmentModelParts legacy 装备重载
+
+- **审计**：全仓（src/tests/tools/docs）静态核对 `EquipmentModelParts.For(kind)` 与 `EntityModelLayerHelpers.WithEquipment` 两个 legacy 重载（L617 `CompiledEntityModel`/kind 版、L757 `IReadOnlyList<EntityModelPart>` flat 版）的调用者：唯一生产 `WithEquipment` 调用（`EntityModelResolver.cs:479`）使用现代重载 L580 `WithEquipment(CompiledEntityModel model, CompiledEntityModel equipmentModel, ...)`；L617/L757 除定义自身外**零调用者**，`EquipmentModelParts` 消费者仅这两个死重载 + `EquipmentModelPartsTests`。与 R-047 登记结论一致。
+- **删除**：`EntityModelLayerHelpers` 的 L617/L757 两 legacy 重载；`src/Sharpcraft.Client/Render/EquipmentModelParts.cs`（DSL 数据 + flat bake，纯测试专用数据不留游戏程序集）。更新 class-map baseline（删该文件条目）。
+- **测试迁移**：`EquipmentModelPartsTests` 从逐字段 flat `AssertPartsMatch` 改为 `EquipmentModelTrees.For(kind)` 编译树结构断言（horse/camel/nautilus-armor/nautilus-saddle/happy-ghast 五类装备树含预期 box）；严格 jar 源等效仍由 `MountEquipmentRawReferenceSampleTests`（equine/camel/nautilus-saddle/llama/happy-ghast）与 `MountArmorRawReferenceSampleTests`（nautilus-armor）keyed 1e-5+UV half 覆盖。
+- **验证**：build 0 error/0 warning；三门禁绿（含 class-map baseline 更新）；受影响测试 + keyed 样本 63/63 harness 全绿；diff 干净。R-047 风险登记标记为已解决。
 ### Issue #244（R-045）：held banner/shield pattern overlay 迁到 raw 手链
 
 - **范围**：`held_special_banner_patterns_{right,left}`、`held_special_shield_patterns_{right,left}`，以及 banner flag plane（`held_special_banner_flag_*`）的独立 world keyed 样本。banner body、shield body 已由 T3/T2 迁移；pot/conduit/end cube 等其它 special 未改。

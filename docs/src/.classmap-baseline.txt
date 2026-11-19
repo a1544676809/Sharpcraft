@@ -96,7 +96,6 @@ src/Sharpcraft.Client/Render/EntitySkinLibrary.cs :: Sharpcraft.Client.Render.En
 src/Sharpcraft.Client/Render/EntitySkinTexture.cs :: Sharpcraft.Client.Render.EntitySkinTexture
 src/Sharpcraft.Client/Render/EntityVariantTable.cs :: Sharpcraft.Client.Render.EntityVariantTable
 src/Sharpcraft.Client/Render/EquineAnimationProvider.cs :: Sharpcraft.Client.Render.EquineAnimationProvider
-src/Sharpcraft.Client/Render/EquipmentModelParts.cs :: Sharpcraft.Client.Render.EquipmentModelParts
 src/Sharpcraft.Client/Render/EquipmentTextureCatalog.cs :: Sharpcraft.Client.Render.EquipmentAssetKind
 src/Sharpcraft.Client/Render/EquipmentTextureCatalog.cs :: Sharpcraft.Client.Render.EquipmentTexture
 src/Sharpcraft.Client/Render/EquipmentTextureCatalog.cs :: Sharpcraft.Client.Render.EquipmentTextureCatalog
