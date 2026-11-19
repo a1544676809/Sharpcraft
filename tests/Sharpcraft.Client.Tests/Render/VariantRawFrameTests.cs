@@ -88,28 +88,45 @@ public sealed class VariantRawFrameTests
             Assert.All(rows, row => Assert.InRange(row.Key.Vertex, 0, 3));
 
             var geometry = BuildCutout(state, width, height, atlas, onlyPart: flatName);
-            Assert.Equal(rows.Length, VertexCount(geometry));
             var ordered = rows.OrderBy(row => row.Key.Polygon).ThenBy(row => row.Key.Vertex).ToArray();
-            for (var i = 0; i < ordered.Length; i++)
-            {
-                var row = ordered[i];
-                var rawPosition = VertexFieldReader.Position(geometry.Vertices, i);
-                var actualPosition = new Vector3(rawPosition.X, rawPosition.Y, rawPosition.Z) / EntityPlaceholderMesher.ModelScale;
-                Assert.True((actualPosition - row.Position).Length() <= Tolerance,
-                    $"{row.Key}: world position expected {row.Position}, actual {actualPosition}");
-
-                // The geometry buffer stores UVs as half floats; quantise the sample the same way.
-                var uv = VertexFieldReader.Uv(geometry.Vertices, i);
-                var expectedU = QuantizeHalf(row.U);
-                var expectedV = QuantizeHalf(row.V);
-                Assert.True(MathF.Abs(uv.U - expectedU) <= Tolerance && MathF.Abs(uv.V - expectedV) <= Tolerance,
-                    $"{row.Key}: UV expected ({expectedU:F6},{expectedV:F6}), actual ({uv.U:F6},{uv.V:F6})");
-            }
-
+            AssertKeyedPartMatches(geometry, ordered, worldSample + ": " + group.Key);
             consumed += rows.Length;
         }
 
         Assert.Equal(sample.Count, consumed);
+    }
+
+    [Fact]
+    public void KeyedPartCheckRejectsUvFromAnotherKey()
+    {
+        // Negative regression for the keyed production check above: a vertex whose position is correct
+        // but whose UV was taken from a different sample key must fail. The helper is the same one the
+        // production test calls, so this pins that the binding check cannot silently degrade into two
+        // independent position/UV multiset checks.
+        var definition = EntityVariantTable.Builtin.Resolve(99, 1);
+        Assert.True(definition.RawSourceFrame);
+        var atlas = Atlas("entity/parrot/parrot_blue", 32, 32);
+        var state = new EntityRenderState(1, 99, 0f, 0f, 0f, 180f, 0f, VariantId: 1);
+        var geometry = BuildCutout(state, 32, 32, atlas, onlyPart: "head");
+        var rows = LoadSample("parrot-blue-world-frame.reference.txt")
+            .Where(row => row.Key.Part == "/head")
+            .OrderBy(row => row.Key.Polygon).ThenBy(row => row.Key.Vertex)
+            .ToArray();
+
+        // Control: the untampered sample rows pass, so the helper is not unconditionally throwing.
+        AssertKeyedPartMatches(geometry, rows, "control");
+
+        // Tamper UV only (position untouched): replace row 0's UV with a different key's UV.
+        var victim = rows[0];
+        var donor = rows.First(row => row.Key != victim.Key && (row.U != victim.U || row.V != victim.V));
+        var tampered = rows.ToArray();
+        tampered[0] = victim with { U = donor.U, V = donor.V };
+        Assert.NotEqual(victim.U, donor.U);
+
+        var exception = Record.Exception(() => AssertKeyedPartMatches(geometry, tampered, "tampered"));
+        Assert.NotNull(exception);
+        // It must fail on the UV binding, not on some unrelated position/count problem.
+        Assert.Contains("UV expected", exception!.Message);
     }
 
     [Theory]
@@ -169,6 +186,31 @@ public sealed class VariantRawFrameTests
         }
     }
 
+    /// <summary>
+    /// Keyed production check for one isolated part: vertex <c>i</c> (raw emit order) must match the
+    /// sample row with the same (part, cube, polygon, vertex) at 1e-5 in position and UV together, so a
+    /// vertex carrying the correct position but another key's UV fails. The negative unit test calls
+    /// this directly with a tampered UV.
+    /// </summary>
+    internal static void AssertKeyedPartMatches(DynamicGeometry geometry, IReadOnlyList<SampleRow> expectedRows, string label)
+    {
+        Assert.Equal(expectedRows.Count, VertexCount(geometry));
+        for (var i = 0; i < expectedRows.Count; i++)
+        {
+            var row = expectedRows[i];
+            var rawPosition = VertexFieldReader.Position(geometry.Vertices, i);
+            var actualPosition = new Vector3(rawPosition.X, rawPosition.Y, rawPosition.Z) / EntityPlaceholderMesher.ModelScale;
+            Assert.True((actualPosition - row.Position).Length() <= Tolerance,
+                $"{label}: {row.Key} world position expected {row.Position}, actual {actualPosition}");
+
+            // The geometry buffer stores UVs as half floats; quantise the sample the same way.
+            var uv = VertexFieldReader.Uv(geometry.Vertices, i);
+            var expectedU = QuantizeHalf(row.U);
+            var expectedV = QuantizeHalf(row.V);
+            Assert.True(MathF.Abs(uv.U - expectedU) <= Tolerance && MathF.Abs(uv.V - expectedV) <= Tolerance,
+                $"{label}: {row.Key} UV expected ({expectedU:F6},{expectedV:F6}), actual ({uv.U:F6},{uv.V:F6})");
+        }
+    }
     private static ItemAtlas Atlas(string texturePath, int width, int height) =>
         ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
         {
@@ -219,7 +261,7 @@ public sealed class VariantRawFrameTests
 
     private static float QuantizeHalf(float value) => (float)BitConverter.UInt16BitsToHalf(BitConverter.HalfToUInt16Bits((Half)value));
 
-    private readonly record struct SampleRow(
+    internal readonly record struct SampleRow(
         (string Part, int Cube, int Polygon, int Vertex) Key,
         Vector3 Position,
         float U,
