@@ -24,6 +24,11 @@ public static class StriderModelDefinition
 
     public static readonly EntityModelDefinition Definition = new("strider", 64, 128, faceTransforms: null, texturePath: "entity/strider/strider", textureSelector: state => state.IsCold ? "entity/strider/strider_cold" : "entity/strider/strider", additionalTexturePaths: ["entity/strider/strider_cold"], compiled: StriderCompiled, baselinePx: 0f, rawSourceFrame: true);
 
+    /// <summary>
+    /// Reference <c>AdultStriderModel.createBodyLayer()</c> for <c>ModelLayers.STRIDER_SADDLE</c>: the saddle layer
+    /// reuses the adult strider body mesh unchanged (no deformation), only the equipment texture differs.
+    /// </summary>
+    internal static VanillaMeshDefinition BuildSaddleMesh() => BuildStriderMesh();
     private static VanillaMeshDefinition BuildStriderMesh()
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);

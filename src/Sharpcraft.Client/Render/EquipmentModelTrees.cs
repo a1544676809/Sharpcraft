@@ -23,6 +23,12 @@ internal static class EquipmentModelTrees
     private static readonly CompiledEntityModel CamelSaddle =
         VanillaMeshBakery.Build(CamelModelDefinition.BuildSaddleMesh(), 128, 128, rawSourceFrame: true);
 
+    private static readonly CompiledEntityModel PigSaddle =
+        VanillaMeshBakery.Build(PigModelDefinition.BuildSaddleMesh(), 64, 64, rawSourceFrame: true);
+
+    private static readonly CompiledEntityModel StriderSaddle =
+        VanillaMeshBakery.Build(StriderModelDefinition.BuildSaddleMesh(), 64, 128, rawSourceFrame: true);
+
     private static readonly CompiledEntityModel LlamaDecor =
         VanillaMeshBakery.Build(LlamaModelDefinition.BuildBodyMesh(0.5f), 128, 64, rawSourceFrame: true);
 
@@ -72,6 +78,9 @@ internal static class EquipmentModelTrees
         EquipmentAssetKind.SkeletonHorseSaddle => EquineSaddle,
         EquipmentAssetKind.ZombieHorseSaddle => EquineSaddle,
         EquipmentAssetKind.CamelSaddle => CamelSaddle,
+        EquipmentAssetKind.CamelHuskSaddle => CamelSaddle,
+        EquipmentAssetKind.PigSaddle => PigSaddle,
+        EquipmentAssetKind.StriderSaddle => StriderSaddle,
         EquipmentAssetKind.LlamaBody => baby ? LlamaBabyDecor : LlamaDecor,
         EquipmentAssetKind.NautilusBody => NautilusArmor,
         EquipmentAssetKind.NautilusSaddle => NautilusSaddle,
@@ -103,6 +112,9 @@ internal static class EquipmentModelTrees
         EquipmentAssetKind.SkeletonHorseSaddle => true,
         EquipmentAssetKind.ZombieHorseSaddle => true,
         EquipmentAssetKind.CamelSaddle => true,
+        EquipmentAssetKind.CamelHuskSaddle => true,
+        EquipmentAssetKind.PigSaddle => true,
+        EquipmentAssetKind.StriderSaddle => true,
         EquipmentAssetKind.NautilusSaddle => true,
         EquipmentAssetKind.LlamaBody => true,
         EquipmentAssetKind.HappyGhastBody => true,

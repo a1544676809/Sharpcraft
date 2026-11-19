@@ -105,6 +105,7 @@ public static class EntityAnimationRegistry
         new SquidAnimationProvider(SquidModelDefinition.GlowSquidEntityTypeId),
         new BatAnimationProvider(BatModelDefinition.BatEntityTypeId),
         new CamelAnimationProvider(CamelModelDefinition.CamelEntityTypeId),
+        new CamelAnimationProvider(CamelHuskModelDefinition.CamelHuskEntityTypeId),
         new ArmadilloAnimationProvider(ArmadilloModelDefinition.ArmadilloEntityTypeId),
         new FrogAnimationProvider(FrogModelDefinition.FrogEntityTypeId),
         new AxolotlAnimationProvider(AxolotlModelDefinition.AxolotlEntityTypeId),

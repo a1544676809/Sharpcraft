@@ -65,6 +65,7 @@ public static partial class EntityModelResolver
         [ChickenModelDefinition.ChickenEntityTypeId] = ChickenModelDefinition.Definition,
         [RabbitModelDefinition.RabbitEntityTypeId] = RabbitModelDefinition.Definition,
         [CamelModelDefinition.CamelEntityTypeId] = CamelModelDefinition.Definition,
+        [CamelHuskModelDefinition.CamelHuskEntityTypeId] = CamelHuskModelDefinition.Definition,
         [BatModelDefinition.BatEntityTypeId] = BatModelDefinition.Definition,
         [BeeModelDefinition.BeeEntityTypeId] = BeeModelDefinition.Definition,
         [DolphinModelDefinition.DolphinEntityTypeId] = DolphinModelDefinition.Definition,
