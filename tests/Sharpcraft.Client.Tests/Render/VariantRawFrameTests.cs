@@ -166,21 +166,52 @@ public sealed class VariantRawFrameTests
 
     [Theory]
     [MemberData(nameof(FormulaCases))]
-    public void SourceWorldSampleEqualsTheLivingFlipOfTheModelSpaceSample(string worldSample, string modelSpaceSample)
+    public void SourceWorldSampleEqualsTheLivingFlipOfTheModelSpaceSample(string worldSample, string modelSpaceSample) =>
+        AssertWorldIsLivingFlipOfModelPerKey(LoadSample(worldSample), LoadSample(modelSpaceSample), worldSample);
+
+    /// <summary>
+    /// Per-key two-step chain check: world = flip(model) in position, and world UV == model UV at half/1e-5
+    /// (the living flip changes position only). Samples are matched by their (layer, part, cube, polygon, vertex)
+    /// source key, not by an unordered multiset, so a vertex carrying one key's position and another's UV fails.
+    /// </summary>
+    internal static void AssertWorldIsLivingFlipOfModelPerKey(IReadOnlyList<SampleRow> world, IReadOnlyList<SampleRow> model, string label)
     {
-        var world = LoadSample(worldSample);
-        var model = LoadSample(modelSpaceSample);
         Assert.Equal(model.Count, world.Count);
         var keyedModel = model.ToDictionary(row => row.Key);
         Assert.Equal(model.Count, keyedModel.Count);
-        // Source formula: world = (-x, 1.501 - y, z) of the y-down model-space vertex.
         foreach (var row in world)
         {
-            Assert.True(keyedModel.TryGetValue(row.Key, out var modelRow), $"{worldSample}: missing model row {row.Key}");
+            Assert.True(keyedModel.TryGetValue(row.Key, out var modelRow), $"{label}: missing model row {row.Key}");
             var expected = new Vector3(-modelRow.Position.X, SourceFlipBaselineBlocks - modelRow.Position.Y, modelRow.Position.Z);
             Assert.True((expected - row.Position).Length() <= Tolerance,
-                $"{row.Key}: expected world {expected}, sample world {row.Position}");
+                $"{label} {row.Key}: expected world {expected}, sample world {row.Position}");
+            Assert.True(
+                MathF.Abs(QuantizeHalf(row.U) - QuantizeHalf(modelRow.U)) <= Tolerance
+                && MathF.Abs(QuantizeHalf(row.V) - QuantizeHalf(modelRow.V)) <= Tolerance,
+                $"{label} {row.Key}: world UV ({row.U:F6},{row.V:F6}) must equal model-space UV ({modelRow.U:F6},{modelRow.V:F6}) at half/1e-5");
         }
+    }
+
+    [Fact]
+    public void TwoStepChainRejectsWorldSampleWithWrongUv()
+    {
+        // Negative regression: a world sample whose position is correct but whose UV is corrupted must fail the
+        // exact helper the 18 FormulaCases use — guards against the chain degrading into a position-only check.
+        var world = LoadSample("shulker-world-frame.reference.txt");
+        var model = LoadSample("shulker-raw-vectors.reference.txt");
+
+        // Control: untouched samples pass through the real helper.
+        AssertWorldIsLivingFlipOfModelPerKey(world, model, "control");
+
+        // Tamper one world row's UV (position untouched) and require the real helper to reject it.
+        var tampered = world.ToArray();
+        var victim = tampered[0];
+        var donor = tampered.First(r => r.U != victim.U || r.V != victim.V);
+        tampered[0] = victim with { U = donor.U, V = donor.V };
+        Assert.NotEqual(victim.U, donor.U);
+        var exception = Record.Exception(() => AssertWorldIsLivingFlipOfModelPerKey(tampered, model, "tampered"));
+        Assert.NotNull(exception);
+        Assert.Contains("UV", exception!.Message);
     }
 
     [Fact]
