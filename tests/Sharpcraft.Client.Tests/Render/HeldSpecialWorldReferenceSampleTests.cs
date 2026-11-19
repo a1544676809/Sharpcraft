@@ -72,7 +72,9 @@ public sealed class HeldSpecialWorldReferenceSampleTests
             for (var i = 0; i < ordered.Length; i++)
             {
                 var row = ordered[i];
-                var produced = ReadVertex(layer.Geometry, (cubeIndex * 24) + (row.Polygon * 4) + row.Vertex);
+                var offset = (cubeIndex * 24) + (row.Polygon * 4) + row.Vertex;
+                Assert.InRange(offset, 0, (layer.Geometry.VertexFloats / ChunkMesher.FloatsPerVertex) - 1);
+                var produced = ReadVertex(layer.Geometry, offset);
                 var actual = produced.Position;
                 // Production held layers work in the source hand frame without the entity living flip, so the
                 // world sample is mapped back through S(-1,-1,1) and T(0,-1.501,0) and scaled by the model scale.
@@ -91,6 +93,127 @@ public sealed class HeldSpecialWorldReferenceSampleTests
         Assert.Equal(rows.Length, consumed);
     }
 
+    public static TheoryData<string, string, string, string, string, bool> PosedCases => new()
+    {
+        { "trident-held-world-stab.reference.txt", "TRIDENT_RIGHT_STAB", "trident", "stab", "held_special_trident_right", false },
+        { "trident-held-world-throw-use.reference.txt", "TRIDENT_RIGHT_USE_REAL", "trident", "throw", "held_special_trident_right", true },
+        { "shield-held-world-use.reference.txt", "SHIELD_RIGHT_USE", "shield", "use", "held_special_shield_right", true },
+        { "shield-held-world-block.reference.txt", "SHIELD_RIGHT_BLOCK", "shield", "block", "held_special_shield_right", false }
+    };
+
+    [Theory]
+    [MemberData(nameof(PosedCases))]
+    public void ProductionHeldSpecialMatchesRealPoseSamplesPerKey(string sampleFile, string sampleLayer, string itemName,
+        string poseName, string layerName, bool usingItem)
+    {
+        try
+        {
+            RunPosed(sampleFile, sampleLayer, itemName, poseName, layerName, usingItem);
+        }
+        catch (Exception ex)
+        {
+            throw new Xunit.Sdk.XunitException(ex.ToString());
+        }
+    }
+
+    private static void RunPosed(string sampleFile, string sampleLayer, string itemName,
+        string poseName, string layerName, bool usingItem)
+    {
+        var isTrident = itemName == "trident";
+        var model = isTrident ? SpecialItemModelDefinition.Trident : SpecialItemModelDefinition.Shield;
+        var texture = isTrident ? SpecialItemModelDefinition.TridentTexture : SpecialItemModelDefinition.ShieldTexture;
+        using var fixture = new ItemFixture();
+        var atlas = ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
+        {
+            [texture] = new(model.TextureWidth, model.TextureHeight, new byte[model.TextureWidth * model.TextureHeight * 4])
+        });
+        var itemId = EntityModelResolver.Items!.GetId(Identifier.Parse("minecraft:" + itemName));
+        var stab = poseName == "stab";
+        var frame = default(EntityAnimationFrame) with
+        {
+            TypeId = EntityPlaceholderMesher.PlayerEntityTypeId,
+            SwingAnimation = stab ? 0.15f : 0f,
+            SwingType = stab ? 2 : 0,
+            SwingHand = 0,
+            MainHandItemId = itemId,
+            IsUsingItem = usingItem,
+            TicksUsingItem = usingItem ? 10f : 0f,
+            UseItemHand = 0
+        };
+        var rightPose = poseName switch
+        {
+            "stab" => HumanoidArmPose.Spear,
+            "throw" => HumanoidArmPose.ThrowTrident,
+            "use" or "block" => HumanoidArmPose.Block,
+            _ => HumanoidArmPose.Empty
+        };
+        var pose = new EntityPose();
+        try
+        {
+            HumanoidModelPose.Apply(frame, pose, HumanoidVariant.Plain, rightPose, HumanoidArmPose.Empty,
+                isHoldingBow: false, rawSourceFrame: true);
+        }
+        catch (Exception ex)
+        {
+            throw new Xunit.Sdk.XunitException(ex.ToString());
+        }
+
+        var state = new EntityRenderState(3, EntityPlaceholderMesher.PlayerEntityTypeId, 0f, 0f, 0f, 180f, 0f,
+            IsUsingItem: usingItem,
+            TicksUsingItem: usingItem ? 10f : 0f,
+            MainHandItemId: itemId,
+            SwingAnimation: stab ? 0.15f : 0f,
+            SwingType: stab ? 2 : 0,
+            SwingHand: 0,
+            UseItemHand: 0);
+        IReadOnlyList<EntityGeometryLayer> layers;
+        try
+        {
+            layers = new ItemInHandMesher().Build([state], [pose], variants: null, atlas);
+        }
+        catch (Exception ex)
+        {
+            throw new Xunit.Sdk.XunitException(ex.ToString());
+        }
+        var layer = layers.Single(entry => entry.Name == layerName);
+        var rows = Load(sampleFile).Where(row => row.Layer == sampleLayer).ToArray();
+        Assert.NotEmpty(rows);
+        var cubes = model.Compiled!.Cubes.Select(cube => cube.Name).ToArray();
+        Assert.Equal(rows.Length, 24 * cubes.Length);
+        Assert.True(layer.Geometry.VertexFloats / ChunkMesher.FloatsPerVertex == rows.Length,
+            $"{sampleLayer}: production vertices {layer.Geometry.VertexFloats / ChunkMesher.FloatsPerVertex} vs {rows.Length}");
+        foreach (var group in rows.GroupBy(row => (row.Part, row.Cube)))
+        {
+            var cubeName = group.Key.Part.Split('/').Last();
+            var cubeIndex = Array.IndexOf(cubes, cubeName);
+            Assert.True(cubeIndex >= 0, $"{sampleLayer}: production cube '{cubeName}' missing");
+            var ordered = group.OrderBy(row => row.Polygon).ThenBy(row => row.Vertex).ToArray();
+            for (var i = 0; i < ordered.Length; i++)
+            {
+                var row = ordered[i];
+                var offset = (cubeIndex * 24) + (row.Polygon * 4) + row.Vertex;
+                Assert.InRange(offset, 0, (layer.Geometry.VertexFloats / ChunkMesher.FloatsPerVertex) - 1);
+                var produced = ReadVertex(layer.Geometry, offset);
+                var expected = EntityPlaceholderMesher.ModelScale
+                    * new Vector3(-row.Position.X, 1.501f - row.Position.Y, row.Position.Z);
+                Assert.True((produced.Position - expected).Length() <= Tolerance,
+                    $"{sampleLayer}/{row.Part}#{row.Cube} {row.Polygon}/{row.Vertex}: position {produced.Position} vs {expected}");
+                Assert.True(MathF.Abs(produced.U - QuantizeHalf(row.U)) <= Tolerance
+                        && MathF.Abs(produced.V - QuantizeHalf(row.V)) <= Tolerance,
+                    $"{sampleLayer}/{row.Part}#{row.Cube} {row.Polygon}/{row.Vertex}: UV");
+            }
+        }
+    }
+    [Fact]
+    public void HeadSpecialLayersAreRegistered()
+    {
+        var layers = EntityModelResolver.Resolve(EntityPlaceholderMesher.PlayerEntityTypeId).RenderLayers!;
+        foreach (var name in new[] { "held_special_head_right", "held_special_head_left" })
+        {
+            var layer = layers.Single(entry => entry.Name == name);
+            Assert.NotNull(layer.Model);
+        }
+    }
     [Theory]
     [InlineData("trident", "TRIDENT_RIGHT", "held_special_trident_right")]
     [InlineData("shield", "SHIELD_RIGHT", "held_special_shield_right")]
