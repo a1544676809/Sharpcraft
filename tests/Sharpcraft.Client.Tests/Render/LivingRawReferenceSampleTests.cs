@@ -321,10 +321,14 @@ public sealed class LivingRawReferenceSampleTests
 
             Assert.NotEmpty(sourceParts);
             // Include ancestor parts so child pivots (e.g. baby pig snout is a child of head) compose.
-            // The target part is emitted first in definition.Parts order; ancestors follow.
+            // The target part is emitted first in definition.StructuralParts() order; ancestors follow.
             var targetName = sourceParts[0].Name;
             var sourceNames = sourceParts.Select(p => p.Name).ToHashSet(StringComparer.Ordinal);
-            var partOrder = definition.Parts.Where(p => sourceNames.Contains(p.Name) || IsAncestorOf(p, targetName, definition)).ToArray();
+            // #231: sourceParts may include a source-derived descriptor absent from the compiled structural view
+            // (e.g. dragon skull's pre-scaled "head"). Include them explicitly, then add ancestor nodes.
+            var partOrder = sourceParts
+                .Concat(definition.StructuralParts().Where(p => !sourceNames.Contains(p.Name) && IsAncestorOf(p, targetName, definition)))
+                .ToArray();
             // The jar sample is bind-pose geometry with ALL parts emitted; strip runtime visibility
             // predicates (e.g. illager crossed-vs-open arms are mutually exclusive at runtime) so the
             // geometry test compares the stored cubes, not a particular animation state.
@@ -498,6 +502,43 @@ public sealed class LivingRawReferenceSampleTests
     /// </summary>
     private static EntityModelPart[] FlatPartsForSampleCube(EntityModelDefinition definition, string part, int cube)
     {
+        // #231: dragon skull's flat head boxes were the source PartPose.scaled(0.75) group: the scale is
+        // applied to the compiled "head" node, so reconstruct the pre-scaled descriptors from the node pose
+        // (source truth) for all six /head cubes. UV pins are the source pre-scale values (DragonHeadModel).
+        if (definition.Name == "dragon_skull" && part == "/head" && cube is >= 0 and <= 5)
+        {
+            var headNode = definition.Compiled!.Parts.Single(n => n.Name == "head");
+            var box = headNode.CubeArray[cube];
+            var s = headNode.ScaleX; // PartPose.scaled(0.75) — uniform source scale
+            var flatName = cube switch
+            {
+                0 => "head", 1 => "upper_head", 2 => "scale_left",
+                3 => "nostril_left", 4 => "scale_right", _ => "nostril_right"
+            };
+            var (uw, uh, ud) = cube switch
+            {
+                0 => (12, 5, 16), 1 => (16, 16, 16),
+                2 or 4 => (2, 4, 6), _ => (2, 2, 4)
+            };
+            var scaled = new EntityModelPart(
+                Name: flatName,
+                CentreX: box.CentreX * s,
+                Bottom: headNode.PivotY + (box.Bottom - headNode.PivotY) * s,
+                CentreZ: box.CentreZ * s,
+                Width: box.Width * s,
+                Height: box.Height * s,
+                Depth: box.Depth * s,
+                TextureX: box.TextureX, TextureY: box.TextureY, Mirror: box.Mirror,
+                OverlayLayers: box.Overlays, TexturePath: box.TexturePath, Grow: box.Grow,
+                GrowXyz: box.GrowXyz, Kind: box.Kind, VisibleWhen: headNode.VisibleWhen,
+                TextureWidth: box.TextureWidth, TextureHeight: box.TextureHeight,
+                IncludeInEmissive: box.IncludeInEmissive, EmissiveOnly: box.EmissiveOnly,
+                EmissiveTexturePath: box.EmissiveTexturePath, TextureSelector: box.TextureSelector,
+                VisibleSides: box.VisibleSides,
+                UvWidth: uw, UvHeight: uh, UvDepth: ud);
+            return [scaled];
+        }
+
         string flatName;
         switch (part)
         {
@@ -700,11 +741,11 @@ public sealed class LivingRawReferenceSampleTests
             case "/ribcage" when definition.Name.StartsWith("wither", StringComparison.Ordinal):
                 // Wither ribcage is one source part with 4 cubes; meshed together below via the
                 // multi-cube group handling in the caller (all 4 parts, offset by cube).
-                return new[] { "ribcage", "rib_1", "rib_2", "rib_3" }.Select(n => definition.Parts.Single(p => p.Name == n)).ToArray();
+                return new[] { "ribcage", "rib_1", "rib_2", "rib_3" }.Select(n => definition.StructuralParts().Single(p => p.Name == n)).ToArray();
             default:
                 flatName = part.TrimStart('/').Split('/').Last(); break;
         }
-        return [definition.Parts.Single(p => p.Name == flatName)];
+        return [definition.StructuralParts().Single(p => p.Name == flatName)];
     }
 
     /// <summary>Vertex count a single part emits when meshed (depends only on its cube dimensions/visibility).</summary>
@@ -719,12 +760,12 @@ public sealed class LivingRawReferenceSampleTests
     private static bool IsAncestorOf(EntityModelPart p, string targetName, EntityModelDefinition def)
     {
         if (p.Name is null) return false;
-        var cursor = def.Parts.FirstOrDefault(x => x.Name == targetName);
+        var cursor = def.StructuralParts().FirstOrDefault(x => x.Name == targetName);
         var guard = 0;
         while (cursor.Name is not null && cursor.Parent is { } parent && guard++ < 32)
         {
             if (parent == p.Name) return true;
-            cursor = def.Parts.FirstOrDefault(x => x.Name == parent);
+            cursor = def.StructuralParts().FirstOrDefault(x => x.Name == parent);
         }
         return false;
     }
