@@ -1,60 +1,62 @@
 # Issue #165 model/sample coverage baseline. Lines are discovered, not counted by hand.
 # Entries ending in .golden.txt or .reference.txt are samples with no test literal.
-# Other entries are Type.Member model definitions with no truth assertion.
-# Sorted; '#' starts a comment. Remove an entry once it is covered (the gate enforces this).
-ArmorStandArmorModelDefinition.Boots
-ArmorStandArmorModelDefinition.Chestplate
-ArmorStandArmorModelDefinition.Helmet
-ArmorStandArmorModelDefinition.Leggings
-ArmorStandArmorModelDefinition.SmallBoots
-ArmorStandArmorModelDefinition.SmallChestplate
-ArmorStandArmorModelDefinition.SmallHelmet
-ArmorStandArmorModelDefinition.SmallLeggings
-BabyHumanoidArmorModelDefinition.Boots
-BabyHumanoidArmorModelDefinition.Chestplate
-BabyHumanoidArmorModelDefinition.Helmet
-BabyHumanoidArmorModelDefinition.Leggings
-BabyModelDefinitions.Models
-BabyModelDefinitionsAquatic.Models
-BabyModelDefinitionsEquine.Models
-BabyModelDefinitionsExtra.Models
-BabyModelDefinitionsFinal.Models
-BabyModelDefinitionsHumanoid.Models
-BabyModelDefinitionsHumanoid.Variants
-BabyModelDefinitionsMisc.Models
-BabyModelDefinitionsNether.Models
-BabyModelDefinitionsOdd.Models
+# Type.Member entries are scalar definitions with no truth assertion.
+# 'Type.Member = N' entries are exact container element-count anchors.
+# Sorted; '#' starts a comment. Remove or update an entry once it is covered (the gate enforces this).
+BabyModelDefinitionsNether.Zoglin
 BannerModelDefinition.StandingBody
 BannerModelDefinition.StandingFlag
 BannerModelDefinition.WallBody
 BannerModelDefinition.WallFlag
+BookModelDefinition.Definition
 CamelHuskModelDefinition.Definition
 ConduitModelDefinition.Shell
-CopperGolemModelDefinition.Variants
-CopperGolemStatueModelDefinition.ByPose
-GiantArmorModelDefinition.Boots
-GiantArmorModelDefinition.Chestplate
-GiantArmorModelDefinition.Helmet
-GiantArmorModelDefinition.Leggings
-HuskArmorModelDefinition.Boots
-HuskArmorModelDefinition.Chestplate
-HuskArmorModelDefinition.Helmet
-HuskArmorModelDefinition.Leggings
-PiglinArmorModelDefinition.AdultBoots
-PiglinArmorModelDefinition.AdultChestplate
-PiglinArmorModelDefinition.AdultHelmet
-PiglinArmorModelDefinition.AdultLeggings
-PiglinArmorModelDefinition.BabyBoots
-PiglinArmorModelDefinition.BabyChestplate
-PiglinArmorModelDefinition.BabyHelmet
-PiglinArmorModelDefinition.BabyLeggings
+GuardianModelDefinition.Elder
+HappyGhastModelDefinition.RopesBabyDefinition
+HappyGhastModelDefinition.RopesDefinition
+HoglinModelDefinition.Zoglin
+SpecialItemModelDefinition.Conduit
+SpecialItemModelDefinition.DecoratedPot
+SpecialItemModelDefinition.DecoratedPotSides
+SpecialItemModelDefinition.EndCube
 SpecialItemModelDefinition.HeldShulkerLeft
 SpecialItemModelDefinition.HeldShulkerRight
-WitherSkeletonArmorModelDefinition.Boots
-WitherSkeletonArmorModelDefinition.Chestplate
-WitherSkeletonArmorModelDefinition.Helmet
-WitherSkeletonArmorModelDefinition.Leggings
-ZombieVillagerArmorModelDefinition.Boots
-ZombieVillagerArmorModelDefinition.Chestplate
-ZombieVillagerArmorModelDefinition.Helmet
-ZombieVillagerArmorModelDefinition.Leggings
+SpecialItemModelDefinition.ShulkerBox
+AxolotlModelDefinition.Variants = 5
+BabyModelDefinitions.Models = 3
+BabyModelDefinitions.Variants = 9
+BabyModelDefinitionsAquatic.Models = 4
+BabyModelDefinitionsAquatic.Variants = 5
+BabyModelDefinitionsEquine.Models = 4
+BabyModelDefinitionsEquine.Variants = 11
+BabyModelDefinitionsExtra.Models = 4
+BabyModelDefinitionsExtra.Variants = 29
+BabyModelDefinitionsFinal.Models = 3
+BabyModelDefinitionsHumanoid.Models = 4
+BabyModelDefinitionsHumanoid.Variants = 14
+BabyModelDefinitionsMisc.Models = 4
+BabyModelDefinitionsMisc.Variants = 7
+BabyModelDefinitionsNether.Models = 4
+BabyModelDefinitionsOdd.Models = 4
+CatModelDefinition.Variants = 11
+ChickenModelDefinition.Variants = 3
+CopperGolemModelDefinition.Variants = 4
+CopperGolemStatueModelDefinition.ByPose = 4
+CowModelDefinition.Variants = 3
+EntityModelResolver.Definitions = 299
+FoxModelDefinition.Variants = 2
+FrogModelDefinition.Variants = 3
+HorseModelDefinition.Variants = 7
+LlamaModelDefinition.Variants = 4
+PandaModelDefinition.Variants = 7
+ParrotModelDefinition.Variants = 5
+PigModelDefinition.Variants = 3
+PufferfishModelDefinition.Variants = 3
+RabbitModelDefinition.Variants = 7
+SalmonModelDefinition.Variants = 3
+ShulkerModelDefinition.Variants = 16
+TropicalFishModelDefinition.Variants = 12
+VillagerModelDefinition.Variants = 7
+WolfModelDefinition.Variants = 9
+ZombieNautilusModelDefinition.Variants = 2
+ZombieVillagerModelDefinition.Variants = 7
