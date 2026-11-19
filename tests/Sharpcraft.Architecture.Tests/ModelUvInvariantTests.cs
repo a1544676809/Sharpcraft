@@ -190,8 +190,12 @@ public sealed class ModelUvInvariantTests
                         || span.U4 - span.U0 <= 0f || span.V2 - span.V0 <= 0f)
                     {
                         // Baby llama chest cubes are a reference-declared UV overshoot (see baseline above).
-                        if (!definition.Name.StartsWith("baby_llama", StringComparison.Ordinal)
-                            || (cube.Name != "right_chest" && cube.Name != "left_chest"))
+                        // The llama decor equipment tree reuses the same baby mesh, so the decorated
+                        // equipment nodes carry the same source overshoot under their prefix (B-2 / #228).
+                        var isBabyLlamaChest = definition.Name.StartsWith("baby_llama", StringComparison.Ordinal)
+                            && (cube.Name.EndsWith("right_chest", StringComparison.Ordinal)
+                                || cube.Name.EndsWith("left_chest", StringComparison.Ordinal));
+                        if (!isBabyLlamaChest)
                         {
                             violations[key] = $"uv {span.U0}..{span.U4} x {span.V0}..{span.V2} outside 0..{textureWidth} x 0..{textureHeight}";
                         }

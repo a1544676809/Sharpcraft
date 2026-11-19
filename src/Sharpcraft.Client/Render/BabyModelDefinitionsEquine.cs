@@ -106,32 +106,39 @@ public static class BabyModelDefinitionsEquine
         return new VanillaMeshDefinition(root);
     }
 
-    private static VanillaMeshDefinition BuildLlamaMesh()
+    private static VanillaMeshDefinition BuildLlamaMesh() => BuildLlamaMesh(0f);
+
+    /// <summary>
+    /// Baby llama mesh with an optional source <c>CubeDeformation</c> grow. The decor layer is the same model
+    /// with grow 0.2 (reference <c>LayerDefinitions.llamaBabyDecorLayer</c>), so the equipment tree reuses this
+    /// builder instead of duplicating the cube table.
+    /// </summary>
+    internal static VanillaMeshDefinition BuildLlamaMesh(float addedGrow)
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
         var head = root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 12f, -4f),
-            new VanillaCubeDefinition("head", 0, 0, -3f, -9f, -4f, 6f, 11f, 4f));
+            new VanillaCubeDefinition("head", 0, 0, -3f, -9f, -4f, 6f, 11f, 4f, Grow: addedGrow));
         head.AddOrReplaceChild("snout", VanillaPartPose.Zero,
-            new VanillaCubeDefinition("snout", 0, 15, -1.5f, -7f, -7f, 3f, 3f, 3f));
+            new VanillaCubeDefinition("snout", 0, 15, -1.5f, -7f, -7f, 3f, 3f, 3f, Grow: addedGrow));
         head.AddOrReplaceChild("ear_right", VanillaPartPose.Zero,
-            new VanillaCubeDefinition("ear_right", 20, 4, 0.5f, -11f, -3f, 2f, 2f, 2f));
+            new VanillaCubeDefinition("ear_right", 20, 4, 0.5f, -11f, -3f, 2f, 2f, 2f, Grow: addedGrow));
         head.AddOrReplaceChild("ear_left", VanillaPartPose.Zero,
-            new VanillaCubeDefinition("ear_left", 20, 0, -2.5f, -11f, -3f, 2f, 2f, 2f));
+            new VanillaCubeDefinition("ear_left", 20, 0, -2.5f, -11f, -3f, 2f, 2f, 2f, Grow: addedGrow));
         root.AddOrReplaceChild("right_hind_leg", VanillaPartPose.Offset(-2.5f, 16.5f, 4.5f),
-            new VanillaCubeDefinition("right_hind_leg", 0, 45, -1.4f, -0.5f, -1.5f, 3f, 8f, 3f));
+            new VanillaCubeDefinition("right_hind_leg", 0, 45, -1.4f, -0.5f, -1.5f, 3f, 8f, 3f, Grow: addedGrow));
         root.AddOrReplaceChild("left_hind_leg", VanillaPartPose.Offset(2.5f, 16.5f, 4.5f),
-            new VanillaCubeDefinition("left_hind_leg", 12, 45, -1.6f, -0.5f, -1.5f, 3f, 8f, 3f));
+            new VanillaCubeDefinition("left_hind_leg", 12, 45, -1.6f, -0.5f, -1.5f, 3f, 8f, 3f, Grow: addedGrow));
         root.AddOrReplaceChild("right_front_leg", VanillaPartPose.Offset(-2.5f, 16.5f, -3.5f),
-            new VanillaCubeDefinition("right_front_leg", 0, 34, -1.4f, -0.5f, -1.5f, 3f, 8f, 3f));
+            new VanillaCubeDefinition("right_front_leg", 0, 34, -1.4f, -0.5f, -1.5f, 3f, 8f, 3f, Grow: addedGrow));
         root.AddOrReplaceChild("left_front_leg", VanillaPartPose.Offset(2.5f, 16.5f, -3.5f),
-            new VanillaCubeDefinition("left_front_leg", 12, 34, -1.6f, -0.5f, -1.5f, 3f, 8f, 3f));
+            new VanillaCubeDefinition("left_front_leg", 12, 34, -1.6f, -0.5f, -1.5f, 3f, 8f, 3f, Grow: addedGrow));
         root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, 14f, 2.5f),
-            new VanillaCubeDefinition("body", 0, 15, -4f, -3f, -8.5f, 8f, 6f, 13f));
+            new VanillaCubeDefinition("body", 0, 15, -4f, -3f, -8.5f, 8f, 6f, 13f, Grow: addedGrow));
         // Source BabyLlamaModel: chest yRot = +PI/2 (source literals).
         root.AddOrReplaceChild("right_chest", VanillaPartPose.OffsetAndRotation(-8.5f, 4f, 3f, 0f, MathF.PI / 2f, 0f),
-            new VanillaCubeDefinition("right_chest", 45, 28, -3f, 0f, 0f, 8f, 8f, 3f));
+            new VanillaCubeDefinition("right_chest", 45, 28, -3f, 0f, 0f, 8f, 8f, 3f, Grow: addedGrow));
         root.AddOrReplaceChild("left_chest", VanillaPartPose.OffsetAndRotation(5.5f, 4f, 3f, 0f, MathF.PI / 2f, 0f),
-            new VanillaCubeDefinition("left_chest", 45, 41, -3f, 0f, 0f, 8f, 8f, 3f));
+            new VanillaCubeDefinition("left_chest", 45, 41, -3f, 0f, 0f, 8f, 8f, 3f, Grow: addedGrow));
         return new VanillaMeshDefinition(root);
     }
 
