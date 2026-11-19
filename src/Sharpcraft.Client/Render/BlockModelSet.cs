@@ -101,7 +101,9 @@ public sealed class BlockModelSet
         int z,
         (float Sky, float Block) light,
         Func<Identifier, SpriteRect?> spriteFor,
-        Func<string, bool>? isCulled = null)
+        Func<string, bool>? isCulled = null,
+        (float R, float G, float B)? tint = null,
+        ReadOnlySpan<(float Sky, float Block)> faceLights = default)
     {
         ArgumentNullException.ThrowIfNull(buffer);
         ArgumentNullException.ThrowIfNull(quads);
@@ -122,20 +124,31 @@ public sealed class BlockModelSet
                 continue;
             }
 
+            // The reference tints exactly the faces whose model declares a tint index, which is why the model path
+            // honours the per-face index rather than a per-block rule: a grass block tints its top and its side
+            // overlay but not its dirt below. Issue 227 was this path dropping the tint entirely.
+            var (tr, tg, tb) = tint is { } colour && quad.TintIndex >= 0 ? colour : (1f, 1f, 1f);
+
+            // The reference lights a face from the block the face looks at, not from the block it belongs to: an
+            // opaque block has an unlit cell of its own, so reading that cell drew every model block black
+            // (issue 227). Callers without a neighbourhood fall back to the single supplied light.
+            var faceIndex = FaceIndex(quad.Direction);
+            var (sky, block) = faceIndex >= 0 && faceIndex < faceLights.Length ? faceLights[faceIndex] : light;
+
             var shade = Shade(quad.Direction);
             buffer.AppendQuad(
                 (quad.V0.Position.X + x, quad.V0.Position.Y + y, quad.V0.Position.Z + z),
                 (quad.V1.Position.X + x, quad.V1.Position.Y + y, quad.V1.Position.Z + z),
                 (quad.V2.Position.X + x, quad.V2.Position.Y + y, quad.V2.Position.Z + z),
                 (quad.V3.Position.X + x, quad.V3.Position.Y + y, quad.V3.Position.Z + z),
-                (shade, shade, shade),
-                (shade, shade, shade),
-                (shade, shade, shade),
-                (shade, shade, shade),
-                light,
-                light,
-                light,
-                light,
+                (shade * tr, shade * tg, shade * tb),
+                (shade * tr, shade * tg, shade * tb),
+                (shade * tr, shade * tg, shade * tb),
+                (shade * tr, shade * tg, shade * tb),
+                (sky, block),
+                (sky, block),
+                (sky, block),
+                (sky, block),
                 (quad.V0.Uv.X, quad.V0.Uv.Y),
                 (quad.V1.Uv.X, quad.V1.Uv.Y),
                 (quad.V2.Uv.X, quad.V2.Uv.Y),
@@ -147,6 +160,30 @@ public sealed class BlockModelSet
 
         return emitted;
     }
+
+    /// <summary>Index of a face direction inside the per-face light table, or -1 when the direction is unknown.</summary>
+    public static int FaceIndex(string direction) => direction switch
+    {
+        "down" => 0,
+        "up" => 1,
+        "north" => 2,
+        "south" => 3,
+        "west" => 4,
+        "east" => 5,
+        _ => -1
+    };
+
+    /// <summary>Neighbour offset of a face direction, in the order <see cref="FaceIndex"/> defines.</summary>
+    public static (int X, int Y, int Z) FaceOffset(int index) => index switch
+    {
+        0 => (0, -1, 0),
+        1 => (0, 1, 0),
+        2 => (0, 0, -1),
+        3 => (0, 0, 1),
+        4 => (-1, 0, 0),
+        5 => (1, 0, 0),
+        _ => (0, 0, 0)
+    };
 
     /// <summary>
     /// Brightness the reference gives each face direction before light is applied. A box that is not

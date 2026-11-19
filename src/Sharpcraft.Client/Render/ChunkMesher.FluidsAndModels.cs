@@ -48,9 +48,14 @@ public static partial class ChunkMesher
         int baseZ,
         MeshBuffer buffer,
         BlockSpriteMap sprites,
-        BlockModelSet models)
+        BlockModelSet models,
+        BiomeTint? tint = null,
+        Sharpcraft.Common.Registries.BlockStateLayout? layout = null)
     {
         var nb = neighbourhood;
+
+        // Hoisted out of the block loop so the per-face light table is one stack frame, not one per block (CA2014).
+        Span<(float Sky, float Block)> faceLights = stackalloc (float, float)[6];
 
         for (var y = 0; y < 16; y++)
         {
@@ -65,6 +70,30 @@ public static partial class ChunkMesher
                     }
 
                     nb.TryGetLight(baseX + x, baseY + y, baseZ + z, out var sky, out var block);
+
+                    // The biome tint belongs to the model path as much as to the cube path. It was applied only by the
+                    // merged cube pass, so every block whose model resolves, which is grass, leaves and plants, drew
+                    // untinted: 227's grey grass and white leaves.
+                    (float R, float G, float B)? tintColour = null;
+                    if (tint is not null && layout?.BlockAt(state) is { } tintedBlock)
+                    {
+                        var kind = BlockTintTable.KindOf(tintedBlock);
+                        if (kind != BlockTintKind.None)
+                        {
+                            tintColour = BiomeTint.ToMultiplier(tint.ColourAt(kind, baseX + x, baseY + y, baseZ + z));
+                        }
+                    }
+
+                    // Per-face light: each face reads the cell it looks at, the way the reference does. A solid block
+                    // has an unlit cell of its own, so the single value above would darken every model block.
+                    for (var face = 0; face < 6; face++)
+                    {
+                        var (fx, fy, fz) = BlockModelSet.FaceOffset(face);
+                        faceLights[face] = nb.TryGetLight(baseX + x + fx, baseY + y + fy, baseZ + z + fz, out var faceSky, out var faceBlock)
+                            ? (faceSky / 15f, faceBlock / 15f)
+                            : (sky / 15f, block / 15f);
+                    }
+
                     BlockModelSet.Emit(
                         buffer,
                         quads,
@@ -89,7 +118,9 @@ public static partial class ChunkMesher
 
                             var neighbour = nb.GetBlockState(baseX + x + dx, baseY + y + dy, baseZ + z + dz, 0);
                             return neighbour != 0 && ShouldCullFace(state, neighbour, sprites, null);
-                        });
+                        },
+                        tintColour,
+                        faceLights);
                 }
             }
         }

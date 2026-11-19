@@ -188,7 +188,7 @@ public static partial class ChunkMesher
 
             if (models is not null && sprites is not null)
             {
-                EmitSectionModels(neighbourhood, section, baseX, baseY, baseZ, buffer, sprites, models);
+                EmitSectionModels(neighbourhood, section, baseX, baseY, baseZ, buffer, sprites, models, tint, layout);
             }
         }
 
