@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using System.Numerics;
+using Sharpcraft.Client.Assets;
 using Sharpcraft.Client.World;
 using Sharpcraft.Framework.Rendering;
 
@@ -25,6 +26,15 @@ public sealed class ItemInHandMesher
     private readonly DynamicGeometry _glintGeometry = new();
     private readonly DynamicGeometry _specialGlintGeometry = new();
     private readonly List<ItemModelQuad> _quads = [];
+    // Held special (trident/shield) raw hand-chain output: [trident/right, trident/left, shield/right, shield/left].
+    private readonly DynamicGeometry[] _heldSpecialCutout = [new(), new(), new(), new()];
+    private readonly DynamicGeometry[] _heldSpecialGlint = [new(), new(), new(), new()];
+    private readonly int[] _heldSpecialCutoutFloats = new int[4];
+    private readonly int[] _heldSpecialCutoutIndices = new int[4];
+    private readonly int[] _heldSpecialGlintFloats = new int[4];
+    private readonly int[] _heldSpecialGlintIndices = new int[4];
+    private readonly EntityModelMesher _heldSpecialMesher = new();
+    private readonly Dictionary<EntityModelDefinition, HeldSpecialGeometry> _heldSpecialGeometryCache = [];
 
     /// <summary>Item glint sampler texture (ItemFeatureRenderer.ENCHANTED_GLINT_ITEM).</summary>
     public const string GlintTexture = "misc/enchanted_glint_item";
@@ -53,6 +63,16 @@ public sealed class ItemInHandMesher
         _translucentGeometry.Clear();
         _glintGeometry.Clear();
         _specialGlintGeometry.Clear();
+        for (var special = 0; special < 4; special++)
+        {
+            _heldSpecialCutout[special].Clear();
+            _heldSpecialGlint[special].Clear();
+            _heldSpecialCutoutFloats[special] = 0;
+            _heldSpecialCutoutIndices[special] = 0;
+            _heldSpecialGlintFloats[special] = 0;
+            _heldSpecialGlintIndices[special] = 0;
+        }
+
         var cutoutFloats = 0;
         var cutoutIndices = 0;
         var translucentFloats = 0;
@@ -73,13 +93,15 @@ public sealed class ItemInHandMesher
             for (var hand = 0; hand < 2; hand++)
             {
                 var offhand = hand == 1;
+                var armName = offhand ? "left_arm" : "right_arm";
                 var placements = EntityModelResolver.ResolveHeldItemPlacements(entity, offhand);
                 if (placements.Count == 0)
                 {
+                    // Special-renderer items have no item quads; the trident/shield models are emitted through the same
+                    // raw hand chain in their own geometry buffer (see EmitHeldSpecial).
+                    EmitHeldSpecial(entity, pose, model, offhand, armName, entityMatrix, itemAtlas);
                     continue;
                 }
-
-                var armName = offhand ? "left_arm" : "right_arm";
                 var foil = offhand ? entity.OffHandFoil : entity.MainHandFoil;
                 var displayContext = EntityModelResolver.DisplayContextFor(offhand);
                 var humanoidSource = HumanoidHeldHandFrame.IsHumanoid(entity.TypeId);
@@ -200,6 +222,30 @@ public sealed class ItemInHandMesher
             layers.Add(new EntityGeometryLayer($"{LayerName}_glint_special", EntityGeometryLayerKind.SpecialGlint, 893, _specialGlintGeometry, usesItemAtlas: true));
         }
 
+        for (var heldSpecial = 0; heldSpecial < 4; heldSpecial++)
+        {
+            var specialName = heldSpecial < 2 ? "trident" : "shield";
+            var specialHand = heldSpecial % 2 == 1 ? "left" : "right";
+            var cutout = _heldSpecialCutout[heldSpecial];
+            if (_heldSpecialCutoutIndices[heldSpecial] > 0)
+            {
+                cutout.VertexFloats = _heldSpecialCutoutFloats[heldSpecial];
+                cutout.IndexCount = _heldSpecialCutoutIndices[heldSpecial];
+                layers.Add(new EntityGeometryLayer($"held_special_{specialName}_{specialHand}", EntityGeometryLayerKind.Cutout,
+                    896 + (heldSpecial * 2), cutout, usesItemAtlas: true));
+            }
+
+            var glint = _heldSpecialGlint[heldSpecial];
+            if (_heldSpecialGlintIndices[heldSpecial] > 0)
+            {
+                glint.VertexFloats = _heldSpecialGlintFloats[heldSpecial];
+                glint.IndexCount = _heldSpecialGlintIndices[heldSpecial];
+                GlintTextureTransform.ApplyToGeometry(glint, GlintClock.Millis, GlintTextureTransform.EntityScale);
+                layers.Add(new EntityGeometryLayer($"held_special_{specialName}_{specialHand}_glint",
+                    EntityGeometryLayerKind.Glint, 897 + (heldSpecial * 2), glint, usesItemAtlas: true));
+            }
+        }
+
         return layers;
     }
 
@@ -265,4 +311,150 @@ public sealed class ItemInHandMesher
         // baseline treats as the right arm.
         return (entity.SwingHand == 1) == offhand;
     }
-}
+
+    /// <summary>
+    /// Emits the trident/shield special model through the same raw hand chain as regular held items:
+    /// world = specialLocal · display · stab · anchor · handFrame · entityMatrix (row vectors).
+    /// The special geometry cannot share the item-quad buffer (cube model vs. quad model), so it keeps its own
+    /// geometry buffer while using the identical frame.
+    /// </summary>
+    private void EmitHeldSpecial(
+        EntityRenderState entity,
+        EntityPose? pose,
+        EntityModelDefinition hostModel,
+        bool offhand,
+        string armName,
+        Matrix4x4 entityMatrix,
+        ISpriteAtlas itemAtlas)
+    {
+        if (EntityModelResolver.ResolveHeldItemSpecial(entity, offhand) is not { } specialId)
+        {
+            return;
+        }
+
+        var specialType = specialId.StartsWith("minecraft:", StringComparison.Ordinal) ? specialId["minecraft:".Length..] : specialId;
+        if (specialType is not ("trident" or "shield"))
+        {
+            return;
+        }
+
+        var itemId = offhand ? entity.OffHandItemId : entity.MainHandItemId;
+        if (EntityModelResolver.ItemModels is not { } models || EntityModelResolver.Items?.ById(itemId) is not { } item)
+        {
+            return;
+        }
+
+        var placements = models.ResolveAll(item.Id.ToString(), entity.IsUsingItem);
+        if (placements.Count == 0)
+        {
+            return;
+        }
+
+        var humanoidSource = HumanoidHeldHandFrame.IsHumanoid(entity.TypeId);
+        var handFrame = humanoidSource
+            ? HumanoidHeldHandFrame.SourceWorld(hostModel, armName, pose, offhand, entity.IsBaby)
+            : hostModel.RawSourceFrame
+                ? EntityModelMesher.LegacyHandWorldMatrix(hostModel, entity, armName, pose)
+                : EntityModelMesher.PartWorldMatrix(hostModel, entity, armName, pose);
+        var stab = IsStabSwingOnHand(entity, offhand)
+            ? SpearAnimations.ThirdPersonAttackItemMatrix(entity.SwingAnimation, jetForward: 0f)
+            : Matrix4x4.Identity;
+        var anchor = humanoidSource ? Matrix4x4.Identity : EntityModelResolver.AnchorCoreFor(offhand, entity.IsBaby);
+        var display = EntityModelResolver.DisplayFor(placements[0].Model, offhand);
+        // items/{trident,shield}.json `transformation.scale = (1, -1, -1)`; rotations/translation are identity.
+        var specialLocal = Matrix4x4.CreateScale(1f, -1f, -1f);
+        var world = specialLocal * display * stab * anchor * handFrame * entityMatrix;
+
+        var specialModel = specialType == "trident" ? SpecialItemModelDefinition.Trident : SpecialItemModelDefinition.Shield;
+        var texture = specialType == "trident" ? SpecialItemModelDefinition.TridentTexture : SpecialItemModelDefinition.ShieldTexture;
+        if (itemAtlas.Get(texture) is not { } sprite)
+        {
+            return;
+        }
+
+        var slot = (specialType == "shield" ? 2 : 0) + (offhand ? 1 : 0);
+        var geometry = HeldSpecialGeometryFor(specialModel);
+        var target = _heldSpecialCutout[slot];
+        var vertices = geometry.Positions.Length / 3;
+        target.Reserve(_heldSpecialCutoutFloats[slot] + (vertices * ChunkMesher.FloatsPerVertex),
+            _heldSpecialCutoutIndices[slot] + ((vertices / 4) * 6));
+        for (var vertex = 0; vertex < vertices; vertex++)
+        {
+            var point = new Vector3(geometry.Positions[vertex * 3], geometry.Positions[(vertex * 3) + 1],
+                geometry.Positions[(vertex * 3) + 2]);
+            point = Vector3.Transform(point, world);
+            TerrainVertexWriter.Write(target.Vertices, ref _heldSpecialCutoutFloats[slot],
+                point.X, point.Y, point.Z, 1f, 1f, 1f,
+                geometry.Uvs[vertex * 2], geometry.Uvs[(vertex * 2) + 1], sprite, sky: 1f, block: 0f);
+        }
+
+        WriteHeldSpecialIndices(target, ref _heldSpecialCutoutIndices[slot], _heldSpecialCutoutFloats[slot], vertices);
+
+        var foil = offhand ? entity.OffHandFoil : entity.MainHandFoil;
+        if (foil == ItemFoilType.None)
+        {
+            return;
+        }
+
+        var glintTarget = _heldSpecialGlint[slot];
+        glintTarget.Reserve(_heldSpecialGlintFloats[slot] + (vertices * ChunkMesher.FloatsPerVertex),
+            _heldSpecialGlintIndices[slot] + ((vertices / 4) * 6));
+        for (var vertex = 0; vertex < vertices; vertex++)
+        {
+            var point = new Vector3(geometry.Positions[vertex * 3], geometry.Positions[(vertex * 3) + 1],
+                geometry.Positions[(vertex * 3) + 2]);
+            point = Vector3.Transform(point, world);
+            TerrainVertexWriter.Write(glintTarget.Vertices, ref _heldSpecialGlintFloats[slot],
+                point.X, point.Y, point.Z, 1f, 1f, 1f,
+                geometry.Uvs[vertex * 2], geometry.Uvs[(vertex * 2) + 1], sprite, sky: 1f, block: 0f);
+        }
+
+        WriteHeldSpecialIndices(glintTarget, ref _heldSpecialGlintIndices[slot], _heldSpecialGlintFloats[slot], vertices);
+    }
+
+    private static void WriteHeldSpecialIndices(DynamicGeometry target, ref int indexCount, int vertexFloats, int vertices)
+    {
+        var first = (uint)((vertexFloats / ChunkMesher.FloatsPerVertex) - vertices);
+        for (var quad = 0; quad < vertices / 4; quad++)
+        {
+            var start = first + (uint)(quad * 4);
+            target.Indices[indexCount++] = start;
+            target.Indices[indexCount++] = start + 1;
+            target.Indices[indexCount++] = start + 2;
+            target.Indices[indexCount++] = start;
+            target.Indices[indexCount++] = start + 2;
+            target.Indices[indexCount++] = start + 3;
+        }
+    }
+
+    private HeldSpecialGeometry HeldSpecialGeometryFor(EntityModelDefinition model)
+    {
+        if (_heldSpecialGeometryCache.TryGetValue(model, out var cached))
+        {
+            return cached;
+        }
+
+        var state = new EntityRenderState(0, 0, 0f, 0f, 0f, 180f, 0f);
+        var geometry = _heldSpecialMesher.BuildModel(model, state,
+            new SpriteRect(0, 0, model.TextureWidth, model.TextureHeight, 1),
+            model.TextureWidth, model.TextureHeight, modelScale: 1f);
+        var count = geometry.VertexFloats / ChunkMesher.FloatsPerVertex;
+        var positions = new float[count * 3];
+        var uvs = new float[count * 2];
+        for (var vertex = 0; vertex < count; vertex++)
+        {
+            var offset = vertex * ChunkMesher.FloatsPerVertex;
+            positions[vertex * 3] = geometry.Vertices[offset];
+            positions[(vertex * 3) + 1] = geometry.Vertices[offset + 1];
+            positions[(vertex * 3) + 2] = geometry.Vertices[offset + 2];
+            var packed = BitConverter.SingleToUInt32Bits(geometry.Vertices[offset + 4]);
+            uvs[vertex * 2] = (float)BitConverter.UInt16BitsToHalf((ushort)(packed & 0xFFFF));
+            uvs[(vertex * 2) + 1] = (float)BitConverter.UInt16BitsToHalf((ushort)(packed >> 16));
+        }
+
+        var result = new HeldSpecialGeometry(positions, uvs);
+        _heldSpecialGeometryCache[model] = result;
+        return result;
+    }
+
+    private readonly record struct HeldSpecialGeometry(float[] Positions, float[] Uvs);}

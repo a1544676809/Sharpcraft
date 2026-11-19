@@ -44,9 +44,10 @@ internal enum HumanoidVariant
 /// <remarks>
 /// Model transforms are accumulated in local part state and emitted as absolute pose offsets, because the reference
 /// assigns (not offsets) model-part fields. Rotations are transcribed in radians; positions are converted from the
-/// reference y-down, mirrored model space into the y-up storage used by the mesher. The SPEAR arm pose now comes from `SpearAnimations.thirdPersonHandUse` and the STAB
-/// swing animation depend on <c>SpearAnimations</c> (item-model geometry) and are deliberately left as no-ops and
-/// recorded as blocked; the CROSSBOW_* arm poses are unreachable for these renderers (only player/illager/piglin).
+/// reference y-down, mirrored model space into the y-up storage used by the mesher. The SPEAR arm pose comes from
+/// <c>SpearAnimations.thirdPersonHandUse</c> and the STAB arm arc from <c>SpearAnimations.thirdPersonAttackHand</c>
+/// (the item-model STAB offset lives in <c>SpearAnimations.ThirdPersonAttackItemMatrix</c>); the CROSSBOW_* arm poses
+/// are unreachable for these renderers (only player/illager/piglin).
 /// </remarks>
 internal static class HumanoidModelPose
 {
@@ -382,7 +383,26 @@ internal static class HumanoidModelPose
                 }
             }
 
-            // STAB (type 2) needs SpearAnimations.thirdPersonAttackHand -> blocked, no-op.
+            if (frame.SwingType == 2)
+            {
+                // Reference SpearAnimations.thirdPersonAttackHand: undo the body twist from the arm yaw, then add the
+                // STAB prepare/attack/retract arc to the swinging arm x rotation.
+                rightArm.RotY -= body.RotY;
+                leftArm.RotY -= body.RotY;
+                leftArm.RotX -= body.RotY;
+                var prepare = SpearAnimations.InOutSine(SpearAnimations.Progress(swingAnimation, 0f, 0.05f));
+                var attack = SpearAnimations.InQuad(SpearAnimations.Progress(swingAnimation, 0.05f, 0.2f));
+                var retract = SpearAnimations.InOutExpo(SpearAnimations.Progress(swingAnimation, 0.4f, 1f));
+                var stabArc = ((90f * prepare) - (120f * attack) + (30f * retract)) * DegToRad;
+                if (swingArm == Arm.Left)
+                {
+                    leftArm.RotX += stabArc;
+                }
+                else
+                {
+                    rightArm.RotX += stabArc;
+                }
+            }
         }
 
         if (variant == HumanoidVariant.Zombie)

@@ -161,12 +161,16 @@ public sealed class SpecialItemModelDefinitionTests
     }
 
     [Fact]
-    public void HeldSpecialModelsCarryTheArmPivot()
+    public void HeldSpecialModelsAreRawRootSpaceWithoutArmPivots()
     {
-        Assert.NotNull(SpecialItemModelDefinition.HeldTridentRight.Compiled!.Find("right_arm"));
-        Assert.NotNull(SpecialItemModelDefinition.HeldTridentLeft.Compiled!.Find("left_arm"));
-        Assert.NotNull(SpecialItemModelDefinition.HeldShieldRight.Compiled!.Find("right_arm"));
-        Assert.NotNull(SpecialItemModelDefinition.HeldShieldLeft.Compiled!.Find("left_arm"));
+        // B-4 T2: trident/shield special geometry is emitted by ItemInHandMesher through the raw hand chain, so the
+        // special models stay in their item/root space and no longer carry a synthetic right_arm/left_arm pivot.
+        Assert.Null(SpecialItemModelDefinition.Trident.Compiled!.Find("right_arm"));
+        Assert.Null(SpecialItemModelDefinition.Trident.Compiled!.Find("left_arm"));
+        Assert.NotNull(SpecialItemModelDefinition.Trident.Compiled!.Find("pole"));
+        Assert.Null(SpecialItemModelDefinition.Shield.Compiled!.Find("right_arm"));
+        Assert.Null(SpecialItemModelDefinition.Shield.Compiled!.Find("left_arm"));
+        Assert.NotNull(SpecialItemModelDefinition.Shield.Compiled!.Find("plate"));
     }
 
     [Fact]

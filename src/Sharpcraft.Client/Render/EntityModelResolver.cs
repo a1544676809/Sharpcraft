@@ -439,11 +439,7 @@ public static partial class EntityModelResolver
         {
             var existing = renderLayers ?? definition.RenderLayers;
             var heldLayers = new List<EntityRenderLayerDefinition>(existing);
-            AddSpecialHandLayers(heldLayers, "trident", "minecraft:trident", SpecialItemModelDefinition.HeldTridentRight, SpecialItemModelDefinition.HeldTridentLeft, SpecialItemModelDefinition.TridentTexture,
-                static (_, _) => SpecialItemModelDefinition.TridentTexture);
-            ApplyShieldHeldTransforms();
-            AddSpecialHandLayers(heldLayers, "shield", "minecraft:shield", SpecialItemModelDefinition.HeldShieldRight, SpecialItemModelDefinition.HeldShieldLeft, SpecialItemModelDefinition.ShieldTexture,
-                ResolveHeldItemSpecialTexture);
+            // trident/shield special models are emitted by ItemInHandMesher through the raw hand chain (B-4 T2).
             AddSpecialHeadLayers(heldLayers);
             AddSpecialChestLayers(heldLayers);
             AddSpecialShulkerLayers(heldLayers);
