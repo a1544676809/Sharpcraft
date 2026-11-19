@@ -36,11 +36,6 @@ public sealed class ModelSampleCoverageTests
         @"""([^""\r\n]*\.(?:reference|golden)\.txt)""",
         RegexOptions.Compiled);
 
-    /// <summary>Definition identifiers used by test source, e.g. PigModelDefinition.Definition.</summary>
-    private static readonly Regex DefinitionUse = new(
-        @"([A-Z][A-Za-z0-9]*ModelDefinition)\.([A-Za-z_][A-Za-z0-9_]*)",
-        RegexOptions.Compiled);
-
     /// <summary>Assertion A: every recorded sample is named by a test literal or baselined.</summary>
     [Fact]
     public void EveryReferenceSampleIsReferencedOrBaselined()
@@ -66,7 +61,7 @@ public sealed class ModelSampleCoverageTests
     {
         var root = StateMatrixBaseline.FindRepositoryRoot();
         var definitions = ModelDefinitions();
-        var used = UsedDefinitions(root);
+        var used = AssertedDefinitions(root, definitions);
         var baseline = Baseline(root);
 
         var uncovered = definitions
@@ -90,7 +85,7 @@ public sealed class ModelSampleCoverageTests
         var samples = SampleFiles(root);
         var definitions = ModelDefinitions();
         var referenced = ReferencedSamples(root);
-        var used = UsedDefinitions(root);
+        var used = AssertedDefinitions(root, definitions);
         var baseline = Baseline(root);
 
         var nowCovered = baseline
@@ -102,12 +97,12 @@ public sealed class ModelSampleCoverageTests
             + " so the ratchet can shrink:\n" + string.Join("\n", nowCovered));
 
         var stale = baseline
-            .Where(entry => !IsSample(entry) && !definitions.Contains(entry))
+            .Where(entry => IsSample(entry) ? !samples.Contains(entry) : !definitions.Contains(entry))
             .OrderBy(entry => entry, StringComparer.Ordinal)
             .ToArray();
         Assert.True(stale.Length == 0,
-            "baseline definition entries that no longer exist; remove them from "
-            + BaselineRelativePath + ":\n" + string.Join("\n", stale));
+            "baseline entries that no longer exist (delete them from "
+            + BaselineRelativePath + "):\n" + string.Join("\n", stale));
     }
 
     private static bool IsSample(string entry) =>
@@ -135,11 +130,18 @@ public sealed class ModelSampleCoverageTests
             .Select(name => name.Replace('\\', '/').Split('/')[^1])
             .ToHashSet(StringComparer.Ordinal);
 
-    private static HashSet<string> UsedDefinitions(string root) =>
-        TestSources(root)
-            .SelectMany(source => DefinitionUse.Matches(source)
-                .Select(match => match.Groups[1].Value + "." + match.Groups[2].Value))
-            .ToHashSet(StringComparer.Ordinal);
+    /// <summary>
+    /// Definitions asserted by test source. Each reflected identifier is looked up as a literal
+    /// substring in the concatenated test text rather than extracted with a naming-convention regex,
+    /// so a definition whose declaring type is plural (BabyModelDefinitions) or otherwise outside the
+    /// convention is still discovered. Comments count as mentions; the ratchet guards against a new
+    /// model shipping with no test mention at all, and being lenient cannot create a false gap.
+    /// </summary>
+    private static HashSet<string> AssertedDefinitions(string root, IEnumerable<string> definitions)
+    {
+        var text = string.Join('\n', TestSources(root));
+        return definitions.Where(text.Contains).ToHashSet(StringComparer.Ordinal);
+    }
 
     private static IEnumerable<string> TestSources(string root)
     {
