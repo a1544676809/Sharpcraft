@@ -44,6 +44,30 @@ public static class PigModelDefinition
     /// <summary>
     /// Builds the seven root parts. The cold variant only differs by the 0.5-pixel outer body overlay (UV 28,32).
     /// </summary>
+    /// <summary>
+    /// Reference <c>PigModel.createBodyLayer(new CubeDeformation(0.5F))</c> for <c>ModelLayers.PIG_SADDLE</c>:
+    /// the full pig body with the 0.5 px saddle deformation, and the source head part carrying both the head and
+    /// snout cubes (the saddle layer does not split the snout into its own part).
+    /// </summary>
+    internal static VanillaMeshDefinition BuildSaddleMesh()
+    {
+        const float grow = 0.5f;
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 12f, -6f),
+            new VanillaCubeDefinition("head", 0, 0, -4f, -4f, -8f, 8f, 8f, 8f, Grow: grow),
+            new VanillaCubeDefinition("snout", 16, 16, -2f, 0f, -9f, 4f, 3f, 1f, Grow: grow));
+        root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 11f, 2f, MathF.PI / 2f, 0f, 0f),
+            new VanillaCubeDefinition("body", 28, 8, -5f, -10f, -7f, 10f, 16f, 8f, Grow: grow));
+        root.AddOrReplaceChild("right_hind_leg", VanillaPartPose.Offset(-3f, 18f, 7f),
+            new VanillaCubeDefinition("right_hind_leg", 0, 16, -2f, 0f, -2f, 4f, 6f, 4f, Grow: grow));
+        root.AddOrReplaceChild("left_hind_leg", VanillaPartPose.Offset(3f, 18f, 7f),
+            new VanillaCubeDefinition("left_hind_leg", 0, 16, -2f, 0f, -2f, 4f, 6f, 4f, Mirror: true, Grow: grow));
+        root.AddOrReplaceChild("right_front_leg", VanillaPartPose.Offset(-3f, 18f, -5f),
+            new VanillaCubeDefinition("right_front_leg", 0, 16, -2f, 0f, -2f, 4f, 6f, 4f, Grow: grow));
+        root.AddOrReplaceChild("left_front_leg", VanillaPartPose.Offset(3f, 18f, -5f),
+            new VanillaCubeDefinition("left_front_leg", 0, 16, -2f, 0f, -2f, 4f, 6f, 4f, Mirror: true, Grow: grow));
+        return new VanillaMeshDefinition(root);
+    }
     private static VanillaMeshDefinition BuildPigMesh(IReadOnlyList<EntityModelLayer>? bodyOverlays)
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);

@@ -16,6 +16,7 @@ public enum EquipmentAssetKind
     SkeletonHorseSaddle,
     ZombieHorseSaddle,
     CamelSaddle,
+    CamelHuskSaddle,
     PigSaddle,
     StriderSaddle,
     LlamaBody,
@@ -99,6 +100,7 @@ public static class EquipmentTextureCatalog
             EquipmentAssetKind.SkeletonHorseSaddle when saddle => new("entity/equipment/skeleton_horse_saddle/saddle"),
             EquipmentAssetKind.ZombieHorseSaddle when saddle => new("entity/equipment/zombie_horse_saddle/saddle"),
             EquipmentAssetKind.CamelSaddle when saddle => new("entity/equipment/camel_saddle/saddle"),
+            EquipmentAssetKind.CamelHuskSaddle when saddle => new("entity/equipment/camel_husk_saddle/saddle"),
             EquipmentAssetKind.PigSaddle when saddle => new("entity/equipment/pig_saddle/saddle"),
             EquipmentAssetKind.StriderSaddle when saddle => new("entity/equipment/strider_saddle/saddle"),
             EquipmentAssetKind.NautilusSaddle when saddle => new("entity/equipment/nautilus_saddle/saddle"),
@@ -269,6 +271,7 @@ public static class EquipmentTextureCatalog
             case EquipmentAssetKind.SkeletonHorseSaddle:
             case EquipmentAssetKind.ZombieHorseSaddle:
             case EquipmentAssetKind.CamelSaddle:
+            case EquipmentAssetKind.CamelHuskSaddle:
             case EquipmentAssetKind.PigSaddle:
             case EquipmentAssetKind.StriderSaddle:
             case EquipmentAssetKind.NautilusSaddle:
@@ -286,6 +289,7 @@ public static class EquipmentTextureCatalog
                     EquipmentAssetKind.SkeletonHorseSaddle => EquipmentLayerType.SkeletonHorseSaddle,
                     EquipmentAssetKind.ZombieHorseSaddle => EquipmentLayerType.ZombieHorseSaddle,
                     EquipmentAssetKind.CamelSaddle => EquipmentLayerType.CamelSaddle,
+                    EquipmentAssetKind.CamelHuskSaddle => EquipmentLayerType.CamelHuskSaddle,
                     EquipmentAssetKind.PigSaddle => EquipmentLayerType.PigSaddle,
                     EquipmentAssetKind.StriderSaddle => EquipmentLayerType.StriderSaddle,
                     _ => EquipmentLayerType.NautilusSaddle

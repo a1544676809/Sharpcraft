@@ -104,7 +104,11 @@ public sealed class EntityModelRegistrationTests
         var definition = EntityModelResolver.Resolve(StriderModelDefinition.StriderEntityTypeId);
 
         Assert.Equal("strider", definition.Name);
-        Assert.All(definition.Compiled!.Parts.Where(part => part.Name.EndsWith("bristle", StringComparison.Ordinal)), part => Assert.Equal("body", part.Parent));
+        // The saddle equipment tree is merged into the decorated definition under its equipment_ prefix; only the
+        // entity body nodes carry the un-prefixed "body" parent.
+        Assert.All(definition.Compiled!.Parts
+            .Where(part => !part.Name.StartsWith("equipment_", StringComparison.Ordinal)
+                && part.Name.EndsWith("bristle", StringComparison.Ordinal)), part => Assert.Equal("body", part.Parent));
     }
 
     [Fact]
