@@ -32,9 +32,24 @@ public static class DyeColors
         FromRgb(0x1D1D21)  // 15 black
     ];
 
+    // Reference DyeColor enum declaration order (white, orange, magenta, light_blue, yellow, lime, pink, gray,
+    // light_gray, cyan, purple, blue, brown, green, red, black). Banner item models name their base colour here.
+    private static readonly string[] Names =
+    [
+        "white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray",
+        "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black"
+    ];
+
     /// <summary>Diffuse tint for a dye colour id; out-of-range ids fall back to white like the reference id mapper.</summary>
     public static Vector3 DiffuseAt(int colorId) =>
         (uint)colorId < (uint)Diffuse.Length ? Diffuse[colorId] : Vector3.One;
+
+    /// <summary>Reference <c>DyeColor</c> name -> id, or null for an unknown name.</summary>
+    public static int? IdFromName(string? name)
+    {
+        var index = name is null ? -1 : Array.IndexOf(Names, name);
+        return index >= 0 ? index : null;
+    }
 
     private static Vector3 FromRgb(int rgb) => new(
         ((rgb >> 16) & 0xFF) / 255f,

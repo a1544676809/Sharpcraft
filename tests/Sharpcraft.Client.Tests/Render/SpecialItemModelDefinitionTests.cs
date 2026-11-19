@@ -126,41 +126,6 @@ public sealed class SpecialItemModelDefinitionTests
     }
 
     [Fact]
-    public void PatternOverlaysAreRaw()
-    {
-        // task-206: pattern overlays reuse the jar-verified base shield/flag geometry per state layer;
-        // only visibility/tint stays state-driven, so the model frame is raw source frame.
-        foreach (var def in new[]
-        {
-            SpecialItemModelDefinition.BannerFlagPatternsRight, SpecialItemModelDefinition.BannerFlagPatternsLeft,
-            SpecialItemModelDefinition.ShieldPatternsRight, SpecialItemModelDefinition.ShieldPatternsLeft
-        })
-        {
-            Assert.True(def.RawSourceFrame, $"{def.Name}: rawSourceFrame");
-            Assert.Equal(0f, def.BaselinePx);
-            Assert.Null(def.FaceTransforms is { Count: > 0 } ? def.FaceTransforms : null);
-        }
-    }
-
-    [Fact]
-    public void PatternOverlayBakesOneCoplanarCopyPerLayer()
-    {
-        var parts = SpecialItemModelDefinition.BannerFlagPatternsRight.Compiled!.Parts
-            .Where(part => part.Name.StartsWith("flag_", StringComparison.Ordinal))
-            .ToArray();
-        Assert.Equal(SpecialItemModelDefinition.MaxBannerPatternLayers, parts.Length);
-        // Without decoded layers every copy stays hidden, so a plain banner renders exactly as before.
-        Assert.All(parts, part => Assert.False(part.VisibleWhen!(default!)));
-        // task-206: source ShieldModel owns plate and handle as separate parts; the overlay mirrors that
-        // (one part per cube per layer), so both plate_<i> and handle_<i> parts are present per layer.
-        var shieldCubes = SpecialItemModelDefinition.ShieldPatternsRight.Compiled!.Parts
-            .Where(part => part.Name.StartsWith("plate_", StringComparison.Ordinal)
-                || part.Name.StartsWith("handle_", StringComparison.Ordinal))
-            .Sum(part => part.Cubes.Count);
-        Assert.Equal(SpecialItemModelDefinition.MaxBannerPatternLayers * 2, shieldCubes);
-    }
-
-    [Fact]
     public void HeldSpecialModelsAreRawRootSpaceWithoutArmPivots()
     {
         // B-4 T2: trident/shield special geometry is emitted by ItemInHandMesher through the raw hand chain, so the

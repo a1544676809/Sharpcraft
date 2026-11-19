@@ -182,6 +182,24 @@ public static partial class EntityModelResolver
         bool offhand = false) =>
         state.EquipmentBannerPatternsAt(offhand ? 1 : 0);
 
+    /// <summary>
+    /// Base-colour dye id for a held banner/shield pattern overlay. Banners take the item model `color` property
+    /// (BannerSpecialRenderer.Unbaked.baseColor); shields take the stack BASE_COLOR component and fall back to white,
+    /// matching ShieldSpecialRenderer.submitPatterns(Objects.requireNonNullElse(baseColor, DyeColor.WHITE)).
+    /// </summary>
+    public static int ResolveHeldItemBannerBaseColor(EntityRenderState state, bool offhand = false)
+    {
+        if (ResolveHeldItemSpecial(state, offhand) == "minecraft:shield")
+        {
+            return state.EquipmentBannerBaseColorAt(offhand ? 1 : 0) ?? 0;
+        }
+
+        var properties = ResolveHeldItemSpecialProperties(state, offhand);
+        return properties is not null && properties.TryGetValue("color", out var name)
+            ? DyeColors.IdFromName(name) ?? 0
+            : 0;
+    }
+
     /// <summary>Atlas sprites a held banner or shield needs for its pattern layers.</summary>
     public static IReadOnlyList<string> ResolveHeldItemPatternSprites(EntityRenderState state, bool offhand = false)
     {
@@ -442,16 +460,8 @@ public static partial class EntityModelResolver
     {
         // Banner body/flag are emitted by ItemInHandMesher through the raw hand chain (B-4 T3); the pattern overlay
         // still uses the resolver layer until its per-pattern sprites move to the same path.
-        AddSpecialPair(layers, "banner_patterns", "minecraft:banner",
-            SpecialItemModelDefinition.BannerFlagPatternsRight, SpecialItemModelDefinition.BannerFlagPatternsLeft, 80,
-            (state, offhand) => ResolveHeldItemPatternSprites(state, offhand).Count > 0
-                ? SpecialItemModelDefinition.BannerTexture
-                : null);
-        AddSpecialPair(layers, "shield_patterns", "minecraft:shield",
-            SpecialItemModelDefinition.ShieldPatternsRight, SpecialItemModelDefinition.ShieldPatternsLeft, 82,
-            (state, offhand) => ResolveHeldItemPatternSprites(state, offhand).Count > 0
-                ? SpecialItemModelDefinition.ShieldTexture
-                : null);
+        // Banner and shield pattern overlays are emitted by ItemInHandMesher through the same raw hand frame as the
+        // body/flag/shield (#244 R-045); only the pot/conduit/end-cube specials remain on resolver layers here.
         // Decorated pot uses a base sprite plus a per-pattern side sprite.
         AddSpecialPair(layers, "pot", "minecraft:decorated_pot",
             SpecialItemModelDefinition.DecoratedPot, SpecialItemModelDefinition.DecoratedPot, 70,
