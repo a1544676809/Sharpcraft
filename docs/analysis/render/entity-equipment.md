@@ -83,6 +83,7 @@ DataComponentPatch patch
 - 马：`entity/equipment/horse_body/<material>`、`entity/equipment/horse_saddle/saddle`；
 - 羊驼：`entity/equipment/llama_body/<color>`（trader 地毯单独）；
 - 骆驼：`entity/equipment/camel_saddle/saddle`、`camel_husk_saddle/saddle`；
+- 猪 / 炽足兽：`entity/equipment/pig_saddle/saddle`、`strider_saddle/saddle`；
 - 鹦鹉螺：`entity/equipment/nautilus_body/*`、`nautilus_saddle/*`（具体子目录需在实现前核对包里实际路径）；
 - 快乐恶魂：`entity/equipment/happy_ghast_body/<color>_harness` 与 `happy_ghast_ropes`；
 - 狼：`entity/wolf/wolf_armor` 及 `wolf_armor_crackiness_*`。
@@ -96,6 +97,9 @@ DataComponentPatch patch
 | Horse / Donkey / Mule / undead horse | `body`、`saddle` | HorseRenderer 装备层 | `horse_body/*`、`horse_saddle/saddle` | 盔甲已验证；鞍专用几何待补 |
 | Llama / TraderLlama | `body`（decor） | LlamaDecorLayer | `llama_body/*`，trader 地毯单独 | 纹理层已接入 |
 | Camel | `saddle` | CamelRenderer 鞍层 | `camel_saddle/saddle` | 已验证（CamelSaddleModel） |
+| Pig | `saddle` | PigRenderer SimpleEquipmentLayer（PIG_SADDLE） | `pig_saddle/saddle` | 已验证（#234，PigModel.createBodyLayer grow 0.5 raw） |
+| Strider | `saddle` | StriderRenderer SimpleEquipmentLayer（STRIDER_SADDLE） | `strider_saddle/saddle` | 已验证（#234，AdultStriderModel body raw） |
+| CamelHusk | `saddle` | CamelHuskRenderer（CAMEL_HUSK_SADDLE = camelSaddleLayer） | `camel_husk_saddle/saddle` | 已验证（#234，复用 camel saddle tree；base mesh = camel_husk texture） |
 | Nautilus / ZombieNautilus | `body`、`saddle` | NautilusRenderer/NautilusArmorModel | `nautilus_*` | 已验证（NautilusArmor/Saddle） |
 | Happy Ghast | `body`、挽具/绳索 | HappyGhastHarnessModel、RopesLayer | `happy_ghast_body/*`、`happy_ghast_ropes` | 已验证（专用 harness/goggles 几何） |
 | Wolf | `body` | WolfArmorLayer + crackiness | `wolf_armor`、`wolf_armor_crackiness_*` | 已验证（修复 64×32） |
