@@ -43,7 +43,7 @@ public static class AxolotlModelDefinition
                 continue;
             }
 
-            variants[key] = new EntityModelDefinition("axolotl_" + key, 64, 64, faceTransforms: null, texturePath: "entity/axolotl/axolotl_" + key, compiled: AxolotlCompiled);
+            variants[key] = new EntityModelDefinition("axolotl_" + key, 64, 64, faceTransforms: null, texturePath: "entity/axolotl/axolotl_" + key, compiled: AxolotlCompiled, baselinePx: 0f, rawSourceFrame: true);
         }
 
         return variants;
