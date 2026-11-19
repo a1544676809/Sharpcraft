@@ -418,22 +418,8 @@ public static partial class EntityModelResolver
             renderLayers = customLayers;
         }
 
-        if (typeId == WitchModelDefinition.WitchEntityTypeId)
-        {
-            var existing = renderLayers ?? definition.RenderLayers;
-            var witchLayers = new List<EntityRenderLayerDefinition>(existing);
-            witchLayers.Add(new EntityRenderLayerDefinition(
-                "held_potion",
-                EntityGeometryLayerKind.Cutout,
-                40,
-                WitchModelDefinition.HeldPotionDefinition,
-                WitchModelDefinition.PotionTexture,
-                static _ => WitchModelDefinition.PotionTexture,
-                static state => state.IsHoldingPotion,
-                AllCubes: true,
-                UsesItemAtlas: true));
-            renderLayers = witchLayers;
-        }
+        // Witch held potion is now rendered by WitchHeldPotionMesher with the real item model and the source
+        // WitchItemLayer pose (B-4 T4b); the old single flat-quad `held_potion` layer was removed.
 
         if (ReferenceEquals(layers, HumanoidArmorLayers))
         {

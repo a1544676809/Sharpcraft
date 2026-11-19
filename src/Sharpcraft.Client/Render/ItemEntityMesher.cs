@@ -273,23 +273,43 @@ public sealed class ItemEntityMesher
             return;
         }
 
-        // No elements: the model is a generated sprite. The reference emits both faces as *unculled* quads, so both are
-        // always drawn, and it gives the north face explicitly reversed UVs (16,0,0,16) so that the far face lines up
-        // with the near one instead of showing a mirror image. Using the generic auto-UV here (0,0,16,16 for a full
-        // element) makes the back face read as a second, mirrored blade.
-        var texture = resolution.Textures.TryGetValue("layer0", out var layer0) ? IdentifierPath(layer0) : null;
-        if (texture is null)
+        // No elements: the model is a generated sprite. The reference (ItemModelGenerator.bake,
+        // ref://mc-26.3-analysis/src/net/minecraft/client/resources/model/cuboid/ItemModelGenerator.java:48-77)
+        // emits one extruded sprite per present layer in LAYERS = [layer0..layer4], breaking at the first missing
+        // material, and gives each layer a tint index equal to its layer index (ItemLayerKey:208-213). layer0 is the
+        // base sprite; layer1 (e.g. potion_overlay) is a second, independently tinted quad at the same place.
+        var emitted = false;
+        for (var layerIndex = 0; layerIndex < GeneratedLayers.Count; layerIndex++)
+        {
+            var slot = GeneratedLayers[layerIndex];
+            if (!resolution.Textures.TryGetValue(slot, out var layerTexture) || IdentifierPath(layerTexture) is not { } texture)
+            {
+                break; // reference stops at the first missing layer material
+            }
+
+            emitted = true;
+            AppendGeneratedLayer(output, texture, layerIndex, atlas);
+        }
+
+        if (!emitted)
         {
             return;
         }
+    }
 
+    /// <summary>Reference layer slots of <c>builtin/generated</c> (ItemModelGenerator.LAYERS).</summary>
+    private static readonly IReadOnlyList<string> GeneratedLayers = ["layer0", "layer1", "layer2", "layer3", "layer4"];
+
+    /// <summary>
+    /// Emits one extruded generated-sprite layer: two unculled faces (south normal / north with reversed UVs so the far
+    /// face is not mirrored) plus alpha-derived side faces, all carrying <paramref name="tintIndex"/>.
+    /// </summary>
+    private static void AppendGeneratedLayer(List<ItemModelQuad> output, string texture, int tintIndex, ItemAtlas? atlas)
+    {
         var from = new Vector3(0f, 0f, 7.5f);
         var to = new Vector3(16f, 16f, 8.5f);
-        // The reference bakes generated layers with the layer index as the tint index, so layer0 is tint 0; leaving it
-        // at -1 silently disables every tint source on flat items such as short_grass.
-        const int layerTintIndex = 0;
-        var south = new ItemModelFace(texture, new Vector4(0f, 0f, 16f, 16f), TintIndex: layerTintIndex);
-        var north = new ItemModelFace(texture, new Vector4(16f, 0f, 0f, 16f), TintIndex: layerTintIndex);
+        var south = new ItemModelFace(texture, new Vector4(0f, 0f, 16f, 16f), TintIndex: tintIndex);
+        var north = new ItemModelFace(texture, new Vector4(16f, 0f, 0f, 16f), TintIndex: tintIndex);
         output.Add(BuildQuad(from, to, ModelFaceDirection.South, south));
         output.Add(BuildQuad(from, to, ModelFaceDirection.North, north));
 
@@ -302,7 +322,8 @@ public sealed class ItemEntityMesher
                 pixels.Height,
                 (x, y) => x >= 0 && y >= 0 && x < pixels.Width && y < pixels.Height
                     ? pixels.Rgba[(((y * pixels.Width) + x) * 4) + 3]
-                    : (byte)0);
+                    : (byte)0,
+                tintIndex);
         }
     }
 
@@ -322,7 +343,8 @@ public sealed class ItemEntityMesher
         ref int vertexFloats,
         ref int indexCount,
         string? textureOverride = null,
-        float? foilDecalScale = null)
+        float? foilDecalScale = null,
+        Vector3? tintOverride = null)
     {
         ArgumentNullException.ThrowIfNull(geometry);
         ArgumentNullException.ThrowIfNull(quads);
@@ -339,7 +361,7 @@ public sealed class ItemEntityMesher
 
             EnsureCapacity(geometry, vertexFloats, indexCount + 6);
             var first = (uint)(vertexFloats / VertexStride);
-            var tint = resolution.TintFor(quad.TintIndex, grass);
+            var tint = tintOverride ?? resolution.TintFor(quad.TintIndex, grass);
             for (var corner = 0; corner < 4; corner++)
             {
                 var uv = foilDecalScale is { } decalScale

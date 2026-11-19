@@ -500,6 +500,7 @@ internal static class WindowCommand
         var modelMesher = new Sharpcraft.Client.Render.EntityModelMesher();
         var droppedItemMesher = new Sharpcraft.Client.Render.ItemEntityMesher();
         var heldItemMesher = new Sharpcraft.Client.Render.ItemInHandMesher();
+        var witchPotionMesher = new Sharpcraft.Client.Render.WitchHeldPotionMesher();
         var variantTable = Sharpcraft.Client.Render.EntityVariantTable.FromRegistries(live?.Registries);
 
         /// <summary>
@@ -521,6 +522,14 @@ internal static class WindowCommand
             foreach (var heldLayer in heldItemMesher.Build(entities, modelMesher.PreparedPoses, variantTable, itemAtlas))
             {
                 extra.Add(heldLayer);
+            }
+
+            // Witch held potion uses the real item model through the source WitchItemLayer pose (B-4 T4b). It renders
+            // only entities that hold a potion; every other held/special item stays on the existing paths above.
+            var potionModel = Sharpcraft.Client.Render.EntityModelResolver.ItemModels?.Resolve("minecraft:potion");
+            if (witchPotionMesher.Build(entities, modelMesher.PreparedPoses, itemAtlas, potionModel) is { } potionLayer)
+            {
+                extra.Add(potionLayer);
             }
 
             if (extra.Count == 0)
