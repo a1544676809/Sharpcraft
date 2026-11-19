@@ -66,6 +66,11 @@ public sealed class MissingSaddleRawReferenceSampleTests
         var full = BuildLayer(state, layerName, model.TextureWidth, model.TextureHeight, onlyPart: null, atlas);
         Assert.True(rows.Length == VertexCount(full), $"{layerName}: full vertices {VertexCount(full)} != sample rows {rows.Length}");
 
+        // The second sample is the source living world frame. Bind it to the raw sample per key and drive the
+        // production BuildLayers world frame from it (position + UV), not just a position formula.
+        var worldRows = Load(worldSample).Where(row => row.Layer == LayerName(kind)).ToArray();
+        Assert.Equal(rows.Length, worldRows.Length);
+
         var nodes = Flatten(model.Compiled!.Root).GroupBy(node => node.Name, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
         var usedCubes = new HashSet<string>(StringComparer.Ordinal);
@@ -92,7 +97,39 @@ public sealed class MissingSaddleRawReferenceSampleTests
                     $"{layerName}/{row.Part}#{row.Cube} {row.Key}: position expected {row.Position}, actual {actual}");
                 var uv = VertexFieldReader.Uv(geometry.Vertices, i);
                 Assert.True(MathF.Abs(uv.U - QuantizeHalf(row.U)) <= Tolerance && MathF.Abs(uv.V - QuantizeHalf(row.V)) <= Tolerance,
-                    $"{layerName}/{row.Part}#{row.Cube} {row.Key}: UV");
+                    $"{layerName}/{row.Part}#{row.Cube} {row.Key}: raw production UV");
+            }
+
+            // Source world frame: world = S(-1,-1,1)*T(0,-1.501,0)*raw. Bind raw<->world per key (position and
+            // UV) and compare the production BuildLayers world output against the world sample per key.
+            var worldCube = worldRows.Where(world => world.Part == group.Key.Part && world.Cube == group.Key.Cube)
+                .OrderBy(world => world.Polygon).ThenBy(world => world.Vertex).ToArray();
+            Assert.Equal(ordered.Length, worldCube.Length);
+            var worldGeometry = BuildLayer(state, layerName, model.TextureWidth, model.TextureHeight, cubeName, atlas);
+            Assert.Equal(worldCube.Length, VertexCount(worldGeometry));
+            for (var i = 0; i < worldCube.Length; i++)
+            {
+                var rawRow = ordered[i];
+                var worldRow = worldCube[i];
+                var bound = new Vector3(-rawRow.Position.X, 1.501f - rawRow.Position.Y, rawRow.Position.Z);
+                Assert.True((worldRow.Position - bound).Length() <= Tolerance,
+                    $"{layerName}/{worldRow.Part}#{worldRow.Cube} {worldRow.Key}: raw->world position binding");
+                Assert.True(MathF.Abs(worldRow.U - rawRow.U) <= Tolerance && MathF.Abs(worldRow.V - rawRow.V) <= Tolerance,
+                    $"{layerName}/{worldRow.Part}#{worldRow.Cube} {worldRow.Key}: raw/world UV binding");
+
+                // BuildLayers emits the equipment layer in the living world frame; the mesh baseline is 0, so the
+                // entity living translate is already folded out: expected = (world - (0,1.501,0)) * ModelScale.
+                var worldRaw = VertexFieldReader.Position(worldGeometry.Vertices, i);
+                var worldPosition = new Vector3(worldRaw.X, worldRaw.Y, worldRaw.Z);
+                var expectedWorld = new Vector3(worldRow.Position.X * EntityPlaceholderMesher.ModelScale,
+                    (worldRow.Position.Y - 1.501f) * EntityPlaceholderMesher.ModelScale,
+                    worldRow.Position.Z * EntityPlaceholderMesher.ModelScale);
+                Assert.True((worldPosition - expectedWorld).Length() <= Tolerance,
+                    $"{layerName}/{worldRow.Part}#{worldRow.Cube} {worldRow.Key}: production world position {worldPosition} vs {expectedWorld}");
+                var worldUv = VertexFieldReader.Uv(worldGeometry.Vertices, i);
+                Assert.True(MathF.Abs(worldUv.U - QuantizeHalf(worldRow.U)) <= Tolerance
+                        && MathF.Abs(worldUv.V - QuantizeHalf(worldRow.V)) <= Tolerance,
+                    $"{layerName}/{worldRow.Part}#{worldRow.Cube} {worldRow.Key}: production world UV");
             }
 
             consumed += ordered.Length;
@@ -100,17 +137,6 @@ public sealed class MissingSaddleRawReferenceSampleTests
 
         Assert.Equal(rows.Length, consumed);
 
-        // The second source sample is the living world frame: world = S(-1,-1,1)*T(0,-1.501,0)*raw, so the
-        // sample pair pins the same geometry through the source living flip as well.
-        var world = Load(worldSample).Where(row => row.Layer == LayerName(kind)).ToArray();
-        Assert.Equal(rows.Length, world.Length);
-        var worldByKey = world.ToDictionary(row => (row.Part, row.Cube, row.Polygon, row.Vertex));
-        foreach (var row in rows)
-        {
-            var expected = new Vector3(-row.Position.X, 1.501f - row.Position.Y, row.Position.Z);
-            Assert.True((worldByKey[(row.Part, row.Cube, row.Polygon, row.Vertex)].Position - expected).Length() <= Tolerance,
-                $"{layerName}/{row.Part}#{row.Cube}: world-frame formula");
-        }
     }
 
     [Theory]
