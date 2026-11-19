@@ -12,19 +12,28 @@ using Xunit;
 namespace Sharpcraft.Client.Tests.Render;
 
 /// <summary>
-/// B-1 migration of the 83 raw source-frame variants (issue #228): every definition must render in the
-/// source frame, the two available world-frame samples must match production <c>BuildLayers</c> output
-/// per source key, and those samples must equal the source living formula
-/// <c>scale(-1,-1,1) * translate(0,-1.501,0)</c>.
+/// B-1 migration of the 83 raw source-frame variants (issue #228) and Issue #247/R-040 world-frame sample
+/// expansion: every definition must render in the source frame; world-frame samples must match production
+/// <c>BuildLayers</c> output per source key (single-cube families), and every world sample must equal the
+/// source living formula <c>scale(-1,-1,1) * translate(0,-1.501,0)</c> applied to the independent model-space
+/// probe of the same source model layer.
 /// </summary>
 /// <remarks>
-/// World samples: <c>parrot-blue-world-frame.reference.txt</c> (PARROT, blue is a texture-only variant)
-/// and <c>dolphin-world-frame.reference.txt</c>. Both were generated from the 26.3 jar by
+/// World samples were generated from the 26.3 jar by
 /// <c>ref://mc-26.3-analysis/vectors/b-class-source/LivingWorldFrameProbe.java</c> with the entity
-/// yaw/translation/scale excluded. The samples are in world blocks; production <c>BuildLayers</c> uses
-/// <see cref="EntityPlaceholderMesher.ModelScale"/> for living entities (0.9), so the comparison is
-/// performed after dividing the production output by that scale. That division is exact: the source
-/// frame is linear and the scale is applied uniformly, so the 1e-5 tolerance still pins every vertex.
+/// yaw/translation/scale excluded. They are in world blocks; production <c>BuildLayers</c> uses
+/// <see cref="EntityPlaceholderMesher.ModelScale"/> for living entities (0.9), so the comparison divides
+/// production output by that scale — exact because the source frame is linear and the scale is uniform.
+/// <para>
+/// Direct production <c>BuildLayers</c> keyed verification covers families whose jar model emits one cube
+/// per part with no extra render layers (parrot, dolphin, shulker, bee, squid). Families whose source model
+/// has multi-cube parts, degenerate cubes or additional layers (axolotl, tropical fish, salmon, frog, turtle,
+/// the baby families) are covered by a two-step source-backed chain: <see cref="SourceWorldSampleEqualsTheLivingFlipOfTheModelSpaceSample"/>
+/// pins the world sample to the flip of the independent <c>RawRenderUnitProbe</c> model-space sample per key,
+/// and <c>LivingRawReferenceSampleTests.RawBakeMatchesSourceVertices</c> already verifies production against
+/// that model-space sample with the required degenerate/mirror filtering. Their production world-frame keyed
+/// coverage via a single atlas remains a scoped follow-up (R-040).
+/// </para>
 /// </remarks>
 public sealed class VariantRawFrameTests
 {
@@ -41,14 +50,40 @@ public sealed class VariantRawFrameTests
     {
         // world sample, entity type id, variant value, texture path, width, height
         { "parrot-blue-world-frame.reference.txt", 99, 1, "entity/parrot/parrot_blue", 32, 32 },
-        { "dolphin-world-frame.reference.txt", 36, 0, "entity/dolphin/dolphin", 64, 64 }
+        { "dolphin-world-frame.reference.txt", 36, 0, "entity/dolphin/dolphin", 64, 64 },
+        // Issue #247 / R-040: additional B-1 variant families. Production BuildLayers is verified per key for
+        // families whose source model emits exactly one cube per part with no extra render layers (below);
+        // the rest are covered by the source-to-source formula cross-check in FormulaCases + the existing
+        // LivingRawReferenceSampleTests production keyed verification of the model-space samples.
+        { "shulker-world-frame.reference.txt", 115, 0, "entity/shulker/shulker", 64, 64 },
+        { "bee-world-frame.reference.txt", 11, 0, "entity/bee/bee", 64, 64 },
+        { "squid-world-frame.reference.txt", 130, 0, "entity/squid/squid", 64, 32 }
     };
 
     public static TheoryData<string, string> FormulaCases => new()
     {
-        // world sample, model-space sample of the same source model layer
+        // world sample, model-space sample of the same source model layer. Both come from independent jar probes
+        // (LivingWorldFrameProbe applies the source living flip; RawRenderUnitProbe emits raw render units), so
+        // the per-key equality below cross-validates the world samples against the already production-verified
+        // model-space samples for every B-1 family added in Issue #247.
         { "parrot-blue-world-frame.reference.txt", "parrot-raw-vectors.reference.txt" },
-        { "dolphin-world-frame.reference.txt", "dolphin-raw-vectors.reference.txt" }
+        { "dolphin-world-frame.reference.txt", "dolphin-raw-vectors.reference.txt" },
+        { "shulker-world-frame.reference.txt", "shulker-raw-vectors.reference.txt" },
+        { "axolotl-world-frame.reference.txt", "axolotl-raw-vectors.reference.txt" },
+        { "axolotl-baby-world-frame.reference.txt", "axolotl-baby-raw-vectors.reference.txt" },
+        { "tropical-fish-small-world-frame.reference.txt", "tropical-fish-small-raw-vectors.reference.txt" },
+        { "tropical-fish-large-world-frame.reference.txt", "tropical-fish-large-raw-vectors.reference.txt" },
+        { "salmon-world-frame.reference.txt", "salmon-raw-vectors.reference.txt" },
+        { "frog-world-frame.reference.txt", "frog-raw-vectors.reference.txt" },
+        { "turtle-world-frame.reference.txt", "turtle-raw-vectors.reference.txt" },
+        { "bee-world-frame.reference.txt", "bee-raw-vectors.reference.txt" },
+        { "squid-world-frame.reference.txt", "squid-raw-vectors.reference.txt" },
+        { "baby-cat-world-frame.reference.txt", "baby-cat-raw-vectors.reference.txt" },
+        { "baby-wolf-world-frame.reference.txt", "baby-wolf-raw-vectors.reference.txt" },
+        { "baby-fox-world-frame.reference.txt", "baby-fox-raw-vectors.reference.txt" },
+        { "baby-rabbit-world-frame.reference.txt", "baby-rabbit-raw-vectors.reference.txt" },
+        { "baby-horse-world-frame.reference.txt", "baby-horse-raw-vectors.reference.txt" },
+        { "baby-panda-world-frame.reference.txt", "baby-panda-raw-vectors.reference.txt" }
     };
 
     [Theory]
@@ -131,21 +166,52 @@ public sealed class VariantRawFrameTests
 
     [Theory]
     [MemberData(nameof(FormulaCases))]
-    public void SourceWorldSampleEqualsTheLivingFlipOfTheModelSpaceSample(string worldSample, string modelSpaceSample)
+    public void SourceWorldSampleEqualsTheLivingFlipOfTheModelSpaceSample(string worldSample, string modelSpaceSample) =>
+        AssertWorldIsLivingFlipOfModelPerKey(LoadSample(worldSample), LoadSample(modelSpaceSample), worldSample);
+
+    /// <summary>
+    /// Per-key two-step chain check: world = flip(model) in position, and world UV == model UV at half/1e-5
+    /// (the living flip changes position only). Samples are matched by their (layer, part, cube, polygon, vertex)
+    /// source key, not by an unordered multiset, so a vertex carrying one key's position and another's UV fails.
+    /// </summary>
+    internal static void AssertWorldIsLivingFlipOfModelPerKey(IReadOnlyList<SampleRow> world, IReadOnlyList<SampleRow> model, string label)
     {
-        var world = LoadSample(worldSample);
-        var model = LoadSample(modelSpaceSample);
         Assert.Equal(model.Count, world.Count);
         var keyedModel = model.ToDictionary(row => row.Key);
         Assert.Equal(model.Count, keyedModel.Count);
-        // Source formula: world = (-x, 1.501 - y, z) of the y-down model-space vertex.
         foreach (var row in world)
         {
-            Assert.True(keyedModel.TryGetValue(row.Key, out var modelRow), $"{worldSample}: missing model row {row.Key}");
+            Assert.True(keyedModel.TryGetValue(row.Key, out var modelRow), $"{label}: missing model row {row.Key}");
             var expected = new Vector3(-modelRow.Position.X, SourceFlipBaselineBlocks - modelRow.Position.Y, modelRow.Position.Z);
             Assert.True((expected - row.Position).Length() <= Tolerance,
-                $"{row.Key}: expected world {expected}, sample world {row.Position}");
+                $"{label} {row.Key}: expected world {expected}, sample world {row.Position}");
+            Assert.True(
+                MathF.Abs(QuantizeHalf(row.U) - QuantizeHalf(modelRow.U)) <= Tolerance
+                && MathF.Abs(QuantizeHalf(row.V) - QuantizeHalf(modelRow.V)) <= Tolerance,
+                $"{label} {row.Key}: world UV ({row.U:F6},{row.V:F6}) must equal model-space UV ({modelRow.U:F6},{modelRow.V:F6}) at half/1e-5");
         }
+    }
+
+    [Fact]
+    public void TwoStepChainRejectsWorldSampleWithWrongUv()
+    {
+        // Negative regression: a world sample whose position is correct but whose UV is corrupted must fail the
+        // exact helper the 18 FormulaCases use — guards against the chain degrading into a position-only check.
+        var world = LoadSample("shulker-world-frame.reference.txt");
+        var model = LoadSample("shulker-raw-vectors.reference.txt");
+
+        // Control: untouched samples pass through the real helper.
+        AssertWorldIsLivingFlipOfModelPerKey(world, model, "control");
+
+        // Tamper one world row's UV (position untouched) and require the real helper to reject it.
+        var tampered = world.ToArray();
+        var victim = tampered[0];
+        var donor = tampered.First(r => r.U != victim.U || r.V != victim.V);
+        tampered[0] = victim with { U = donor.U, V = donor.V };
+        Assert.NotEqual(victim.U, donor.U);
+        var exception = Record.Exception(() => AssertWorldIsLivingFlipOfModelPerKey(tampered, model, "tampered"));
+        Assert.NotNull(exception);
+        Assert.Contains("UV", exception!.Message);
     }
 
     [Fact]
