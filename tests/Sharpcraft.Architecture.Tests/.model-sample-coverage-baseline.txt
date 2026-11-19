@@ -1,0 +1,12 @@
+# Issue #165 model/sample coverage baseline. Lines are discovered, not counted by hand.
+# Entries ending in .golden.txt or .reference.txt are samples with no test literal.
+# Type.Member entries are scalar definitions with no truth assertion.
+# Sorted; '#' starts a comment. Remove an entry once it is covered (the gate enforces this).
+BannerModelDefinition.StandingBody
+BannerModelDefinition.StandingFlag
+BannerModelDefinition.WallBody
+BannerModelDefinition.WallFlag
+CamelHuskModelDefinition.Definition
+ConduitModelDefinition.Shell
+SpecialItemModelDefinition.HeldShulkerLeft
+SpecialItemModelDefinition.HeldShulkerRight
