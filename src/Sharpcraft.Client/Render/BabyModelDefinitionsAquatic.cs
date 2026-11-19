@@ -17,18 +17,18 @@ public static class BabyModelDefinitionsAquatic
     private static readonly CompiledEntityModel DolphinCompiled = VanillaMeshBakery.Build(DolphinMesh, 64, 64, modelHeight: 0f, rawSourceFrame: true);
     private static readonly CompiledEntityModel AxolotlCompiled = VanillaMeshBakery.Build(AxolotlMesh, 32, 32, modelHeight: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Squid = new("baby_squid", 32, 32, faceTransforms: null, texturePath: "entity/squid/squid_baby", compiled: SquidCompiled);
+    public static readonly EntityModelDefinition Squid = new("baby_squid", 32, 32, faceTransforms: null, texturePath: "entity/squid/squid_baby", compiled: SquidCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Bee = new("baby_bee", 32, 32, faceTransforms: null, texturePath: "entity/bee/bee_baby", textureSelector: state => state.IsAngry
             ? (state.HasNectar ? "entity/bee/bee_angry_nectar_baby" : "entity/bee/bee_angry_baby")
             : (state.HasNectar ? "entity/bee/bee_nectar_baby" : "entity/bee/bee_baby"), additionalTexturePaths:
         [
             "entity/bee/bee_angry_baby", "entity/bee/bee_nectar_baby", "entity/bee/bee_angry_nectar_baby"
-        ], compiled: BeeCompiled);
+        ], compiled: BeeCompiled, baselinePx: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Dolphin = new("baby_dolphin", 64, 64, faceTransforms: null, texturePath: "entity/dolphin/dolphin_baby", compiled: DolphinCompiled);
+    public static readonly EntityModelDefinition Dolphin = new("baby_dolphin", 64, 64, faceTransforms: null, texturePath: "entity/dolphin/dolphin_baby", compiled: DolphinCompiled, baselinePx: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Axolotl = new("baby_axolotl", 32, 32, faceTransforms: null, texturePath: "entity/axolotl/axolotl_lucy_baby", compiled: AxolotlCompiled);
+    public static readonly EntityModelDefinition Axolotl = new("baby_axolotl", 32, 32, faceTransforms: null, texturePath: "entity/axolotl/axolotl_lucy_baby", compiled: AxolotlCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly IReadOnlyDictionary<int, EntityModelDefinition> Models =
         new Dictionary<int, EntityModelDefinition>
