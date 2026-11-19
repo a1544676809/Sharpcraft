@@ -266,9 +266,11 @@
 | Sharpcraft.Client | Sharpcraft.Client.Render.WitchAnimationProvider | Mirror | Partial | net.minecraft.client.model.monster.witch.WitchModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/witch/WitchModel.java |  |
 | Sharpcraft.Client | Sharpcraft.Client.Render.WitchModelDefinition | Mirror | Partial | net.minecraft.client.model.monster.witch.WitchModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/witch/WitchModel.java |  |
 | Sharpcraft.Client | Sharpcraft.Client.Render.WitherBossModelDefinition | Mirror | Partial | net.minecraft.client.model.monster.wither.WitherBossModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/wither/WitherBossModel.java |  |
+| Sharpcraft.Client | Sharpcraft.Client.Render.WitherSkeletonArmorModelDefinition | Mirror | Partial | net.minecraft.client.model.HumanoidModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/HumanoidModel.java | Wither skeleton armor = humanoid armor MeshTransformer.scaling(1.2); raw scaled bake |
 | Sharpcraft.Client | Sharpcraft.Client.Render.WolfAnimationProvider | Mirror | Partial | net.minecraft.client.model.animal.wolf.WolfModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/wolf/WolfModel.java |  |
 | Sharpcraft.Client | Sharpcraft.Client.Render.WolfArmorModelDefinition | Mirror | Partial | net.minecraft.client.model.animal.wolf.AdultWolfModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/wolf/AdultWolfModel.java |  |
 | Sharpcraft.Client | Sharpcraft.Client.Render.WolfModelDefinition | Mirror | Partial | net.minecraft.client.model.animal.wolf.WolfModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/wolf/WolfModel.java |  |
+| Sharpcraft.Client | Sharpcraft.Client.Render.ZombieVillagerArmorModelDefinition | Mirror | Partial | net.minecraft.client.model.monster.zombie.ZombieVillagerModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/zombie/ZombieVillagerModel.java | Zombie villager armor slot raw source-frame meshes; material layers separate |
 | Sharpcraft.Client | Sharpcraft.Client.Render.ZombieVillagerModelDefinition | Mirror | Partial | net.minecraft.client.model.monster.zombie.ZombieVillagerModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/zombie/ZombieVillagerModel.java |  |
 
 <!-- END GENERATED: class-map -->
