@@ -230,7 +230,10 @@ public sealed partial class EntityTracker
                 DragonIsLandingOrTakingOff: dragon && (entity.DragonPhase is 3 or 4),
                 DragonIsSitting: dragon && (entity.DragonPhase is 5 or 6 or 7),
                 DragonDistanceToEgg: dragon ? DragonDistanceToEgg(entity) : 0,
-                IsHoldingPotion: entity.TypeId == WitchModelDefinition.WitchEntityTypeId && IsPotionItem(entity.EquipmentItemAt(0))));
+                IsHoldingPotion: entity.TypeId == WitchModelDefinition.WitchEntityTypeId && IsPotionItem(entity.EquipmentItemAt(0)),
+                HeldPotionColor: entity.TypeId == WitchModelDefinition.WitchEntityTypeId && IsPotionItem(entity.EquipmentItemAt(0))
+                    ? entity.EquipmentComponentsAt(0).PotionColor
+                    : null));
         }
 
         return CollectionsMarshal.AsSpan(_renderStates);

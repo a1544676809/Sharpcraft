@@ -14,6 +14,39 @@ public sealed class HeldStateChannelTests
     private static AddedEntity Player(int id) =>
         new(id, Guid.Empty, EntityPlaceholderMesher.PlayerEntityTypeId, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
+    private static AddedEntity Witch(int id) =>
+        new(id, Guid.Empty, WitchModelDefinition.WitchEntityTypeId, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+
+    [Fact]
+    public void WitchHeldPotionColorIsCapturedAsStateOnly()
+    {
+        // B-4 T4 (R-046): PotionContents.custom_color is decoded into ItemComponentInfo.PotionColor and
+        // carried to EntityRenderState.HeldPotionColor. This is state capture ONLY - no renderer consumes
+        // it yet (held_potion still uses the flat quad). The test must not be read as tint/render coverage.
+        var potionId = EntityModelResolver.Items?.GetId(
+            Sharpcraft.Common.Identifiers.Identifier.Parse("minecraft:potion")) ?? -1;
+        if (potionId <= 0)
+        {
+            return; // embedded registry unavailable in this host
+        }
+
+        const int capturedColor = unchecked((int)0xFF2A7F1E);
+        var tracker = new EntityTracker();
+        tracker.Add(Witch(5));
+        tracker.ApplyEquipment(5, [new EquipmentItem(0, potionId, 1, new ItemComponentInfo(PotionColor: capturedColor))]);
+        var state = tracker.Interpolate(0f)[0];
+
+        Assert.True(state.IsHoldingPotion);
+        Assert.Equal(capturedColor, state.HeldPotionColor);
+
+        // A non-witch holding the same potion must not carry the potion tint channel.
+        tracker.Add(Player(6));
+        tracker.ApplyEquipment(6, [new EquipmentItem(0, potionId, 1, new ItemComponentInfo(PotionColor: capturedColor))]);
+        var playerState = tracker.Interpolate(0f)[1];
+        Assert.False(playerState.IsHoldingPotion);
+        Assert.Null(playerState.HeldPotionColor);
+    }
+
     [Fact]
     public void NewChannelsHaveSourceDefaults()
     {
