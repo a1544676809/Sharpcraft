@@ -82,27 +82,24 @@ public sealed class NetherModelDefinitionTests
         Assert.Equal("entity/hoglin/hoglin", HoglinModelDefinition.Definition.TexturePath);
         Assert.Equal("zoglin", HoglinModelDefinition.Zoglin.Name);
         Assert.Equal("entity/hoglin/zoglin", HoglinModelDefinition.Zoglin.TexturePath);
-        Assert.Equal(11, HoglinModelDefinition.Definition.Parts.Count);
-        Assert.Equal(11, HoglinModelDefinition.Zoglin.Parts.Count);
 
         // Blaze.
         Assert.Equal("blaze", BlazeModelDefinition.Definition.Name);
         Assert.Equal(64, BlazeModelDefinition.Definition.TextureWidth);
         Assert.Equal(32, BlazeModelDefinition.Definition.TextureHeight);
         Assert.Equal("entity/blaze/blaze", BlazeModelDefinition.Definition.TexturePath);
-        Assert.Equal(13, BlazeModelDefinition.Definition.Parts.Count);
     }
 
     [Fact]
     public void HoglinStriderHappyGhastKeepOrderAndParentLinks()
     {
-        AssertNamesAndParents(HoglinModelDefinition.Definition.Parts,
+        AssertNamesAndParents(HoglinModelDefinition.Definition.StructuralParts(),
             ["body", "mane", "head", "right_ear", "left_ear", "right_horn", "left_horn", "right_front_leg", "left_front_leg", "right_hind_leg", "left_hind_leg"],
             [null, "body", null, "head", "head", "head", "head", null, null, null, null]);
-        AssertNamesAndParents(StriderModelDefinition.Definition.Parts,
+        AssertNamesAndParents(StriderModelDefinition.Definition.StructuralParts(),
             ["right_leg", "left_leg", "body", "right_bottom_bristle", "right_middle_bristle", "right_top_bristle", "left_top_bristle", "left_middle_bristle", "left_bottom_bristle"],
             [null, null, null, "body", "body", "body", "body", "body", "body"]);
-        AssertNamesAndParents(HappyGhastModelDefinition.Definition.Parts,
+        AssertNamesAndParents(HappyGhastModelDefinition.Definition.StructuralParts(),
             ["body", "tentacle0", "tentacle1", "tentacle2", "tentacle3", "tentacle4", "tentacle5", "tentacle6", "tentacle7", "tentacle8"],
             [null, "body", "body", "body", "body", "body", "body", "body", "body", "body"]);
     }

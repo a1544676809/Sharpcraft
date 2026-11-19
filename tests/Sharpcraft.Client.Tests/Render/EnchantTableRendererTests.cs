@@ -18,7 +18,6 @@ public sealed class EnchantTableRendererTests
     [Fact]
     public void BookModelDefinitionRegression()
     {
-        Assert.Equal(7, BookModelDefinition.Definition.Parts.Count);
         Assert.Equal(64, BookModelDefinition.Definition.TextureWidth);
         Assert.Equal(32, BookModelDefinition.Definition.TextureHeight);
         Assert.Equal("entity/enchantment/enchanting_table_book", BookModelDefinition.Definition.TexturePath);

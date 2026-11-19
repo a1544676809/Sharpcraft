@@ -43,7 +43,7 @@ public sealed class FrogAnimationTests
     public void EveryAnimatedBoneExistsInTheFrogModel()
     {
         var modelParts = new HashSet<string>(
-            FrogModelDefinition.Definition.Parts.Select(part => part.Name),
+            FrogModelDefinition.Definition.StructuralParts().Select(part => part.Name),
             StringComparer.Ordinal);
 
         foreach (var definition in new[]

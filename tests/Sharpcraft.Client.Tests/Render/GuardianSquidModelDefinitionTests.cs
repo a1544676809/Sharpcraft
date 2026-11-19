@@ -69,9 +69,9 @@ public sealed class GuardianSquidModelDefinitionTests
     [Fact]
     public void NamesAndCountsRemain()
     {
-        AssertNames(GuardianModelDefinition.Definition.Parts,
+        AssertNames(GuardianModelDefinition.Definition.StructuralParts(),
             ["head", "head_left", "head_right", "head_top", "head_bottom", "spike0", "spike1", "spike2", "spike3", "spike4", "spike5", "spike6", "spike7", "spike8", "spike9", "spike10", "spike11", "eye", "tail0", "tail1", "tail2", "tail2_body", "tail2_fin"]);
-        AssertNames(SquidModelDefinition.Definition.Parts,
+        AssertNames(SquidModelDefinition.Definition.StructuralParts(),
             ["body", "tentacle0", "tentacle1", "tentacle2", "tentacle3", "tentacle4", "tentacle5", "tentacle6", "tentacle7"]);
     }
 

@@ -36,10 +36,10 @@ public sealed class BabyModelDefinitionsFinalTests
     [Fact]
     public void BabyGlowSquidUsesDedicatedBabyMesh()
     {
-        Assert.NotSame(BabyModelDefinitionsAquatic.Squid.Parts, BabyModelDefinitionsFinal.GlowSquid.Parts);
+        Assert.NotSame(BabyModelDefinitionsAquatic.Squid.StructuralParts(), BabyModelDefinitionsFinal.GlowSquid.StructuralParts());
         Assert.True(BabyModelDefinitionsFinal.GlowSquid.RawSourceFrame);
         Assert.Equal("entity/squid/glow_squid_baby", BabyModelDefinitionsFinal.GlowSquid.TexturePath);
-        var body = Assert.Single(BabyModelDefinitionsFinal.GlowSquid.Parts, p => p.Name == "body");
+        var body = Assert.Single(BabyModelDefinitionsFinal.GlowSquid.StructuralParts(), p => p.Name == "body");
         Assert.Equal(8f, body.Width);
         Assert.Equal(10f, body.Height);
         Assert.Equal(8f, body.Depth);

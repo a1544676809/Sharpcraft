@@ -15,7 +15,7 @@ public sealed class ZombieNautilusCoralTests
     public void CoralHidesWhenBodyArmorIsEquipped()
     {
         var definition = EntityModelResolver.ResolveVariantStrict(ZombieNautilusModelDefinition.ZombieNautilusEntityTypeId, "warm");
-        var coral = definition.Parts.First(part => part.Name == "yellow_coral_second");
+        var coral = definition.StructuralParts().First(part => part.Name == "yellow_coral_second");
         Assert.NotNull(coral.VisibleWhen);
 
         var unarmored = new EntityRenderState(1, ZombieNautilusModelDefinition.ZombieNautilusEntityTypeId, 0f, 0f, 0f, 0f, 0f);

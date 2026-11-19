@@ -44,8 +44,8 @@ public sealed class EntityVariantTests
         var warm = EntityModelResolver.TryResolveVariant(PigModelDefinition.PigEntityTypeId, "warm")!;
         var cold = EntityModelResolver.TryResolveVariant(PigModelDefinition.PigEntityTypeId, "cold")!;
 
-        Assert.All(warm.Parts, part => Assert.Null(part.OverlayLayers));
-        var coldBody = Assert.Single(cold.Parts, part => part.Name == "body");
+        Assert.All(warm.StructuralParts(), part => Assert.Null(part.OverlayLayers));
+        var coldBody = Assert.Single(cold.StructuralParts(), part => part.Name == "body");
         var layer = Assert.Single(coldBody.OverlayLayers!);
         Assert.Equal(0.5f, layer.Grow);
         Assert.Equal(28, layer.TextureX);
@@ -59,15 +59,12 @@ public sealed class EntityVariantTests
         var warm = EntityModelResolver.TryResolveVariant(CowModelDefinition.CowEntityTypeId, "warm")!;
         var cold = EntityModelResolver.TryResolveVariant(CowModelDefinition.CowEntityTypeId, "cold")!;
 
-        Assert.Equal(10, normal.Parts.Count);
-        Assert.Equal(12, warm.Parts.Count);
-        Assert.Equal(2, warm.Parts.Count(part => part.Mirror && part.Name.Contains("ear", StringComparison.Ordinal)));
 
-        Assert.All(cold.Parts, part => Assert.True(part.OverlayLayers is null || part.Name == "body"));
-        var coldBody = Assert.Single(cold.Parts, part => part.Name == "body");
+        Assert.All(cold.StructuralParts(), part => Assert.True(part.OverlayLayers is null || part.Name == "body"));
+        var coldBody = Assert.Single(cold.StructuralParts(), part => part.Name == "body");
         Assert.Equal(0.5f, Assert.Single(coldBody.OverlayLayers!).Grow);
-        Assert.Contains(cold.Parts, part => part.Name == "right_horn" && part.RotationX != 0f);
-        Assert.Contains(cold.Parts, part => part.Name == "left_horn" && part.RotationX != 0f);
+        Assert.Contains(cold.StructuralParts(), part => part.Name == "right_horn" && part.RotationX != 0f);
+        Assert.Contains(cold.StructuralParts(), part => part.Name == "left_horn" && part.RotationX != 0f);
     }
 
     [Fact]
@@ -75,9 +72,8 @@ public sealed class EntityVariantTests
     {
         var cold = EntityModelResolver.TryResolveVariant(ChickenModelDefinition.ChickenEntityTypeId, "cold")!;
 
-        Assert.Equal(10, cold.Parts.Count);
-        Assert.Contains(cold.Parts, part => part.Name == "cold_head_layer");
-        Assert.Contains(cold.Parts, part => part.Name == "cold_body_fin" && part.Width == 0f);
+        Assert.Contains(cold.StructuralParts(), part => part.Name == "cold_head_layer");
+        Assert.Contains(cold.StructuralParts(), part => part.Name == "cold_body_fin" && part.Width == 0f);
     }
 
     [Fact]

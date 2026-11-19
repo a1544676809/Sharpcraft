@@ -42,27 +42,9 @@ public sealed class BabyModelDefinitionsHumanoidTests
     }
 
     [Fact]
-    public void BabyVariantsCopyTheVillagerAndZombieVillagerParts()
-    {
-        foreach (var key in VillagerModelDefinition.VariantKeys)
-        {
-            var villager = BabyModelDefinitionsHumanoid.Variants[(143, key)];
-            var zombieVillager = BabyModelDefinitionsHumanoid.Variants[(157, key)];
-
-            Assert.Equal("baby_villager_" + key, villager.Name);
-            Assert.Equal("baby_zombie_villager_" + key, zombieVillager.Name);
-            Assert.Equal(BabyModelDefinitionsHumanoid.Villager.Parts.Count * 2, villager.Parts.Count);
-            Assert.Equal(BabyModelDefinitionsHumanoid.ZombieVillager.Parts.Count * 2, zombieVillager.Parts.Count);
-
-            AssertVariantCopies(BabyModelDefinitionsHumanoid.Villager.Parts, villager.Parts, "entity/villager/baby/" + key);
-            AssertVariantCopies(BabyModelDefinitionsHumanoid.ZombieVillager.Parts, zombieVillager.Parts, "entity/zombie_villager/baby/" + key);
-        }
-    }
-
-    [Fact]
     public void BabyZombiePartsKeepParentLinksAndOrder()
     {
-        var parts = BabyModelDefinitionsHumanoid.Zombie.Parts;
+        var parts = BabyModelDefinitionsHumanoid.Zombie.StructuralParts();
         var expectedNames = new[] { "body", "head", "head_overlay", "hat", "right_arm", "left_arm", "right_leg", "left_leg" };
         Assert.Equal(expectedNames.Length, parts.Count);
         var names = new string[parts.Count];

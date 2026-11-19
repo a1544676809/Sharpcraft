@@ -79,7 +79,7 @@ public sealed class SnifferAnimationTests
     [Fact]
     public void EveryAnimatedPartExistsInTheSnifferModel()
     {
-        var modelParts = SnifferModelDefinition.Definition.Parts
+        var modelParts = SnifferModelDefinition.Definition.StructuralParts()
             .Select(part => part.Name)
             .ToHashSet(StringComparer.Ordinal);
 

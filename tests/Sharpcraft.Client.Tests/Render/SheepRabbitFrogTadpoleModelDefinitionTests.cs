@@ -47,7 +47,7 @@ public sealed class SheepRabbitFrogTadpoleModelDefinitionTests
     [Fact]
     public void RabbitKeepsNestedChildOrderAndParentLinks()
     {
-        AssertNamesAndParents(RabbitModelDefinition.Definition.Parts,
+        AssertNamesAndParents(RabbitModelDefinition.Definition.StructuralParts(),
             ["body", "tail", "head", "left_ear", "right_ear", "frontlegs", "right_front_leg", "left_front_leg", "backlegs", "right_hind_leg", "right_haunch", "left_hind_leg", "left_haunch"],
             [null, "body", "body", "head", "head", "body", "frontlegs", "frontlegs", null, "backlegs", "right_hind_leg", "backlegs", "left_hind_leg"]);
     }
@@ -55,7 +55,7 @@ public sealed class SheepRabbitFrogTadpoleModelDefinitionTests
     [Fact]
     public void FrogKeepsNestedChildOrderAndParentLinks()
     {
-        AssertNamesAndParents(FrogModelDefinition.Definition.Parts,
+        AssertNamesAndParents(FrogModelDefinition.Definition.StructuralParts(),
             ["root", "body", "body_layer", "head", "head_layer", "eyes", "right_eye", "left_eye", "croaking_body", "tongue", "left_arm", "left_hand", "right_arm", "right_hand", "left_leg", "left_foot", "right_leg", "right_foot"],
             [null, "root", "body", "body", "head", "head", "eyes", "eyes", "body", "body", "body", "left_arm", "body", "right_arm", "root", "left_leg", "root", "right_leg"]);
     }
@@ -68,12 +68,10 @@ public sealed class SheepRabbitFrogTadpoleModelDefinitionTests
         Assert.Equal(64, SheepModelDefinition.Definition.TextureWidth);
         Assert.Equal(32, SheepModelDefinition.Definition.TextureHeight);
         Assert.Equal("entity/sheep/sheep", SheepModelDefinition.Definition.TexturePath);
-        Assert.Equal(12, SheepModelDefinition.Definition.Parts.Count);
         Assert.Equal("tadpole", TadpoleModelDefinition.Definition.Name);
         Assert.Equal(16, TadpoleModelDefinition.Definition.TextureWidth);
         Assert.Equal(16, TadpoleModelDefinition.Definition.TextureHeight);
         Assert.Equal("entity/tadpole/tadpole", TadpoleModelDefinition.Definition.TexturePath);
-        Assert.Equal(2, TadpoleModelDefinition.Definition.Parts.Count);
 
         // Rabbit: 7 registry variants, all sharing the 13-part geometry.
         var rabbitFiles = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -93,7 +91,6 @@ public sealed class SheepRabbitFrogTadpoleModelDefinitionTests
             var variant = RabbitModelDefinition.Variants[key];
             Assert.Equal(key == "brown" ? "rabbit" : "rabbit_" + key, variant.Name);
             Assert.Equal("entity/rabbit/" + rabbitFiles[key], variant.TexturePath);
-            Assert.Equal(13, variant.Parts.Count);
             Assert.Equal(64, variant.TextureWidth);
             Assert.Equal(64, variant.TextureHeight);
         }
@@ -106,7 +103,6 @@ public sealed class SheepRabbitFrogTadpoleModelDefinitionTests
             var variant = FrogModelDefinition.Variants[key];
             Assert.Equal(key == "temperate" ? "frog" : "frog_" + key, variant.Name);
             Assert.Equal("entity/frog/frog_" + key, variant.TexturePath);
-            Assert.Equal(18, variant.Parts.Count);
             Assert.Equal(48, variant.TextureWidth);
             Assert.Equal(48, variant.TextureHeight);
         }

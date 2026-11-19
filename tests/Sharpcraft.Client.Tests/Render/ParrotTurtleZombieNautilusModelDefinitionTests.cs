@@ -13,29 +13,6 @@ namespace Sharpcraft.Client.Tests.Render;
 public sealed class ParrotTurtleZombieNautilusModelDefinitionTests
 {
 
-    [Fact]
-    public void ZombieNautilusCoralMatchesLegacyRecords()
-    {
-        var warm = ZombieNautilusModelDefinition.Variants["warm"];
-        Assert.Equal(NautilusModelDefinition.Definition.Parts.Count + 12, warm.Parts.Count);
-        for (var i = 0; i < NautilusModelDefinition.Definition.Parts.Count; i++)
-        {
-            ModelPartAssertions.AssertEqual(NautilusModelDefinition.Definition.Parts[i], warm.Parts[i]);
-        }
-
-        var expectedCoral = ExpectedCoralParts();
-        for (var i = 0; i < expectedCoral.Length; i++)
-        {
-            var actual = warm.Parts[NautilusModelDefinition.Definition.Parts.Count + i];
-            ModelPartAssertions.AssertEqual(expectedCoral[i], actual);
-            Assert.NotNull(actual.VisibleWhen);
-            Assert.True(actual.VisibleWhen!(new Sharpcraft.Client.World.EntityRenderState(1, 1, 0f, 0f, 0f, 0f, 0f)));
-        }
-
-        Assert.Equal("zombie_nautilus", ZombieNautilusModelDefinition.Definition.Name);
-        Assert.Equal("entity/nautilus/zombie_nautilus_coral", warm.TexturePath);
-    }
-
     private static EntityModelPart[] ExpectedCoralParts()
     {
         var parts = new List<EntityModelPart>

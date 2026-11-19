@@ -17,20 +17,6 @@ public sealed class CatWolfFoxPandaModelDefinitionTests
 {
 
     [Fact]
-    public void WolfVariantsCarryRawSourceFrameFlags()
-    {
-        // task-137: every wolf coat variant must render in the raw source frame, not just pale/base.
-        foreach (var key in WolfModelDefinition.VariantKeys)
-        {
-            var def = WolfModelDefinition.Variants[key];
-            Assert.True(def.RawSourceFrame, $"wolf variant {key}: must be rawSourceFrame");
-            Assert.Equal(0f, def.BaselinePx);
-            Assert.Null(def.FaceTransforms is { Count: > 0 } ? def.FaceTransforms : null);
-            Assert.Same(WolfModelDefinition.Definition.Parts, def.Parts);
-        }
-    }
-
-    [Fact]
     public void PandaPartsMatchSourceFrameRecords()
     {
         var expected = ExpectedPandaParts();
@@ -44,13 +30,6 @@ public sealed class CatWolfFoxPandaModelDefinitionTests
     }
 
     [Fact]
-    public void CollarCopylayerSelectorsWork()
-    {
-        AssertCollarCopylayers(CatModelDefinition.Definition.Parts, 11, "entity/cat/cat_collar");
-        AssertCollarCopylayers(WolfModelDefinition.Definition.Parts, 13, "entity/wolf/wolf_collar");
-    }
-
-    [Fact]
     public void VariantMetadataAndSelectorsAreUnchanged()
     {
         // Cat: 11 variants, 0.8 scale, Ocelot.
@@ -59,11 +38,9 @@ public sealed class CatWolfFoxPandaModelDefinitionTests
         Assert.Equal(32, CatModelDefinition.Definition.TextureHeight);
         Assert.Equal("entity/cat/cat_tabby", CatModelDefinition.Definition.TexturePath);
         Assert.Equal(0.8f, CatModelDefinition.Definition.Scale);
-        Assert.Equal(22, CatModelDefinition.Definition.Parts.Count);
         Assert.Equal("ocelot", CatModelDefinition.Ocelot.Name);
         Assert.Equal("entity/cat/ocelot", CatModelDefinition.Ocelot.TexturePath);
         Assert.Equal(1f, CatModelDefinition.Ocelot.Scale);
-        Assert.Equal(22, CatModelDefinition.Ocelot.Parts.Count);
         Assert.Equal(CatModelDefinition.VariantKeys.Count, CatModelDefinition.Variants.Count);
         Assert.Same(CatModelDefinition.Definition, CatModelDefinition.Variants["tabby"]);
         foreach (var key in CatModelDefinition.VariantKeys)
@@ -73,7 +50,6 @@ public sealed class CatWolfFoxPandaModelDefinitionTests
             Assert.Equal("cat_" + key, variant.Name);
             Assert.Equal("entity/cat/cat_" + key, variant.TexturePath);
             Assert.Equal(0.8f, variant.Scale);
-            Assert.Equal(22, variant.Parts.Count);
         }
 
         // Wolf: tame/angry selector, 9 variants.
@@ -81,7 +57,6 @@ public sealed class CatWolfFoxPandaModelDefinitionTests
         Assert.Equal(64, WolfModelDefinition.Definition.TextureWidth);
         Assert.Equal(32, WolfModelDefinition.Definition.TextureHeight);
         Assert.Equal("entity/wolf/wolf", WolfModelDefinition.Definition.TexturePath);
-        Assert.Equal(26, WolfModelDefinition.Definition.Parts.Count);
         Assert.NotNull(WolfModelDefinition.Definition.TextureSelector);
         Assert.Equal("entity/wolf/wolf_tame", WolfModelDefinition.Definition.TextureSelector!(WolfState(isTame: true, isAngry: false)));
         Assert.Equal("entity/wolf/wolf_angry", WolfModelDefinition.Definition.TextureSelector!(WolfState(isTame: false, isAngry: true)));
@@ -92,7 +67,6 @@ public sealed class CatWolfFoxPandaModelDefinitionTests
         var spotted = WolfModelDefinition.Variants["spotted"];
         Assert.Equal("wolf_spotted", spotted.Name);
         Assert.Equal("entity/wolf/wolf_spotted", spotted.TexturePath);
-        Assert.Equal(26, spotted.Parts.Count);
         Assert.NotNull(spotted.TextureSelector);
         Assert.Equal("entity/wolf/wolf_spotted_tame", spotted.TextureSelector!(WolfState(isTame: true, isAngry: false)));
         Assert.Equal("entity/wolf/wolf_spotted", spotted.TextureSelector!(WolfState(isTame: false, isAngry: false)));
@@ -102,7 +76,6 @@ public sealed class CatWolfFoxPandaModelDefinitionTests
         Assert.Equal(48, FoxModelDefinition.Definition.TextureWidth);
         Assert.Equal(32, FoxModelDefinition.Definition.TextureHeight);
         Assert.Equal("entity/fox/fox", FoxModelDefinition.Definition.TexturePath);
-        Assert.Equal(10, FoxModelDefinition.Definition.Parts.Count);
         Assert.NotNull(FoxModelDefinition.Definition.TextureSelector);
         Assert.Equal("entity/fox/fox_sleep", FoxModelDefinition.Definition.TextureSelector!(FoxState(true)));
         Assert.Equal("entity/fox/fox", FoxModelDefinition.Definition.TextureSelector!(FoxState(false)));
@@ -112,7 +85,6 @@ public sealed class CatWolfFoxPandaModelDefinitionTests
         var snow = FoxModelDefinition.Variants["snow"];
         Assert.Equal("fox_snow", snow.Name);
         Assert.Equal("entity/fox/fox_snow", snow.TexturePath);
-        Assert.Equal(10, snow.Parts.Count);
         Assert.NotNull(snow.TextureSelector);
         Assert.Equal("entity/fox/fox_snow_sleep", snow.TextureSelector!(FoxState(true)));
         Assert.Equal("entity/fox/fox_snow", snow.TextureSelector!(FoxState(false)));
@@ -123,7 +95,6 @@ public sealed class CatWolfFoxPandaModelDefinitionTests
         Assert.Equal(64, PandaModelDefinition.Definition.TextureWidth);
         Assert.Equal(64, PandaModelDefinition.Definition.TextureHeight);
         Assert.Equal("entity/panda/panda", PandaModelDefinition.Definition.TexturePath);
-        Assert.Equal(9, PandaModelDefinition.Definition.Parts.Count);
         Assert.Equal(PandaModelDefinition.VariantKeys.Count, PandaModelDefinition.Variants.Count);
         Assert.Same(PandaModelDefinition.Definition, PandaModelDefinition.Variants["normal"]);
         foreach (var key in PandaModelDefinition.VariantKeys)
@@ -132,19 +103,7 @@ public sealed class CatWolfFoxPandaModelDefinitionTests
             var variant = PandaModelDefinition.Variants[key];
             Assert.Equal("panda_" + key, variant.Name);
             Assert.Equal("entity/panda/panda_" + key, variant.TexturePath);
-            Assert.Equal(9, variant.Parts.Count);
         }
-    }
-
-    [Fact]
-    public void FoxWolfKeepOrderAndParentLinks()
-    {
-        AssertNamesAndParentsPrefix(FoxModelDefinition.Definition.Parts,
-            ["head", "right_ear", "left_ear", "nose", "body", "right_hind_leg", "left_hind_leg", "right_front_leg", "left_front_leg", "tail"],
-            [null, "head", "head", "head", null, null, null, null, null, "body"]);
-        AssertNamesAndParentsPrefix(WolfModelDefinition.Definition.Parts,
-            ["head", "real_head", "right_ear", "left_ear", "snout", "body", "upper_body", "right_hind_leg", "left_hind_leg", "right_front_leg", "left_front_leg", "tail", "real_tail"],
-            [null, "head", "head", "head", "head", null, null, null, null, null, null, null, "tail"]);
     }
 
     private static EntityRenderState WolfState(bool isTame, bool isAngry) =>

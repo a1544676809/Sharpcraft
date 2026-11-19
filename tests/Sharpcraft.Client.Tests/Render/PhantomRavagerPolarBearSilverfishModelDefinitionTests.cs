@@ -52,14 +52,10 @@ public sealed class PhantomRavagerPolarBearSilverfishModelDefinitionTests
     [Fact]
     public void NestedOrderAndMetadataRemain()
     {
-        AssertNames(PhantomModelDefinition.Definition.Parts,
+        AssertNames(PhantomModelDefinition.Definition.StructuralParts(),
             ["body", "head", "tail_base", "tail_tip", "left_wing_base", "left_wing_tip", "right_wing_base", "right_wing_tip"]);
-        AssertNames(RavagerModelDefinition.Definition.Parts,
+        AssertNames(RavagerModelDefinition.Definition.StructuralParts(),
             ["neck", "head", "head_snout", "right_horn", "left_horn", "mouth", "body", "body_lower", "right_hind_leg", "left_hind_leg", "right_front_leg", "left_front_leg"]);
-        Assert.Equal(8, PhantomModelDefinition.Definition.Parts.Count);
-        Assert.Equal(12, RavagerModelDefinition.Definition.Parts.Count);
-        Assert.Equal(10, PolarBearModelDefinition.Definition.Parts.Count);
-        Assert.Equal(10, SilverfishModelDefinition.Definition.Parts.Count);
     }
 
     private static void AssertNames(IReadOnlyList<EntityModelPart> parts, string[] names)

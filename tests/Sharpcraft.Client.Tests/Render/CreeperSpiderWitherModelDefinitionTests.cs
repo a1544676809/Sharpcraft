@@ -36,10 +36,10 @@ public sealed class CreeperSpiderWitherModelDefinitionTests
     [Fact]
     public void NamesAndCountsRemain()
     {
-        AssertNames(CreeperModelDefinition.Definition.Parts, ["head", "body", "left_hind_leg", "right_hind_leg", "left_front_leg", "right_front_leg"]);
-        AssertNames(SpiderModelDefinition.Definition.Parts,
+        AssertNames(CreeperModelDefinition.Definition.StructuralParts(), ["head", "body", "left_hind_leg", "right_hind_leg", "left_front_leg", "right_front_leg"]);
+        AssertNames(SpiderModelDefinition.Definition.StructuralParts(),
             ["head", "body0", "body1", "right_hind_leg", "left_hind_leg", "right_middle_hind_leg", "left_middle_hind_leg", "right_middle_front_leg", "left_middle_front_leg", "right_front_leg", "left_front_leg"]);
-        AssertNames(WitherBossModelDefinition.Definition.Parts, ["shoulders", "ribcage", "rib_1", "rib_2", "rib_3", "tail", "center_head", "right_head", "left_head"]);
+        AssertNames(WitherBossModelDefinition.Definition.StructuralParts(), ["shoulders", "ribcage", "rib_1", "rib_2", "rib_3", "tail", "center_head", "right_head", "left_head"]);
     }
 
     private static EntityModelPart Leg(string name, float pivotX, float pivotZ, bool mirror, float rotationY, float rotationZ) =>

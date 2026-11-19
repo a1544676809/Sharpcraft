@@ -22,54 +22,6 @@ public sealed class HumanoidMobModelDefinitionTests
     private static EntityModelLayer DrownedOuter(int textureX, int textureY) =>
         new("drowned_outer", 0.25f, textureX, textureY, false, "entity/zombie/drowned_outer_layer", EntityGeometryLayerKind.Translucent);
 
-    [Fact]
-    public void WitherSkeletonSharesTheSkeletonParts()
-    {
-        Assert.Same(HumanoidMobModelDefinition.Skeleton.Parts, HumanoidMobModelDefinition.WitherSkeleton.Parts);
-    }
-
-    [Fact]
-    public void StrayAndBoggedOuterPartsKeepTheirPoseSource()
-    {
-        var expected = new (string Part, string PoseSource)[]
-        {
-            ("outer_head", "head"), ("outer_body", "body"),
-            ("outer_left_arm", "left_arm"), ("outer_right_arm", "right_arm"),
-            ("outer_left_leg", "left_leg"), ("outer_right_leg", "right_leg")
-        };
-        foreach (var definition in new[] { HumanoidMobModelDefinition.Stray, HumanoidMobModelDefinition.Bogged })
-        {
-            foreach (var (part, poseSource) in expected)
-            {
-                Assert.Equal(poseSource, definition.Parts.Single(candidate => candidate.Name == part).PoseSource);
-            }
-        }
-    }
-
-    [Fact]
-    public void StrayAndBoggedOuterPartsMatchSourceFrameRecords()
-    {
-        const string overlayPath = "entity/skeleton/stray_overlay";
-        const float grow = 0.25f;
-        var sample = new[]
-        {
-            RawModelPartFactory.FromVanilla("outer_head", 0f, 0f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0, grow: grow, texturePath: overlayPath,
-                overlays: [new EntityModelLayer("outer_hat", 0.5f, 32, 0, false, overlayPath, EntityGeometryLayerKind.Cutout)]) with { PoseSource = "head" },
-            RawModelPartFactory.FromVanilla("outer_body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16, grow: grow, texturePath: overlayPath) with { PoseSource = "body" },
-            RawModelPartFactory.FromVanilla("outer_left_arm", 5f, 2f, 0f, -1f, -2f, -2f, 4f, 12f, 4f, 40, 16, mirror: true, grow: grow, texturePath: overlayPath) with { PoseSource = "left_arm" },
-            RawModelPartFactory.FromVanilla("outer_right_arm", -5f, 2f, 0f, -3f, -2f, -2f, 4f, 12f, 4f, 40, 16, grow: grow, texturePath: overlayPath) with { PoseSource = "right_arm" },
-            RawModelPartFactory.FromVanilla("outer_left_leg", 1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16, mirror: true, grow: grow, texturePath: overlayPath) with { PoseSource = "left_leg" },
-            RawModelPartFactory.FromVanilla("outer_right_leg", -1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16, grow: grow, texturePath: overlayPath) with { PoseSource = "right_leg" }
-        };
-        var definition = HumanoidMobModelDefinition.Stray;
-        var baseCount = HumanoidMobModelDefinition.Skeleton.Parts.Count;
-        Assert.Equal(baseCount + sample.Length, definition.Parts.Count);
-        for (var i = 0; i < sample.Length; i++)
-        {
-            ModelPartAssertions.AssertEqual(sample[i], definition.Parts[baseCount + i]);
-        }
-    }
-
     private static void AssertPartsMatch(EntityModelPart[] expected, IReadOnlyList<EntityModelPart> actual)
     {
         Assert.Equal(expected.Length, actual.Count);

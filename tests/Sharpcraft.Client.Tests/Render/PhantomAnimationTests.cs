@@ -141,7 +141,7 @@ public sealed class PhantomAnimationTests
     [Fact]
     public void EveryAnimatedPartExistsInThePhantomModel()
     {
-        var modelParts = PhantomModelDefinition.Definition.Parts.Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
+        var modelParts = PhantomModelDefinition.Definition.StructuralParts().Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
         var pose = Apply(Frame(age: 2.1f, entityId: 3));
 
         Assert.NotEmpty(pose.Offsets);

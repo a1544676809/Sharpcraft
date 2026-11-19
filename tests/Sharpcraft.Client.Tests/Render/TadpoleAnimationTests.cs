@@ -117,7 +117,7 @@ public sealed class TadpoleAnimationTests
     [Fact]
     public void OnlyTheTailIsAnimatedAndItExistsInTheModel()
     {
-        var modelParts = TadpoleModelDefinition.Definition.Parts.Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
+        var modelParts = TadpoleModelDefinition.Definition.StructuralParts().Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
         var pose = Apply(3.3f, inWater: false);
 
         var keys = pose.Offsets.Keys.ToHashSet(StringComparer.Ordinal);

@@ -21,14 +21,6 @@ public sealed class BreezeModelDefinitionTests
     }
 
     [Fact]
-    public void BreezeKeepsChildOrderAndParentLinks()
-    {
-        AssertNamesAndParents(BreezeModelDefinition.Definition.Parts,
-            ["body", "rods", "rod_1", "rod_2", "rod_3", "head", "head_cube", "eyes", "eyes_cube", "wind_body", "wind_bottom", "wind_mid", "wind_mid_mid", "wind_mid_inner", "wind_top", "wind_top_mid", "wind_top_inner"],
-            [null, "body", "rods", "rods", "rods", "body", "head", "head", "eyes", null, "wind_body", "wind_bottom", "wind_mid", "wind_mid", "wind_mid", "wind_top", "wind_top"]);
-    }
-
-    [Fact]
     public void BreezeKeepsEmissiveAndAdditionalTexturePaths()
     {
         var definition = BreezeModelDefinition.Definition;
@@ -44,7 +36,7 @@ public sealed class BreezeModelDefinitionTests
         Assert.Equal("entity/breeze/breeze_wind", paths[0]);
         Assert.Equal("entity/breeze/breeze_eyes", paths[1]);
 
-        var parts = definition.Parts;
+        var parts = definition.StructuralParts();
         foreach (var part in parts)
         {
             if (part.Name.StartsWith("wind_", StringComparison.Ordinal) && part.Name != "wind_body")

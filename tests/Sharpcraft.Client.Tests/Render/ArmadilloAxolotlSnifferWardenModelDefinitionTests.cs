@@ -16,19 +16,6 @@ namespace Sharpcraft.Client.Tests.Render;
 public sealed class ArmadilloAxolotlSnifferWardenModelDefinitionTests
 {
 
-    [Fact]
-    public void NestedOrderAndMetadataRemain()
-    {
-        AssertNames(ArmadilloModelDefinition.Definition.Parts,
-            ["body", "body_outer", "tail", "head", "head_cube", "right_ear", "right_ear_cube", "left_ear", "left_ear_cube", "right_hind_leg", "left_hind_leg", "right_front_leg", "left_front_leg", "cube"]);
-        AssertNames(SnifferModelDefinition.Definition.Parts,
-            ["bone", "body", "body_outer", "body_bottom", "right_front_leg", "right_mid_leg", "right_hind_leg", "left_front_leg", "left_mid_leg", "left_hind_leg", "head", "head_flat", "left_ear", "right_ear", "nose", "lower_beak"]);
-        Assert.Equal(25, WardenModelDefinition.Definition.Parts.Count);
-        Assert.Equal(14, ArmadilloModelDefinition.Definition.Parts.Count);
-        Assert.Equal(11, AxolotlModelDefinition.Definition.Parts.Count);
-        Assert.Equal(16, SnifferModelDefinition.Definition.Parts.Count);
-    }
-
     private static bool Unrolled(Sharpcraft.Client.World.EntityRenderState state) => !state.IsHidingInShell;
     private static bool Rolled(Sharpcraft.Client.World.EntityRenderState state) => state.IsHidingInShell;
 

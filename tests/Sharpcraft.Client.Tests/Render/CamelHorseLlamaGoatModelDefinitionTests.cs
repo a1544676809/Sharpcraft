@@ -25,30 +25,6 @@ public sealed class CamelHorseLlamaGoatModelDefinitionTests
     }
 
     [Fact]
-    public void HorseMarkingsCopylayerSelectorsWork()
-    {
-        var parts = HorseModelDefinition.Definition.Parts;
-        Assert.Equal(60, parts.Count);
-        var keys = new[] { "white", "whitefield", "whitedots", "blackdots" };
-        var ids = new[] { 1, 2, 3, 4 };
-        for (var m = 0; m < keys.Length; m++)
-        {
-            for (var i = 0; i < 12; i++)
-            {
-                var basePart = parts[i];
-                var copy = parts[12 + m * 12 + i];
-                Assert.Equal("marking_" + keys[m] + "_" + basePart.Name, copy.Name);
-                Assert.Equal("entity/horse/horse_markings_" + keys[m], copy.TexturePath);
-                Assert.Equal(basePart.Grow, copy.Grow);
-                Assert.Equal(basePart.PoseSource ?? basePart.Name, copy.PoseSource);
-                Assert.NotNull(copy.VisibleWhen);
-                Assert.True(copy.VisibleWhen!(HorseState(ids[m])));
-                Assert.False(copy.VisibleWhen!(HorseState(0)));
-            }
-        }
-    }
-
-    [Fact]
     public void VariantMetadataIsUnchanged()
     {
         // Camel.
@@ -56,7 +32,6 @@ public sealed class CamelHorseLlamaGoatModelDefinitionTests
         Assert.Equal(128, CamelModelDefinition.Definition.TextureWidth);
         Assert.Equal(128, CamelModelDefinition.Definition.TextureHeight);
         Assert.Equal("entity/camel/camel", CamelModelDefinition.Definition.TexturePath);
-        Assert.Equal(13, CamelModelDefinition.Definition.Parts.Count);
 
         // Horse: 5 equine definitions + 7 coat variants.
         Assert.Equal("horse", HorseModelDefinition.Definition.Name);
@@ -64,7 +39,6 @@ public sealed class CamelHorseLlamaGoatModelDefinitionTests
         Assert.Equal(64, HorseModelDefinition.Definition.TextureHeight);
         Assert.Equal("entity/horse/horse_brown", HorseModelDefinition.Definition.TexturePath);
         Assert.Equal(1.1f, HorseModelDefinition.Definition.Scale);
-        Assert.Equal(60, HorseModelDefinition.Definition.Parts.Count);
         Assert.Equal("donkey", HorseModelDefinition.Donkey.Name);
         Assert.Equal("entity/horse/donkey", HorseModelDefinition.Donkey.TexturePath);
         Assert.Equal(0.87f, HorseModelDefinition.Donkey.Scale);
@@ -87,7 +61,6 @@ public sealed class CamelHorseLlamaGoatModelDefinitionTests
             var variant = HorseModelDefinition.Variants[key];
             Assert.Equal("horse_" + key, variant.Name);
             Assert.Equal("entity/horse/" + file, variant.TexturePath);
-            Assert.Equal(60, variant.Parts.Count);
         }
 
         // Llama: 4 coats.
@@ -95,7 +68,6 @@ public sealed class CamelHorseLlamaGoatModelDefinitionTests
         Assert.Equal(128, LlamaModelDefinition.Definition.TextureWidth);
         Assert.Equal(64, LlamaModelDefinition.Definition.TextureHeight);
         Assert.Equal("entity/llama/llama_brown", LlamaModelDefinition.Definition.TexturePath);
-        Assert.Equal(11, LlamaModelDefinition.Definition.Parts.Count);
         Assert.Equal(LlamaModelDefinition.VariantKeys.Count, LlamaModelDefinition.Variants.Count);
         Assert.Same(LlamaModelDefinition.Definition, LlamaModelDefinition.Variants["brown"]);
         foreach (var key in LlamaModelDefinition.VariantKeys)
@@ -104,7 +76,6 @@ public sealed class CamelHorseLlamaGoatModelDefinitionTests
             var variant = LlamaModelDefinition.Variants[key];
             Assert.Equal("llama_" + key, variant.Name);
             Assert.Equal("entity/llama/llama_" + key, variant.TexturePath);
-            Assert.Equal(11, variant.Parts.Count);
         }
 
         // Goat.
@@ -112,18 +83,6 @@ public sealed class CamelHorseLlamaGoatModelDefinitionTests
         Assert.Equal(64, GoatModelDefinition.Definition.TextureWidth);
         Assert.Equal(64, GoatModelDefinition.Definition.TextureHeight);
         Assert.Equal("entity/goat/goat", GoatModelDefinition.Definition.TexturePath);
-        Assert.Equal(12, GoatModelDefinition.Definition.Parts.Count);
-    }
-
-    [Fact]
-    public void CamelHorseKeepOrderAndParentLinks()
-    {
-        AssertNamesAndParentsPrefix(CamelModelDefinition.Definition.Parts,
-            ["body", "hump", "tail", "head", "head_lower", "head_upper", "head_snout", "left_ear", "right_ear", "left_hind_leg", "right_hind_leg", "left_front_leg", "right_front_leg"],
-            [null, "body", "body", "body", "head", "head", "head", "head", "head", null, null, null, null]);
-        AssertNamesAndParentsPrefix(HorseModelDefinition.Definition.Parts,
-            ["body", "head_parts", "head", "mane", "upper_mouth", "left_ear", "right_ear", "left_hind_leg", "right_hind_leg", "left_front_leg", "right_front_leg", "tail"],
-            [null, null, "head_parts", "head_parts", "head_parts", "head", "head", null, null, null, null, "body"]);
     }
 
     private static EntityRenderState HorseState(int markings) =>

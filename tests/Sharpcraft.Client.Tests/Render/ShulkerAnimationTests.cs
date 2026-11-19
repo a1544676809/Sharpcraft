@@ -184,7 +184,7 @@ public sealed class ShulkerAnimationTests
     [Fact]
     public void EveryAnimatedPartExistsInTheShulkerModel()
     {
-        var modelParts = ShulkerModelDefinition.Definition.Parts.Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
+        var modelParts = ShulkerModelDefinition.Definition.StructuralParts().Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
         var provider = new ShulkerAnimationProvider(ShulkerModelDefinition.ShulkerEntityTypeId);
         var state = provider.CreateState();
         DrivePeek(state, raw: 60, ticks: 13);

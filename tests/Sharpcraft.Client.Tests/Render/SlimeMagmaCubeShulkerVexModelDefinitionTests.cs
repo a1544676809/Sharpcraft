@@ -61,10 +61,10 @@ public sealed class SlimeMagmaCubeShulkerVexModelDefinitionTests
     [Fact]
     public void NamesAndCountsRemain()
     {
-        AssertNames(SlimeModelDefinition.Definition.Parts, ["cube", "right_eye", "left_eye", "mouth", "outer_cube"]);
-        AssertNames(MagmaCubeModelDefinition.Definition.Parts, ["cube0", "cube1", "cube2", "cube3", "cube4", "cube5", "cube6", "cube7", "inside_cube"]);
-        AssertNames(ShulkerModelDefinition.Definition.Parts, ["lid", "base", "head"]);
-        AssertNames(VexModelDefinition.Definition.Parts, ["root", "head", "body", "body_inner", "right_arm", "left_arm", "left_wing", "right_wing"]);
+        AssertNames(SlimeModelDefinition.Definition.StructuralParts(), ["cube", "right_eye", "left_eye", "mouth", "outer_cube"]);
+        AssertNames(MagmaCubeModelDefinition.Definition.StructuralParts(), ["cube0", "cube1", "cube2", "cube3", "cube4", "cube5", "cube6", "cube7", "inside_cube"]);
+        AssertNames(ShulkerModelDefinition.Definition.StructuralParts(), ["lid", "base", "head"]);
+        AssertNames(VexModelDefinition.Definition.StructuralParts(), ["root", "head", "body", "body_inner", "right_arm", "left_arm", "left_wing", "right_wing"]);
     }
 
     private static Sharpcraft.Client.World.EntityRenderState ChargingState(bool charging) =>

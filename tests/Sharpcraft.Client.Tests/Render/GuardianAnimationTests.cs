@@ -219,7 +219,7 @@ public sealed class GuardianAnimationTests
     [Fact]
     public void EveryAnimatedPartExistsInTheGuardianModel()
     {
-        var modelParts = GuardianModelDefinition.Definition.Parts
+        var modelParts = GuardianModelDefinition.Definition.StructuralParts()
             .Select(part => part.Name)
             .ToHashSet(StringComparer.Ordinal);
 

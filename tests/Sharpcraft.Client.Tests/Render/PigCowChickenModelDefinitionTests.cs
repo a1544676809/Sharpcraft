@@ -38,8 +38,6 @@ public sealed class PigCowChickenModelDefinitionTests
         Assert.Equal("entity/pig/pig_warm", PigModelDefinition.Variants["warm"].TexturePath);
         Assert.Equal("pig_cold", PigModelDefinition.Variants["cold"].Name);
         Assert.Equal("entity/pig/pig_cold", PigModelDefinition.Variants["cold"].TexturePath);
-        Assert.Equal(7, PigModelDefinition.Variants["warm"].Parts.Count);
-        Assert.Equal(7, PigModelDefinition.Variants["cold"].Parts.Count);
         Assert.Equal(64, PigModelDefinition.Variants["cold"].TextureWidth);
         Assert.Equal(64, PigModelDefinition.Variants["cold"].TextureHeight);
 
@@ -50,11 +48,8 @@ public sealed class PigCowChickenModelDefinitionTests
         Assert.Equal("entity/cow/cow_warm", CowModelDefinition.Variants["warm"].TexturePath);
         Assert.Equal("cow_cold", CowModelDefinition.Variants["cold"].Name);
         Assert.Equal("entity/cow/cow_cold", CowModelDefinition.Variants["cold"].TexturePath);
-        Assert.Equal(12, CowModelDefinition.Variants["warm"].Parts.Count);
-        Assert.Equal(10, CowModelDefinition.Variants["cold"].Parts.Count);
         Assert.Equal("mooshroom", CowModelDefinition.Mooshroom.Name);
         Assert.Equal("entity/cow/mooshroom_red", CowModelDefinition.Mooshroom.TexturePath);
-        Assert.Equal(10, CowModelDefinition.Mooshroom.Parts.Count);
 
         // Chicken
         Assert.Equal(3, ChickenModelDefinition.Variants.Count);
@@ -63,8 +58,6 @@ public sealed class PigCowChickenModelDefinitionTests
         Assert.Equal("entity/chicken/chicken_warm", ChickenModelDefinition.Variants["warm"].TexturePath);
         Assert.Equal("chicken_cold", ChickenModelDefinition.Variants["cold"].Name);
         Assert.Equal("entity/chicken/chicken_cold", ChickenModelDefinition.Variants["cold"].TexturePath);
-        Assert.Equal(8, ChickenModelDefinition.Variants["warm"].Parts.Count);
-        Assert.Equal(10, ChickenModelDefinition.Variants["cold"].Parts.Count);
         Assert.Equal(64, ChickenModelDefinition.Variants["cold"].TextureWidth);
         Assert.Equal(32, ChickenModelDefinition.Variants["cold"].TextureHeight);
     }

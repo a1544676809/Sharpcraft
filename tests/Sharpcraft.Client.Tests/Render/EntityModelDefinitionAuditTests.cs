@@ -50,7 +50,7 @@ public sealed class EntityModelDefinitionAuditTests
             "part_only",
             PlayerModelDefinition.Definition.TextureWidth,
             PlayerModelDefinition.Definition.TextureHeight,
-            PlayerModelDefinition.Definition.Parts);
+            PlayerModelDefinition.Definition.StructuralParts());
         Assert.Null(invalid.Compiled);
 
         var atlas = ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)

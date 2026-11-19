@@ -184,7 +184,7 @@ public sealed class PandaAnimationTests
     [Fact]
     public void EveryAnimatedPartExistsInThePandaModel()
     {
-        var modelParts = PandaModelDefinition.Definition.Parts
+        var modelParts = PandaModelDefinition.Definition.StructuralParts()
             .Select(part => part.Name)
             .ToHashSet(StringComparer.Ordinal);
 

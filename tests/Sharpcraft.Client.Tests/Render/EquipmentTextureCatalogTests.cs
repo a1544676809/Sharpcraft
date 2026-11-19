@@ -93,9 +93,9 @@ public sealed class EquipmentTextureCatalogTests
             Equipment = new Sharpcraft.Client.World.EntityEquipment(-1, -1, -1, -1, -1, -1, armorId, 949)
         };
 
-        var bodyLayer = definition.Parts.First(part => part.Name.StartsWith("equipment_HorseBody_6_", StringComparison.Ordinal));
+        var bodyLayer = definition.StructuralParts().First(part => part.Name.StartsWith("equipment_HorseBody_6_", StringComparison.Ordinal));
         Assert.Equal("entity/equipment/horse_body/iron", bodyLayer.TextureSelector!(state));
-        var saddleLayer = definition.Parts.First(part => part.Name.StartsWith("equipment_HorseSaddle_7_", StringComparison.Ordinal));
+        var saddleLayer = definition.StructuralParts().First(part => part.Name.StartsWith("equipment_HorseSaddle_7_", StringComparison.Ordinal));
         Assert.Equal("entity/equipment/horse_saddle/saddle", saddleLayer.TextureSelector!(state));
         Assert.Contains("entity/equipment/horse_body/iron", definition.TexturePaths);
         Assert.Contains("entity/equipment/horse_saddle/saddle", definition.TexturePaths);

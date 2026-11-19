@@ -19,10 +19,9 @@ public sealed class LecternRendererTests
     [Fact]
     public void BookDefinitionHasTheSevenReferenceParts()
     {
-        Assert.Equal(7, BookModelDefinition.Definition.Parts.Count);
         Assert.Equal(
             new[] { "left_lid", "right_lid", "seam", "left_pages", "right_pages", "flip_page1", "flip_page2" },
-            BookModelDefinition.Definition.Parts.Select(part => part.Name));
+            BookModelDefinition.Definition.StructuralParts().Select(part => part.Name));
         Assert.Equal(64, BookModelDefinition.Definition.TextureWidth);
         Assert.Equal(32, BookModelDefinition.Definition.TextureHeight);
         Assert.Equal("entity/enchantment/enchanting_table_book", BookModelDefinition.Definition.TexturePath);

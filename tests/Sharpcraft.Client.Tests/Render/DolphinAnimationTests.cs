@@ -142,7 +142,7 @@ public sealed class DolphinAnimationTests
     [Fact]
     public void EveryAnimatedPartExistsInTheDolphinModel()
     {
-        var modelParts = DolphinModelDefinition.Definition.Parts
+        var modelParts = DolphinModelDefinition.Definition.StructuralParts()
             .Select(part => part.Name)
             .ToHashSet(StringComparer.Ordinal);
 

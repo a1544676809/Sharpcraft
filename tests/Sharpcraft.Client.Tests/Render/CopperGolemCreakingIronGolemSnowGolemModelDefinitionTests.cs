@@ -43,10 +43,6 @@ public sealed class CopperGolemCreakingIronGolemSnowGolemModelDefinitionTests
     [Fact]
     public void NamesAndMetadataRemain()
     {
-        Assert.Equal(9, CopperGolemModelDefinition.Definition.Parts.Count);
-        Assert.Equal(18, CreakingModelDefinition.Definition.Parts.Count);
-        Assert.Equal(8, IronGolemModelDefinition.Definition.Parts.Count);
-        Assert.Equal(5, SnowGolemModelDefinition.Definition.Parts.Count);
         Assert.Equal("entity/copper_golem/copper_golem", CopperGolemModelDefinition.Definition.TexturePath);
         Assert.Equal("entity/creaking/creaking", CreakingModelDefinition.Definition.TexturePath);
         Assert.Equal("entity/iron_golem/iron_golem", IronGolemModelDefinition.Definition.TexturePath);

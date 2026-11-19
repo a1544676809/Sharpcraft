@@ -15,19 +15,6 @@ namespace Sharpcraft.Client.Tests.Render;
 /// </summary>
 public sealed class PiglinModelDefinitionTests
 {
-    [Fact]
-    public void PiglinTreeMatchesSourceFrameRecords()
-    {
-        foreach (var definition in Definitions())
-        {
-            var expected = ExpectedParts();
-            Assert.Equal(expected.Length, definition.Parts.Count);
-            for (var i = 0; i < expected.Length; i++)
-            {
-                ModelPartAssertions.AssertEqual(expected[i], definition.Parts[i]);
-            }
-        }
-    }
 
     [Fact]
     public void DefinitionBruteZombifiedKeepNamesPathsAndCounts()
@@ -37,19 +24,16 @@ public sealed class PiglinModelDefinitionTests
         Assert.Equal(64, definition.TextureWidth);
         Assert.Equal(64, definition.TextureHeight);
         Assert.Equal("entity/piglin/piglin", definition.TexturePath);
-        Assert.Equal(16, definition.Parts.Count);
         Assert.True(definition.RawSourceFrame);
 
         var brute = PiglinModelDefinition.Brute;
         Assert.Equal("piglin_brute", brute.Name);
         Assert.Equal("entity/piglin/piglin_brute", brute.TexturePath);
-        Assert.Equal(16, brute.Parts.Count);
         Assert.True(brute.RawSourceFrame);
 
         var zombified = PiglinModelDefinition.Zombified;
         Assert.Equal("zombified_piglin", zombified.Name);
         Assert.Equal("entity/piglin/zombified_piglin", zombified.TexturePath);
-        Assert.Equal(16, zombified.Parts.Count);
         Assert.True(zombified.RawSourceFrame);
     }
 

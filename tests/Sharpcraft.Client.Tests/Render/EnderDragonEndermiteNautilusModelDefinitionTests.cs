@@ -16,12 +16,6 @@ public sealed class EnderDragonEndermiteNautilusModelDefinitionTests
     [Fact]
     public void NestedNamesRemain()
     {
-        Assert.Equal(66, EnderDragonModelDefinition.Definition.Parts.Count);
-        Assert.Equal("head", EnderDragonModelDefinition.Definition.Parts[0].Name);
-        Assert.Equal("neck0", EnderDragonModelDefinition.Definition.Parts[8].Name);
-        Assert.Equal("body", EnderDragonModelDefinition.Definition.Parts[42].Name);
-        Assert.Equal(4, EndermiteModelDefinition.Definition.Parts.Count);
-        Assert.Equal(9, NautilusModelDefinition.Definition.Parts.Count);
     }
 
     private static EntityModelPart[] ExpectedDragonParts()

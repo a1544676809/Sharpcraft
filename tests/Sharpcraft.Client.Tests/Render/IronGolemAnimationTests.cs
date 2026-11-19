@@ -220,7 +220,7 @@ public sealed class IronGolemAnimationTests
         };
         Assert.True(expected.SetEquals(pose.Offsets.Keys));
 
-        var modelParts = IronGolemModelDefinition.Definition.Parts.Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
+        var modelParts = IronGolemModelDefinition.Definition.StructuralParts().Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
         foreach (var part in expected)
         {
             Assert.Contains(part, modelParts);

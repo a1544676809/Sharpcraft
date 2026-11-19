@@ -136,7 +136,7 @@ public sealed class SilverfishAnimationTests
     [Fact]
     public void EveryAnimatedPartExistsInTheSilverfishModel()
     {
-        var modelParts = SilverfishModelDefinition.Definition.Parts
+        var modelParts = SilverfishModelDefinition.Definition.StructuralParts()
             .Select(part => part.Name)
             .ToHashSet(StringComparer.Ordinal);
 

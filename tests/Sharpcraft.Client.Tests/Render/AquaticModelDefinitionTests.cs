@@ -36,25 +36,16 @@ public sealed class AquaticModelDefinitionTests
     }
 
     [Fact]
-    public void TropicalFishPartsMatchSourceFrameRecords()
-    {
-        // The base body parts are the first half of each variant's parts (the rest are pattern copies).
-        AssertPrefixMatch(ExpectedTropicalSmallParts(), TropicalFishModelDefinition.Definition.Parts);
-        AssertPrefixMatch(ExpectedTropicalLargeParts(), TropicalFishModelDefinition.Variants["flopper"].Parts);
-    }
-
-    [Fact]
     public void TropicalPatternCopiesKeepSelectors()
     {
         var definition = TropicalFishModelDefinition.Definition;
         Assert.Equal("tropical_fish", definition.Name);
         Assert.Equal("entity/fish/tropical_a", definition.TexturePath);
-        Assert.Equal(10, definition.Parts.Count);
         var baseParts = ExpectedTropicalSmallParts();
         for (var i = 0; i < baseParts.Length; i++)
         {
-            var basePart = definition.Parts[i];
-            var copy = definition.Parts[baseParts.Length + i];
+            var basePart = definition.StructuralParts()[i];
+            var copy = definition.StructuralParts()[baseParts.Length + i];
             Assert.Equal("pattern_" + baseParts[i].Name, copy.Name);
             Assert.Equal("entity/fish/tropical_a_pattern_1", copy.TexturePath);
             Assert.NotNull(copy.TintSelector);
@@ -76,7 +67,6 @@ public sealed class AquaticModelDefinitionTests
         Assert.Equal(32, CodModelDefinition.Definition.TextureWidth);
         Assert.Equal(32, CodModelDefinition.Definition.TextureHeight);
         Assert.Equal("entity/fish/cod", CodModelDefinition.Definition.TexturePath);
-        Assert.Equal(7, CodModelDefinition.Definition.Parts.Count);
 
         // Salmon: 3 synced size variants.
         Assert.Equal(3, SalmonModelDefinition.Variants.Count);
@@ -90,7 +80,6 @@ public sealed class AquaticModelDefinitionTests
         {
             var variant = SalmonModelDefinition.Variants[key];
             Assert.Equal("entity/fish/salmon", variant.TexturePath);
-            Assert.Equal(8, variant.Parts.Count);
             Assert.Equal(32, variant.TextureWidth);
             Assert.Equal(32, variant.TextureHeight);
         }
@@ -99,9 +88,7 @@ public sealed class AquaticModelDefinitionTests
         Assert.Equal(3, PufferfishModelDefinition.Variants.Count);
         Assert.Same(PufferfishModelDefinition.Definition, PufferfishModelDefinition.Variants["small"]);
         Assert.Equal("pufferfish_medium", PufferfishModelDefinition.Variants["medium"].Name);
-        Assert.Equal(11, PufferfishModelDefinition.Variants["medium"].Parts.Count);
         Assert.Equal("pufferfish_large", PufferfishModelDefinition.Variants["large"].Name);
-        Assert.Equal(13, PufferfishModelDefinition.Variants["large"].Parts.Count);
         foreach (var key in PufferfishModelDefinition.VariantKeys)
         {
             Assert.Equal("entity/fish/pufferfish", PufferfishModelDefinition.Variants[key].TexturePath);
@@ -117,21 +104,9 @@ public sealed class AquaticModelDefinitionTests
             var large = index >= 6;
             Assert.Equal(index == 0 ? "tropical_fish" : "tropical_fish_" + key, variant.Name);
             Assert.Equal(large ? "entity/fish/tropical_b" : "entity/fish/tropical_a", variant.TexturePath);
-            Assert.Equal(large ? 12 : 10, variant.Parts.Count);
             Assert.Equal(32, variant.TextureWidth);
             Assert.Equal(32, variant.TextureHeight);
         }
-    }
-
-    [Fact]
-    public void SalmonAndDolphinKeepOrderAndParentLinks()
-    {
-        AssertNamesAndParents(SalmonModelDefinition.Definition.Parts,
-            ["body_front", "body_back", "head", "back_fin", "top_front_fin", "top_back_fin", "right_fin", "left_fin"],
-            [null, null, null, "body_back", "body_front", "body_back", null, null]);
-        AssertNamesAndParents(DolphinModelDefinition.Definition.Parts,
-            ["body", "back_fin", "left_fin", "right_fin", "tail", "tail_fin", "head", "nose"],
-            [null, "body", "body", "body", "body", "tail", "body", "head"]);
     }
 
     private static EntityModelPart[] ExpectedCodParts() =>

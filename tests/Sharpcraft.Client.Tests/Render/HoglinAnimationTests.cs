@@ -217,7 +217,7 @@ public sealed class HoglinAnimationTests
     [Fact]
     public void EveryAnimatedPartExistsInTheHoglinModel()
     {
-        var modelParts = HoglinModelDefinition.Definition.Parts.Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
+        var modelParts = HoglinModelDefinition.Definition.StructuralParts().Select(part => part.Name).ToHashSet(StringComparer.Ordinal);
         foreach (var partName in new[]
                  {
                      "right_ear", "left_ear", "head",
