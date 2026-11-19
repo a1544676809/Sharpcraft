@@ -101,12 +101,12 @@ public sealed class PlayerArmorRawReferenceSampleTests
             Assert.Equal(48, armor.Compiled!.Cubes.Sum(cube => 24));
         }
 
-        // Stray armor is still an unscaled legacy layer; Drowned/Husk have raw definitions.
+        // Stray armor is source-identical to player armor (B-3 / #228) and reuses the raw definition.
         var stray = EntityModelResolver.Resolve(Sharpcraft.Client.Render.HumanoidMobModelDefinition.StrayEntityTypeId);
         var strayArmor = stray.RenderLayers!.First(layer => layer.Name == "equipment_HumanoidArmor_5").Model!;
-        Assert.False(strayArmor.RawSourceFrame);
-        Assert.Equal(24f, strayArmor.BaselinePx);
-        Assert.NotNull(strayArmor.FaceTransforms);
+        Assert.True(strayArmor.RawSourceFrame);
+        Assert.Equal(0f, strayArmor.BaselinePx);
+        Assert.True(strayArmor.FaceTransforms is null || strayArmor.FaceTransforms.Count == 0);
     }
 
     private static Row[] Load(string sampleFile)

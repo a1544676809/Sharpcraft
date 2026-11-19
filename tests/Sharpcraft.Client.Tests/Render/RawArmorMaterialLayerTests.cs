@@ -46,17 +46,21 @@ public sealed class RawArmorMaterialLayerTests
     }
 
     [Fact]
-    public void LegacyArmorMaterialLayersKeepLegacyBaseline()
+    public void MigratedArmorMaterialLayersFollowRawGeometry()
     {
+        // B-3 (#228): stray armor is raw now, so trim/glint must be raw and pointwise equal to the armor.
         var model = EntityModelResolver.Resolve(HumanoidMobModelDefinition.StrayEntityTypeId);
         var armor = model.RenderLayers!.Single(layer => layer.Name == "equipment_HumanoidArmor_5").Model!;
         var trim = model.RenderLayers!.Single(layer => layer.Name == "trim_HumanoidArmor_5").Model!;
         var glint = model.RenderLayers!.Single(layer => layer.Name == "glint_HumanoidArmor_5").Model!;
-        Assert.False(armor.RawSourceFrame);
-        Assert.False(trim.RawSourceFrame);
-        Assert.False(glint.RawSourceFrame);
-        Assert.Equal(24f, trim.BaselinePx);
-        Assert.Equal(24f, glint.BaselinePx);
+        Assert.True(armor.RawSourceFrame);
+        Assert.True(trim.RawSourceFrame);
+        Assert.True(glint.RawSourceFrame);
+        Assert.Equal(0f, armor.BaselinePx);
+        Assert.Equal(0f, trim.BaselinePx);
+        Assert.Equal(0f, glint.BaselinePx);
+        AssertPointwiseEqual(armor, trim, 64, 32, HumanoidMobModelDefinition.StrayEntityTypeId, "trim");
+        AssertPointwiseEqual(armor, glint, 64, 32, HumanoidMobModelDefinition.StrayEntityTypeId, "glint");
     }
 
     private static void AssertPointwiseEqual(
