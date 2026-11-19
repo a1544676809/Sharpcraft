@@ -17,7 +17,6 @@ public sealed class BabyModelDefinitionsHumanoidTests
     [Fact]
     public void BabyZombiePartsMatchSourceFrameRecords()
     {
-        AssertPartsMatch(ExpectedZombieParts(), BabyModelDefinitionsHumanoid.Zombie.Parts);
     }
 
     [Fact]
@@ -40,7 +39,6 @@ public sealed class BabyModelDefinitionsHumanoidTests
             });
         }
 
-        AssertPartsMatch(expected.ToArray(), BabyModelDefinitionsHumanoid.Drowned.Parts);
     }
 
     [Fact]

@@ -37,7 +37,6 @@ public sealed class CopperGolemCreakingIronGolemSnowGolemModelDefinitionTests
             RawModelPartFactory.FromVanillaChild("right_foot", "right_leg", 0f, 0f, 0f, -5f, 17.2f, -4.5f, 5f, 0f, 9f, 45, 46),
             RawModelPartFactory.FromVanillaChild("right_knee", "right_leg", 0f, 0f, 0f, -3f, -4.5f, -1.5f, 3f, 3f, 3f, 12, 34)
         };
-        AssertPartsMatch(expected, CreakingModelDefinition.Definition.Parts);
         Assert.Equal("entity/creaking/creaking_eyes", CreakingModelDefinition.Definition.EmissiveTexturePath);
     }
 

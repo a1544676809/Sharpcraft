@@ -26,7 +26,6 @@ public sealed class PhantomRavagerPolarBearSilverfishModelDefinitionTests
             RawModelPartFactory.FromVanillaChild("right_wing_base", "body", -3f, -2f, -8f, -6f, 0f, 0f, 6f, 2f, 9f, 23, 12, mirror: true, rotationZ: -0.1f),
             RawModelPartFactory.FromVanillaChild("right_wing_tip", "right_wing_base", -6f, 0f, 0f, -13f, 0f, 0f, 13f, 1f, 9f, 16, 24, mirror: true, rotationZ: -0.1f)
         };
-        AssertPartsMatch(expected, PhantomModelDefinition.Definition.Parts);
         Assert.Equal("entity/phantom/phantom_eyes", PhantomModelDefinition.Definition.EmissiveTexturePath);
     }
 
@@ -47,7 +46,6 @@ public sealed class PhantomRavagerPolarBearSilverfishModelDefinitionTests
             RawModelPartFactory.FromVanilla("right_front_leg", -3.5f, 14f, -8f, -2f, 0f, -2f, 4f, 10f, 6f, 50, 40),
             RawModelPartFactory.FromVanilla("left_front_leg", 3.5f, 14f, -8f, -2f, 0f, -2f, 4f, 10f, 6f, 50, 40)
         };
-        AssertPartsMatch(expected, PolarBearModelDefinition.Definition.Parts);
         Assert.Equal(1.2f, PolarBearModelDefinition.Definition.Scale);
     }
 

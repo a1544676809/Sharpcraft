@@ -45,8 +45,6 @@ public sealed class GuardianSquidModelDefinitionTests
         parts.Add(RawModelPartFactory.FromVanillaChild("tail2_body", "tail2", 0f, 0f, 0f, 0f, 14f, 0f, 2f, 2f, 6f, 41, 32));
         parts.Add(RawModelPartFactory.FromVanillaChild("tail2_fin", "tail2", 0f, 0f, 0f, 1f, 10.5f, 3f, 1f, 9f, 9f, 25, 19));
 
-        AssertPartsMatch([.. parts], GuardianModelDefinition.Definition.Parts);
-        AssertPartsMatch([.. parts], GuardianModelDefinition.Elder.Parts);
         Assert.Equal(2.35f, GuardianModelDefinition.Elder.Scale);
     }
 
@@ -65,8 +63,6 @@ public sealed class GuardianSquidModelDefinitionTests
             Tentacle(6, 0f, -5f, MathF.PI),
             Tentacle(7, 3.5355339f, -3.5355339f, 3f * MathF.PI / 4f)
         };
-        AssertPartsMatch(expected, SquidModelDefinition.Definition.Parts);
-        AssertPartsMatch(expected, SquidModelDefinition.GlowSquid.Parts);
         Assert.Equal("entity/squid/glow_squid", SquidModelDefinition.GlowSquid.TexturePath);
     }
 

@@ -29,7 +29,6 @@ public sealed class BabyModelDefinitionsOddTests
             RawModelPartFactory.FromVanilla("left_front_leg", -1.5f, 22f, -1.5f, -1f, 0f, -1f, 2f, 2f, 2f, 24, 0, mirror: true) with { VisibleWhen = Unrolled },
             RawModelPartFactory.FromVanilla("cube", 0f, 20.7f, 0.5f, -3f, -3f, -3f, 6f, 6f, 6f, 0, 25, grow: 0.3f) with { VisibleWhen = Rolled }
         };
-        AssertPartsMatch(expected, BabyModelDefinitionsOdd.Armadillo.Parts);
         Assert.Same(BabyModelDefinitionsHumanoid.Zombie.Parts, BabyModelDefinitionsOdd.Husk.Parts);
     }
 

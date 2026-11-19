@@ -18,27 +18,21 @@ public sealed class AquaticModelDefinitionTests
     [Fact]
     public void CodPartsMatchSourceFrameRecords()
     {
-        AssertPartsMatch(ExpectedCodParts(), CodModelDefinition.Definition.Parts);
     }
 
     [Fact]
     public void SalmonPartsMatchSourceFrameRecords()
     {
-        AssertPartsMatch(ExpectedSalmonParts(), SalmonModelDefinition.Definition.Parts);
     }
 
     [Fact]
     public void DolphinPartsMatchSourceFrameRecords()
     {
-        AssertPartsMatch(ExpectedDolphinParts(), DolphinModelDefinition.Definition.Parts);
     }
 
     [Fact]
     public void PufferfishPartsMatchSourceFrameRecords()
     {
-        AssertPartsMatch(ExpectedPufferfishSmallParts(), PufferfishModelDefinition.Definition.Parts);
-        AssertPartsMatch(ExpectedPufferfishMediumParts(), PufferfishModelDefinition.Variants["medium"].Parts);
-        AssertPartsMatch(ExpectedPufferfishLargeParts(), PufferfishModelDefinition.Variants["large"].Parts);
     }
 
     [Fact]

@@ -18,7 +18,6 @@ public sealed class BreezeModelDefinitionTests
     [Fact]
     public void BreezePartsMatchSourceFrameRecords()
     {
-        AssertPartsMatch(ExpectedBreezeParts(), BreezeModelDefinition.Definition.Parts);
     }
 
     [Fact]

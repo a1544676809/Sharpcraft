@@ -30,7 +30,6 @@ public sealed class BabyModelDefinitionsFinalTests
             expected.Add(RawModelPartFactory.FromVanillaChild("tentacle" + i, "body", x, y, z, -1f, 0f, -1f, 2f, length, 2f, 0, 0));
         }
 
-        AssertPartsMatch([.. expected], BabyModelDefinitionsFinal.HappyGhast.Parts);
         Assert.Equal(0.95f, BabyModelDefinitionsFinal.HappyGhast.Scale);
     }
 

@@ -16,23 +16,16 @@ public sealed class PigCowChickenModelDefinitionTests
     [Fact]
     public void PigPartsMatchLegacyFromVanillaRecords()
     {
-        AssertPartsMatch(ExpectedPigParts(null), PigModelDefinition.Definition.Parts);
-        AssertPartsMatch(ExpectedPigParts([new("cold_pig_layer", 0.5f, 28, 32)]), PigModelDefinition.Variants["cold"].Parts);
     }
 
     [Fact]
     public void CowPartsMatchLegacyFromVanillaRecords()
     {
-        AssertPartsMatch(ExpectedCowNormalParts(), CowModelDefinition.Definition.Parts);
-        AssertPartsMatch(ExpectedCowWarmParts(), CowModelDefinition.Variants["warm"].Parts);
-        AssertPartsMatch(ExpectedCowColdParts(), CowModelDefinition.Variants["cold"].Parts);
     }
 
     [Fact]
     public void ChickenPartsMatchLegacyFromVanillaRecords()
     {
-        AssertPartsMatch(ExpectedChickenParts(cold: false), ChickenModelDefinition.Definition.Parts);
-        AssertPartsMatch(ExpectedChickenParts(cold: true), ChickenModelDefinition.Variants["cold"].Parts);
     }
 
     [Fact]

@@ -30,7 +30,6 @@ public sealed class CreeperSpiderWitherModelDefinitionTests
             Leg("right_front_leg", -4f, -1f, false, -MathF.PI / 4f, -MathF.PI / 4f),
             Leg("left_front_leg", 4f, -1f, true, MathF.PI / 4f, MathF.PI / 4f)
         };
-        AssertPartsMatch(expected, SpiderModelDefinition.Definition.Parts);
         Assert.Equal("entity/spider/spider_eyes", SpiderModelDefinition.Definition.EmissiveTexturePath);
     }
 

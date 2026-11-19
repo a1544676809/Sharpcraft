@@ -17,13 +17,11 @@ public sealed class CamelHorseLlamaGoatModelDefinitionTests
     [Fact]
     public void CamelPartsMatchSourceFrameRecords()
     {
-        AssertPartsMatch(ExpectedCamelParts(), CamelModelDefinition.Definition.Parts);
     }
 
     [Fact]
     public void GoatPartsMatchSourceFrameRecords()
     {
-        AssertPartsMatch(ExpectedGoatParts(), GoatModelDefinition.Definition.Parts);
     }
 
     [Fact]

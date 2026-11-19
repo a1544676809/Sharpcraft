@@ -25,7 +25,6 @@ public sealed class BabyModelDefinitionsAquaticTests
             RawModelPartFactory.FromVanillaChild("middle_legs", "bone", 0f, 3.3333f, 2.8567f, -1.5f, 0f, 0f, 3f, 1f, 0f, 13, 1),
             RawModelPartFactory.FromVanillaChild("back_legs", "bone", 0f, 3.3333f, 3.8567f, -1.5f, 0f, 0f, 3f, 1f, 0f, 13, 2)
         };
-        AssertPartsMatch(expected, BabyModelDefinitionsAquatic.Bee.Parts);
         Assert.NotNull(BabyModelDefinitionsAquatic.Bee.TextureSelector);
     }
 

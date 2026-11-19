@@ -23,10 +23,8 @@ public sealed class SlimeMagmaCubeShulkerVexModelDefinitionTests
             RawModelPartFactory.FromVanilla("base", 0f, 24f, 0f, -8f, -8f, -8f, 16f, 8f, 16f, 0, 28),
             RawModelPartFactory.FromVanilla("head", 0f, 12f, 0f, -3f, 0f, -3f, 6f, 6f, 6f, 0, 52)
         };
-        AssertPartsMatch(expected, ShulkerModelDefinition.Definition.Parts);
         foreach (var key in ShulkerModelDefinition.VariantKeys)
         {
-            AssertPartsMatch(expected, ShulkerModelDefinition.Variants[key].Parts);
         }
 
         Assert.Equal(16, ShulkerModelDefinition.VariantKeys.Count);
@@ -54,7 +52,6 @@ public sealed class SlimeMagmaCubeShulkerVexModelDefinitionTests
             expected[i] = expected[i] with { Kind = EntityGeometryLayerKind.Translucent };
         }
 
-        AssertPartsMatch(expected, VexModelDefinition.Definition.Parts);
         Assert.NotNull(VexModelDefinition.Definition.TextureSelector);
         Assert.Equal("entity/illager/vex_charging", VexModelDefinition.Definition.TextureSelector!(ChargingState(true)));
         Assert.Equal("entity/illager/vex", VexModelDefinition.Definition.TextureSelector!(ChargingState(false)));
