@@ -17,7 +17,10 @@ namespace Sharpcraft.Architecture.Tests;
 /// baseline may only shrink.
 /// </summary>
 /// <remarks>
-/// 容器元素是运行时构造值，无法通过反射命名；其覆盖机制见 Issue #256。本棘轮只覆盖标量定义成员与样本文件。
+/// Container elements are constructed at run time and cannot be named through reflection, so this
+/// ratchet covers scalar definition members and sample files only; see Issue #256 for container
+/// elements. "Covered" here means the test code names the definition, including member-chain
+/// prefixes, not that a value was asserted against a reference sample.
 ///
 /// Definition coverage reads comment-free, literal-free test code and matches complete dotted tokens,
 /// including every prefix of a longer chain (A.B.C also covers A.B), so member access such as
@@ -43,6 +46,8 @@ public sealed class ModelSampleCoverageTests
     /// wholesale deletion only; real per-sample coverage is asserted by ReferencedSamples and the
     /// orphan check below.
     /// </summary>
+    // Floor against a wholesale deletion of the sample directory, not a coverage claim. Lowering
+    // this number needs its own review, otherwise a deleted sample could be absorbed by the floor.
     private const int MinimumSampleFiles = 280;
 
     /// <summary>String literals whose last path segment is a recorded reference sample.</summary>
