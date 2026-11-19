@@ -35,80 +35,6 @@ public static class SpecialItemModelDefinition
     /// </summary>
     public const int MaxBannerPatternLayers = 6;
 
-    /// <summary>Banner flag pattern overlays, one coplanar copy per layer.</summary>
-    public static readonly EntityModelDefinition BannerFlagPatternsRight = CreatePatternOverlay(
-        "special_banner_flag_patterns_right", "entity/banner", VanillaPartPose.Offset(0f, -44f, 0f), false,
-        new VanillaCubeDefinition("flag", 0, 0, -10f, 0f, -2f, 20f, 40f, 1f));
-
-    public static readonly EntityModelDefinition BannerFlagPatternsLeft = CreatePatternOverlay(
-        "special_banner_flag_patterns_left", "entity/banner", VanillaPartPose.Offset(0f, -44f, 0f), true,
-        new VanillaCubeDefinition("flag", 0, 0, -10f, 0f, -2f, 20f, 40f, 1f));
-
-    /// <summary>Shield pattern overlays: the reference re-submits the whole shield model per pattern layer.</summary>
-    public static readonly EntityModelDefinition ShieldPatternsRight = CreatePatternOverlay(
-        "special_shield_patterns_right", "entity/shield", VanillaPartPose.Zero, false,
-        new VanillaCubeDefinition("plate", 0, 0, -6f, -11f, -2f, 12f, 22f, 1f),
-        new VanillaCubeDefinition("handle", 26, 0, -1f, -3f, -1f, 2f, 6f, 6f));
-
-    public static readonly EntityModelDefinition ShieldPatternsLeft = CreatePatternOverlay(
-        "special_shield_patterns_left", "entity/shield", VanillaPartPose.Zero, true,
-        new VanillaCubeDefinition("plate", 0, 0, -6f, -11f, -2f, 12f, 22f, 1f),
-        new VanillaCubeDefinition("handle", 26, 0, -1f, -3f, -1f, 2f, 6f, 6f));
-
-    /// <summary>
-    /// Builds a pattern overlay: <see cref="MaxBannerPatternLayers"/> coplanar copies of the template cubes, each showing
-    /// only when that layer index exists, sampling the layer's pattern sprite and tinted by its dye.
-    /// </summary>
-    private static EntityModelDefinition CreatePatternOverlay(
-        string name,
-        string spritePrefix,
-        VanillaPartPose pose,
-        bool offhand,
-        params VanillaCubeDefinition[] templates)
-    {
-        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
-        for (var index = 0; index < MaxBannerPatternLayers; index++)
-        {
-            var layerIndex = index;
-            var copies = new VanillaCubeDefinition[templates.Length];
-            for (var cube = 0; cube < templates.Length; cube++)
-            {
-                copies[cube] = templates[cube] with
-                {
-                    Name = templates[cube].Name + "_" + layerIndex,
-                    VisibleWhen = state => LayerAt(state, layerIndex, offhand) is not null,
-                    TextureSelector = state => LayerAt(state, layerIndex, offhand) is { PatternAssetId: { } asset }
-                        ? spritePrefix + "/" + asset
-                        : null,
-                    TintSelector = state => DyeColors.DiffuseAt(LayerAt(state, layerIndex, offhand)?.DyeColorId ?? 0)
-                };
-            }
-
-            // Source ShieldModel/BannerFlagModel own each cube as a separate ModelPart. Emit one part per
-            // cube so the source frame (and keyed jar sample) matches one part per cube, not a merged cube group.
-            foreach (var copy in copies)
-                root.AddOrReplaceChild(copy.Name, pose, copy);
-        }
-
-        // task-206: pattern overlays re-submit the same jar ModelLayer geometry as the base shield/flag
-        // (ShieldSpecialRenderer.submitPatterns / BannerRenderer.submitPatterns), so the source frame is
-        // the already-verified base layer frame; only visibility/tint selection stays state-driven.
-        return EntityModelDefinition.FromTree(
-            name, 64, 64, new VanillaMeshDefinition(root),
-            faceTransforms: null, spritePrefix + "/base", 1f,
-            additionalTexturePaths: [spritePrefix + "/base"], baselinePx: 0f, rawSourceFrame: true);
-    }
-
-    private static Sharpcraft.Common.Network.BannerPatternLayer? LayerAt(
-        Sharpcraft.Client.World.EntityRenderState state,
-        int index,
-        bool offhand)
-    {
-        var layers = offhand
-            ? EntityModelResolver.ResolveHeldItemBannerPatterns(state, offhand: true)
-            : EntityModelResolver.ResolveHeldItemBannerPatterns(state, offhand: false);
-        return layers is not null && (uint)index < (uint)layers.Count ? layers[index] : null;
-    }
     public static readonly EntityModelDefinition BannerStanding = EntityModelDefinition.FromTree(
         "special_banner_standing", 64, 64, BuildBannerMesh(standing: true),
         faceTransforms: null, BannerTexture, 1f,
@@ -123,6 +49,15 @@ public static class SpecialItemModelDefinition
     /// <summary>Standing banner flag plane (reference <c>BannerFlagModel.createFlagLayer(true)</c>).</summary>
     public static readonly EntityModelDefinition BannerFlagStanding = EntityModelDefinition.FromTree(
         "special_banner_flag_standing", 64, 64, BuildBannerFlagMesh(standing: true),
+        faceTransforms: null, BannerTexture, 1f,
+        additionalTexturePaths: [BannerTexture], baselinePx: 0f, rawSourceFrame: true);
+
+    /// <summary>
+    /// Banner flag plane as submitted by a held banner item: the reference calls BannerFlagModel.setupAnim(0) for the
+    /// special renderer, so the flag keeps its phase-0 x rotation (#244). World samples key this pose.
+    /// </summary>
+    public static readonly EntityModelDefinition BannerFlagHeld = EntityModelDefinition.FromTree(
+        "special_banner_flag_held", 64, 64, BuildBannerFlagMesh(standing: true, phaseZero: true),
         faceTransforms: null, BannerTexture, 1f,
         additionalTexturePaths: [BannerTexture], baselinePx: 0f, rawSourceFrame: true);
 
@@ -265,12 +200,16 @@ public static class SpecialItemModelDefinition
         return new VanillaMeshDefinition(root);
     }
 
-    private static VanillaMeshDefinition BuildBannerFlagMesh(bool standing)
+    private static VanillaMeshDefinition BuildBannerFlagMesh(bool standing, bool phaseZero = false)
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
         // Reference BannerFlagModel.createFlagLayer: texOffs(0,0) box(-10,0,-2, 20,40,1) under the attachment pose.
-        root.AddOrReplaceChild("flag",
-            VanillaPartPose.Offset(0f, standing ? -44f : -20.5f, standing ? 0f : 10.5f),
+        // Held items submit phase 0, whose setupAnim x rotation is (-0.0125 + 0.01 * cos(0)) * pi (#244).
+        var pose = phaseZero
+            ? VanillaPartPose.OffsetAndRotation(0f, standing ? -44f : -20.5f, standing ? 0f : 10.5f,
+                (-0.0125f + 0.01f) * MathF.PI, 0f, 0f)
+            : VanillaPartPose.Offset(0f, standing ? -44f : -20.5f, standing ? 0f : 10.5f);
+        root.AddOrReplaceChild("flag", pose,
             new VanillaCubeDefinition("flag", 0, 0, -10f, 0f, -2f, 20f, 40f, 1f));
         return new VanillaMeshDefinition(root);
     }

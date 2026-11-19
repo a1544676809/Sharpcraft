@@ -219,6 +219,7 @@ public sealed partial class EntityTracker
                 EquipmentHasEnchantments: entity.EquipmentHasEnchantments,
                 EquipmentHasBannerPatterns: entity.EquipmentHasBannerPatterns,
                 EquipmentBannerPatternLayers: entity.EquipmentBannerPatternLayers,
+                EquipmentBannerBaseColors: entity.EquipmentBannerBaseColors,
                 EquipmentTrimMaterials: entity.EquipmentTrimMaterials,
                 EquipmentTrimPatterns: entity.EquipmentTrimPatterns,
                 PlayerBodyTexture: playerSkin?.Body?.Path,

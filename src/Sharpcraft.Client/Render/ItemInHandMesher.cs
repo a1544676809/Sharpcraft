@@ -26,11 +26,13 @@ public sealed class ItemInHandMesher
     private readonly DynamicGeometry _glintGeometry = new();
     private readonly DynamicGeometry _specialGlintGeometry = new();
     private readonly List<ItemModelQuad> _quads = [];
-    // Held special raw hand-chain output, two slots per kind: trident, shield, chest, head, banner, banner_flag.
+    // Held special raw hand-chain output: trident/shield/chest/head/banner/banner_flag (12 slots), then the banner
+    // pattern overlay (base + up to 6 layers per hand = 14 slots) and the shield pattern overlay (14 slots).
     // Only the trident/shield slots emit a foil glint companion.
-    private const int HeldSpecialSlotCount = 12;
-    private static readonly string[] HeldSpecialLayerNames =
-        ["trident", "trident", "shield", "shield", "chest", "chest", "head", "head", "banner", "banner", "banner_flag", "banner_flag"];
+    private const int HeldSpecialSlotCount = 40;
+    private const int BannerPatternSlotBase = 12;
+    private const int ShieldPatternSlotBase = 26;
+    private static readonly string[] HeldSpecialLayerNames = CreateHeldSpecialLayerNames();
     private readonly DynamicGeometry[] _heldSpecialCutout = CreateGeometryBuffer(HeldSpecialSlotCount);
     private readonly DynamicGeometry[] _heldSpecialGlint = CreateGeometryBuffer(HeldSpecialSlotCount);
     private readonly int[] _heldSpecialCutoutFloats = new int[HeldSpecialSlotCount];
@@ -279,10 +281,20 @@ public sealed class ItemInHandMesher
                 var specialType = specialId.StartsWith("minecraft:", StringComparison.Ordinal)
                     ? specialId["minecraft:".Length..]
                     : specialId;
-                if (specialType is "chest" or "head" or "player_head" or "banner"
+                if (specialType is "chest" or "head" or "player_head" or "banner" or "shield"
                     && EntityModelResolver.ResolveHeldItemSpecialTexture(entity, offhand) is { } specialTexture)
                 {
                     yield return specialTexture;
+                }
+
+                if (specialType is "banner" or "shield")
+                {
+                    // Pattern overlay sprites: the re-submitted flag/shield pattern base plus one sprite per layer.
+                    yield return specialType == "banner" ? "entity/banner/base" : "entity/shield/base";
+                    foreach (var patternSprite in EntityModelResolver.ResolveHeldItemPatternSprites(entity, offhand))
+                    {
+                        yield return patternSprite;
+                    }
                 }
             }
         }
@@ -404,7 +416,6 @@ public sealed class ItemInHandMesher
         var texture = kind switch
         {
             0 => SpecialItemModelDefinition.TridentTexture,
-            1 => SpecialItemModelDefinition.ShieldTexture,
             _ => EntityModelResolver.ResolveHeldItemSpecialTexture(entity, offhand)
         };
         if (texture is null || itemAtlas.Get(texture) is not { } sprite)
@@ -433,8 +444,14 @@ public sealed class ItemInHandMesher
         if (kind == 4)
         {
             // The reference BannerSpecialRenderer submits the body and the flag plane through the same item display
-            // and special local transform; emit the flag as the adjacent slot with the same hand frame.
+            // and special local transform; emit the flag as the adjacent slot with the same hand frame, then the
+            // pattern overlay (base colour + per-layer sprites) on the flag model.
             EmitHeldSpecialGeometry(entity, kind + 1, offhand, sprite, world);
+            EmitHeldSpecialPatterns(entity, offhand, banner: true, world, itemAtlas);
+        }
+        else if (kind == 1)
+        {
+            EmitHeldSpecialPatterns(entity, offhand, banner: false, world, itemAtlas);
         }
 
         var foil = offhand ? entity.OffHandFoil : entity.MainHandFoil;
@@ -463,7 +480,7 @@ public sealed class ItemInHandMesher
     /// resolved by the caller.</summary>
     private void EmitHeldSpecialGeometry(EntityRenderState entity, int kind, bool offhand, SpriteRect sprite, Matrix4x4 world)
     {
-        var model = kind == 5 ? SpecialItemModelDefinition.BannerFlagStanding : null;
+        var model = kind == 5 ? SpecialItemModelDefinition.BannerFlagHeld : null;
         if (model is null)
         {
             return;
@@ -486,6 +503,90 @@ public sealed class ItemInHandMesher
         }
 
         WriteHeldSpecialIndices(target, ref _heldSpecialCutoutIndices[slot], _heldSpecialCutoutFloats[slot], vertices);
+    }
+
+    /// <summary>
+    /// Emits the banner/shield pattern overlay through the same raw hand frame as the body/flag/shield. The reference
+    /// re-submits the same flag/shield model once for the pattern base layer (tinted by the base colour) and once per
+    /// BannerPatternLayers entry (tinted by that layer's dye colour), each with its own sprite (#244).
+    /// </summary>
+    private void EmitHeldSpecialPatterns(EntityRenderState entity, bool offhand, bool banner, Matrix4x4 world,
+        ISpriteAtlas itemAtlas)
+    {
+        var patterns = EntityModelResolver.ResolveHeldItemBannerPatterns(entity, offhand);
+        var hasPatterns = banner || (patterns is { Count: > 0 }) || entity.EquipmentBannerBaseColorAt(offhand ? 1 : 0) is not null;
+        if (!hasPatterns)
+        {
+            return;
+        }
+
+        var model = banner ? SpecialItemModelDefinition.BannerFlagHeld : SpecialItemModelDefinition.Shield;
+        var spritePrefix = banner ? "entity/banner/" : "entity/shield/";
+        var baseColor = EntityModelResolver.ResolveHeldItemBannerBaseColor(entity, offhand);
+        WriteHeldSpecialPatternLayer(banner, layerIndex: 0, offhand, model, spritePrefix + "base",
+            DyeColors.DiffuseAt(baseColor), world, itemAtlas);
+
+        if (patterns is null)
+        {
+            return;
+        }
+
+        var count = Math.Min(patterns.Count, SpecialItemModelDefinition.MaxBannerPatternLayers);
+        for (var index = 0; index < count; index++)
+        {
+            if (patterns[index].PatternAssetId is not { Length: > 0 } asset)
+            {
+                continue;
+            }
+
+            WriteHeldSpecialPatternLayer(banner, index + 1, offhand, model, spritePrefix + asset,
+                DyeColors.DiffuseAt(patterns[index].DyeColorId), world, itemAtlas);
+        }
+    }
+
+    private void WriteHeldSpecialPatternLayer(bool banner, int layerIndex, bool offhand, EntityModelDefinition model,
+        string texture, Vector3 tint, Matrix4x4 world, ISpriteAtlas itemAtlas)
+    {
+        if (itemAtlas.Get(texture) is not { } sprite)
+        {
+            return;
+        }
+
+        var slot = (banner ? BannerPatternSlotBase : ShieldPatternSlotBase) + (layerIndex * 2) + (offhand ? 1 : 0);
+        var geometry = HeldSpecialGeometryFor(model);
+        var target = _heldSpecialCutout[slot];
+        var vertices = geometry.Positions.Length / 3;
+        target.Reserve(_heldSpecialCutoutFloats[slot] + (vertices * ChunkMesher.FloatsPerVertex),
+            _heldSpecialCutoutIndices[slot] + ((vertices / 4) * 6));
+        for (var vertex = 0; vertex < vertices; vertex++)
+        {
+            var point = new Vector3(geometry.Positions[vertex * 3], geometry.Positions[(vertex * 3) + 1],
+                geometry.Positions[(vertex * 3) + 2]);
+            point = Vector3.Transform(point, world);
+            TerrainVertexWriter.Write(target.Vertices, ref _heldSpecialCutoutFloats[slot],
+                point.X, point.Y, point.Z, tint.X, tint.Y, tint.Z,
+                geometry.Uvs[vertex * 2], geometry.Uvs[(vertex * 2) + 1], sprite, sky: 1f, block: 0f);
+        }
+
+        WriteHeldSpecialIndices(target, ref _heldSpecialCutoutIndices[slot], _heldSpecialCutoutFloats[slot], vertices);
+    }
+
+    private static string[] CreateHeldSpecialLayerNames()
+    {
+        var names = new string[HeldSpecialSlotCount];
+        string[] baseNames =
+            ["trident", "trident", "shield", "shield", "chest", "chest", "head", "head", "banner", "banner", "banner_flag", "banner_flag"];
+        Array.Copy(baseNames, names, baseNames.Length);
+        for (var layer = 0; layer <= SpecialItemModelDefinition.MaxBannerPatternLayers; layer++)
+        {
+            var suffix = layer == 0 ? "_base" : "_" + (layer - 1);
+            names[BannerPatternSlotBase + (layer * 2)] = "banner_pattern" + suffix;
+            names[BannerPatternSlotBase + (layer * 2) + 1] = "banner_pattern" + suffix;
+            names[ShieldPatternSlotBase + (layer * 2)] = "shield_pattern" + suffix;
+            names[ShieldPatternSlotBase + (layer * 2) + 1] = "shield_pattern" + suffix;
+        }
+
+        return names;
     }
 
     private static DynamicGeometry[] CreateGeometryBuffer(int count)
