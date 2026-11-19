@@ -74,15 +74,9 @@ public static partial class ChunkMesher
                     // The biome tint belongs to the model path as much as to the cube path. It was applied only by the
                     // merged cube pass, so every block whose model resolves, which is grass, leaves and plants, drew
                     // untinted: 227's grey grass and white leaves.
-                    (float R, float G, float B)? tintColour = null;
-                    if (tint is not null && layout?.BlockAt(state) is { } tintedBlock)
-                    {
-                        var kind = BlockTintTable.KindOf(tintedBlock);
-                        if (kind != BlockTintKind.None)
-                        {
-                            tintColour = BiomeTint.ToMultiplier(tint.ColourAt(kind, baseX + x, baseY + y, baseZ + z));
-                        }
-                    }
+                    var tintColour = tint is not null && layout?.BlockAt(state) is { } tintedBlock
+                        ? BlockTintTable.MultiplierFor(tint, tintedBlock, baseX + x, baseY + y, baseZ + z)
+                        : null;
 
                     // Per-face light: each face reads the cell it looks at, the way the reference does. A solid block
                     // has an unlit cell of its own, so the single value above would darken every model block.

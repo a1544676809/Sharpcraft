@@ -71,4 +71,30 @@ public static class BlockTintTable
     /// </summary>
     /// <param name="kind">Tint kind of the block.</param>
     public static bool TintsTopFaceOnly(BlockTintKind kind) => kind == BlockTintKind.Grass;
+
+    /// <summary>
+    /// The colour multiplier a block's tinted faces are drawn with, or null when the block takes no tint.
+    /// </summary>
+    /// <param name="tint">Biome tint, or null when the caller has none.</param>
+    /// <param name="block">Block identifier the state resolves to.</param>
+    /// <param name="x">Block X, for the biome lookup.</param>
+    /// <param name="y">Block Y, for the biome lookup.</param>
+    /// <param name="z">Block Z, for the biome lookup.</param>
+    /// <remarks>
+    /// This is the one place that decides whether a block is tinted, shared by both mesh paths. The element model path
+    /// applies it to the faces whose model declares a tint index; the cube path applies it per face rule. Issue 227 was
+    /// the model path not asking at all, so keeping the decision here means a test can pin it without a GPU.
+    /// </remarks>
+    public static (float R, float G, float B)? MultiplierFor(BiomeTint? tint, Identifier block, int x, int y, int z)
+    {
+        if (tint is null)
+        {
+            return null;
+        }
+
+        var kind = KindOf(block);
+        return kind == BlockTintKind.None
+            ? null
+            : BiomeTint.ToMultiplier(tint.ColourAt(kind, x, y, z));
+    }
 }

@@ -66,15 +66,31 @@ public sealed class SpriteRectTableTests
     [Fact]
     public void EveryAllowListedProducerStillExists()
     {
-        // A stale entry would silently widen the exemption to a file that no longer needs it.
-        var files = SourceFiles().Select(file => Path.GetRelativePath(RepositoryLocator.Root, file).Replace('\\', '/'))
-            .ToHashSet(StringComparer.Ordinal);
-
+        // A stale entry would silently widen the exemption to a file that no longer needs it, so an entry has to name a
+        // file that still constructs a rectangle *and* still relies on the exemption.
+        var offenders = new List<string>();
         foreach (var entry in IntermediateOnly)
         {
-            Assert.Contains(entry.Key, files);
-            Assert.False(string.IsNullOrWhiteSpace(entry.Value), $"{entry.Key} has no reason recorded");
+            var path = Path.Combine(RepositoryLocator.Root, entry.Key.Replace('/', Path.DirectorySeparatorChar));
+            if (!File.Exists(path))
+            {
+                offenders.Add($"{entry.Key}: file is gone");
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(entry.Value))
+            {
+                offenders.Add($"{entry.Key}: no reason recorded");
+                continue;
+            }
+
+            if (!ConstructionWindows(File.ReadAllText(path)).Any())
+            {
+                offenders.Add($"{entry.Key}: no longer constructs a SpriteRect, so the exemption is stale");
+            }
         }
+
+        Assert.Empty(offenders);
     }
 
     [Fact]

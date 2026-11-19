@@ -44,8 +44,14 @@ public sealed class ChunkMeshCache
     /// <param name="sprites">Atlas mapping, or null for untextured geometry.</param>
     /// <param name="merge">Whether coplanar faces are greedily merged.</param>
     /// <returns>The merged geometry.</returns>
-    public static MeshData MeshWorldOnce(ClientWorld world, BlockSpriteMap? sprites, bool merge, BlockModelSet? models = null) =>
-        ChunkMesher.Mesh(world, airState: 0, maxBlocks: 2_000_000, sprites: sprites, merge: merge, models: models);
+    public static MeshData MeshWorldOnce(
+        ClientWorld world,
+        BlockSpriteMap? sprites,
+        bool merge,
+        BlockModelSet? models = null,
+        Sharpcraft.Common.Registries.BlockStateLayout? layout = null,
+        BiomeTint? tint = null) =>
+        ChunkMesher.Mesh(world, airState: 0, maxBlocks: 2_000_000, sprites: sprites, merge: merge, models: models, layout: layout, tint: tint);
 
     /// <summary>
     /// Meshes one chunk from an explicit parameter set, for callers that hold no cache (the offscreen frame).

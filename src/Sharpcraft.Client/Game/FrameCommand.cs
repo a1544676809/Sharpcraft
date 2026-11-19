@@ -988,6 +988,12 @@ internal static partial class FrameCommand
                 Console.WriteLine($"  demo block (0,{y},0) state {world.GetBlockState(0, y, 0)}");
             }
         }
+        using var resources = CreateResourceManager();
+
+        // The demo world has no biome data, so this entry passes neither layout nor tint and the diagnostic frame keeps
+        // its baseline geometry. That is a deliberate local-scene hole, not production: the live session meshes through
+        // ChunkMeshCache/ChunkWorkerPool with both, and both entries accept them (issue 227). Passing the layout here
+        // changes this scene's culling (2392 -> 4176 triangles), which is a separate question and not this issue's.
         var mesh = Sharpcraft.Client.Render.ChunkMeshCache.MeshWorldOnce(
             world, prepared?.Map, GameOptions.Get("MC_MESH_NOMERGE") != "1", prepared?.Models);
         Console.WriteLine($"local demo: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
@@ -996,7 +1002,6 @@ internal static partial class FrameCommand
         var centre = (bounds.Min + bounds.Max) / 2f;
         var (eye, target) = CameraMath.DefaultCamera(centre, 16f);
 
-        using var resources = CreateResourceManager();
         var request = new FrameRequest(
             width,
             height,
