@@ -9,30 +9,14 @@ using Xunit;
 namespace Sharpcraft.Client.Tests.Render;
 
 /// <summary>
-/// T-678: proves the DSL-baked allay / bat / bee parts are value-identical to the legacy
-/// FromVanilla/FromVanillaChild records (nested chains, zero-width parts, wing grow/rotations, allay translucency), that
-/// the child order and parent links are preserved, and that the bee texture selector and additional texture paths and
-/// all definition names/dims/paths are unchanged.
+/// Allay/bat/bee definition structural invariants: child order and parent links are preserved, allay translucency,
+/// the bee texture selector and additional texture paths, and definition names/dims/paths are unchanged.
+/// The former flat <c>AssertPartsMatch</c> value checks were removed (#231): jar source-sample strict equivalence for
+/// these families is provided by <see cref="LivingRawReferenceSampleTests.RawBakeMatchesSourceVertices"/> (keyed,
+/// 1e-5 + UV half) through the compiled mesher, which is a stronger primary-evidence check.
 /// </summary>
 public sealed class AllayBatBeeModelDefinitionTests
 {
-    [Fact]
-    public void AllayPartsMatchSourceFrameRecords()
-    {
-        AssertPartsMatch(ExpectedAllayParts(), AllayModelDefinition.Definition.Parts);
-    }
-
-    [Fact]
-    public void BatPartsMatchSourceFrameRecords()
-    {
-        AssertPartsMatch(ExpectedBatParts(), BatModelDefinition.Definition.Parts);
-    }
-
-    [Fact]
-    public void BeePartsMatchSourceFrameRecords()
-    {
-        AssertPartsMatch(ExpectedBeeParts(), BeeModelDefinition.Definition.Parts);
-    }
 
     [Fact]
     public void AllayKeepsChildOrderParentLinksAndTranslucentKind()
