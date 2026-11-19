@@ -79,6 +79,10 @@ var min = new Vector3(feet.X + centreX - halfW, feet.Y + bottom, feet.Z + centre
   - `poseStack.scale(-1, -1, 1)`
   - `poseStack.translate(0, -1.501, 0)`
 - `EntityModel.MODEL_Y_OFFSET = -1.501F`。
+- 实现口径（B-1/#228 校正后）：raw living 的翻转基线取 `VanillaMeshBake.ReferencePivotHeight = 24.016f` px
+  （= 1.501 块，正是 `translate(0,-1.501,0)` 的像素值），由 `EntityModelTransform.ForRawSourceFrame` 施加；
+  `EntityModelDefinition.SourceFrameBaselinePx` 默认即该常量（相对已摆放模型的 layer 显式传 0）。此前默认 24px
+  （1.500 块）与源差 0.001 块，变体迁移时一并校正（`VariantRawFrameTests` 以源 world-frame 样本 1e-5 验收）。
 
 我们当前把这些语义拆成了每个 part 的 `Bottom` 和符号翻转，导致每个新 mob 都要重新推导。
 
