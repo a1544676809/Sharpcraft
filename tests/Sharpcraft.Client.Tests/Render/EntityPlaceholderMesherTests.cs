@@ -105,7 +105,14 @@ public sealed class EntityPlaceholderMesherTests
         EntityRenderState[] states = [State(1, 0, 0, 0), State(2, 4, 0, 0)];
 
         var sprite = Sprite(); // hoisted: SpriteRect is a reference type, so building one per frame would allocate
-        mesher.Build(states, sprite); // warm the buffers
+        // Warm enough frames to cross the tiered-JIT promotion threshold before measuring. A single warm call
+        // leaves the loop body at tier-0; when promotion happens mid-measurement the runtime charges one-time
+        // bookkeeping to this thread and the 0-allocation assertion fails depending on test order. This only
+        // extends warm-up; the measured assertion below stays exactly 0 bytes.
+        for (var warm = 0; warm < 64; warm++)
+        {
+            mesher.Build(states, sprite);
+        }
 
         var before = GC.GetAllocatedBytesForCurrentThread();
         for (var frame = 0; frame < 64; frame++)
