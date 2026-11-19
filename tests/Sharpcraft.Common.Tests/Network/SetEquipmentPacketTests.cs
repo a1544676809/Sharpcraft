@@ -556,6 +556,47 @@ public sealed class SetEquipmentPacketTests
     }
 
     [Fact]
+    public void PotionContentsCustomColorIsCaptured()
+    {
+        // ref://mc-26.3-analysis/src/net/minecraft/world/item/alchemy/PotionContents.java:58-68 STREAM_CODEC order:
+        // optional potion (bool), optional int customColor (bool + int), effect list (varint), optional name (bool).
+        var potion = DataComponentTypes.GetId("potion_contents");
+        Assert.True(potion >= 0);
+        const int color = unchecked((int)0xFF2A7F1E);
+
+        var body = Body(
+            b =>
+            {
+                b.Add(0x80);
+                b.AddRange(VarInt(1));
+                b.AddRange(VarInt(1));
+                b.AddRange(VarInt(1));
+                b.AddRange(VarInt(0));
+                b.AddRange(VarInt(potion));
+                b.Add(0);                    // no potion id
+                b.Add(1);                    // has custom color
+                // PayloadReader.TryReadInt is big-endian (network byte order).
+                var colorBytes = new byte[4];
+                System.Buffers.Binary.BinaryPrimitives.WriteInt32BigEndian(colorBytes, color);
+                b.AddRange(colorBytes);
+                b.AddRange(VarInt(0));       // no custom effects
+                b.Add(0);                    // no custom name
+            },
+            b =>
+            {
+                b.Add(7);
+                b.AddRange(VarInt(0));
+            });
+
+        var result = Read(body, out _, out var complete, out var status);
+
+        Assert.Equal(DecodeStatus.Success, status);
+        Assert.True(complete);
+        Assert.Equal(2, result.Length);
+        Assert.Equal(color, result[0].Components.PotionColor);
+    }
+
+    [Fact]
     public void CustomDataNbtIsSkippedAndParsingContinues()
     {
         var customData = DataComponentTypes.GetId("custom_data");

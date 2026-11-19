@@ -596,6 +596,7 @@ public readonly record struct EntityRenderState(
     bool DragonIsSitting = false,
     double DragonDistanceToEgg = 0,
     bool IsHoldingPotion = false,
+    int? HeldPotionColor = null,
     bool IsPowered = false,
     bool IsSmall = false,
     bool ShowArms = false,

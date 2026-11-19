@@ -192,6 +192,22 @@ public sealed class ItemEntityMesherTests
     }
 
     [Fact]
+    public void PotionTintUsesTheSourceDefaultAndCustomColor()
+    {
+        // items/potion.json: tints [{ type: minecraft:potion, default: -13083194 }].
+        var tint = ItemTintSource.Parse(System.Text.Json.JsonDocument.Parse(
+            """{"type":"minecraft:potion","default":-13083194}""").RootElement);
+
+        Assert.NotNull(tint);
+        Assert.Equal(ItemTintKind.Potion, tint!.Value.Kind);
+        Assert.Equal(ItemTintSource.PotionDefaultColor, tint.Value.Argb);
+        var color = tint.Value.Evaluate(grass: null);
+        Assert.Equal(((-13083194 >> 16) & 0xFF) / 255f, color.X, 6);
+        Assert.Equal(((-13083194 >> 8) & 0xFF) / 255f, color.Y, 6);
+        Assert.Equal((-13083194 & 0xFF) / 255f, color.Z, 6);
+    }
+
+    [Fact]
     public void GrassTintSamplesTheColormapWithTheReferenceFormula()
     {
         // Fill a 256x256 map with a per-index colour, then check the reference index maths: x = (1-temp)*255,

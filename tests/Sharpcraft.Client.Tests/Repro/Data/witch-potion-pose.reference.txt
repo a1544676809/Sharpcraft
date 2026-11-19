@@ -1,0 +1,73 @@
+# Sharpcraft 原版基准样本（reference sample）— B-4 witch held-potion pose + tint
+# source: Minecraft 26.3 client (jar sha1 e877b6a07acd633fb3bb475002175cec036e7b87)
+# tool: ref://mc-26.3-analysis/vectors/b-class-source/held-world/WitchPotionPoseProbe.java
+# space: living world render units (blocks): WitchItemLayer.applyTranslation pose then ItemDisplayContext.GROUND transform; calibration unit cube corners; entity yaw/translation/flip excluded; NOT the item-model quads
+# ref: ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/layers/WitchItemLayer.java:14-27 (applyTranslation potion branch)
+# ref: ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/layers/CrossedArmsItemLayer.java:30-36 (applyTranslation non-potion branch)
+# ref: ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/state/HoldingEntityRenderState.java:14 (ItemDisplayContext.GROUND)
+# ref: ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/witch/WitchModel.java:67-80 (setupAnim isHoldingItem nose override)
+# ref: ref://mc-26.3-analysis/src/assets/minecraft/items/potion.json (tint minecraft:potion default -13083194)
+# ref: ref://mc-26.3-analysis/src/assets/minecraft/models/item/potion.json (layer0=potion_overlay, layer1=potion)
+# ref: ref://mc-26.3-analysis/src/assets/minecraft/models/item/generated.json (ground display: translation [0,2,0]*0.0625, scale 0.5)
+# columns: branch|vertex|x|y|z ; #MATRIX <branch_POSE|FULL> m0..m15 column-major JOML
+# calibration cube unit corners in item-local space [0,1]^3 transformed by FULL matrix
+# tool: ref://mc-26.3-analysis/vectors/b-class-source/held-world/WitchPotionPoseProbe.java
+# ref: ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/layers/WitchItemLayer.java:14-27 (applyTranslation)
+# ref: ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/layers/CrossedArmsItemLayer.java:30-36 (applyTranslation)
+# ref: ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/state/HoldingEntityRenderState.java:14 (ItemDisplayContext.GROUND)
+# ref: ref://mc-26.3-analysis/src/assets/minecraft/items/potion.json (tint minecraft:potion default -13083194)
+# ref: ref://mc-26.3-analysis/src/assets/minecraft/models/item/potion.json (layer0=potion_overlay, layer1=potion)
+#TINT potion default -13083194
+#LAYERS potion item/potion_overlay|item/potion
+#MATRIX POTION_POSE -0.991290987 0.127003372 -0.034816444 0.000000000 -0.131398439 -0.971466064 0.197453886 0.000000000 -0.008745683 0.200309098 0.979693651 0.000000000 0.055661947 0.314293265 -0.289581716 1.000000000
+#MATRIX POTION_FULL -0.495645493 0.063501686 -0.017408222 0.000000000 -0.065699220 -0.485733032 0.098726943 0.000000000 -0.004372842 0.100154549 0.489846826 0.000000000 0.322095931 0.353898406 -0.550482750 1.000000000
+POTION	0	0.322095931	0.353898406	-0.550482750
+POTION	1	-0.173549563	0.417400092	-0.567891002
+POTION	2	-0.239248782	-0.068332940	-0.469164044
+POTION	3	0.256396711	-0.131834626	-0.451755822
+POTION	4	0.317723095	0.454052955	-0.060635924
+POTION	5	-0.177922398	0.517554641	-0.078044146
+POTION	6	-0.243621618	0.031821609	0.020682797
+POTION	7	0.252023876	-0.031680077	0.038091019
+POTION	8	0.322095931	0.353898406	-0.550482750
+POTION	9	-0.173549563	0.417400092	-0.567891002
+POTION	10	-0.177922398	0.517554641	-0.078044146
+POTION	11	0.317723095	0.454052955	-0.060635924
+POTION	12	-0.239248782	-0.068332940	-0.469164044
+POTION	13	0.256396711	-0.131834626	-0.451755822
+POTION	14	0.252023876	-0.031680077	0.038091019
+POTION	15	-0.243621618	0.031821609	0.020682797
+POTION	16	0.322095931	0.353898406	-0.550482750
+POTION	17	0.256396711	-0.131834626	-0.451755822
+POTION	18	0.252023876	-0.031680077	0.038091019
+POTION	19	0.317723095	0.454052955	-0.060635924
+POTION	20	-0.173549563	0.417400092	-0.567891002
+POTION	21	-0.239248782	-0.068332940	-0.469164044
+POTION	22	-0.243621618	0.031821609	0.020682797
+POTION	23	-0.177922398	0.517554641	-0.078044146
+#MATRIX CROSS_POSE 1.069999933 0.000000000 0.000000000 0.000000000 0.000000000 -1.069999933 0.000000000 0.000000000 0.000000000 0.000000000 -1.069999933 0.000000000 0.000000000 0.420412481 -0.426299989 1.000000000
+#MATRIX CROSS_FULL 0.534999967 0.000000000 0.000000000 0.000000000 0.000000000 -0.534999967 0.000000000 0.000000000 0.000000000 0.000000000 -0.534999967 0.000000000 -0.267499983 0.554162502 -0.158800006 1.000000000
+CROSS	0	-0.267499983	0.554162502	-0.158800006
+CROSS	1	0.267499983	0.554162502	-0.158800006
+CROSS	2	0.267499983	0.019162536	-0.158800006
+CROSS	3	-0.267499983	0.019162536	-0.158800006
+CROSS	4	-0.267499983	0.554162502	-0.693799973
+CROSS	5	0.267499983	0.554162502	-0.693799973
+CROSS	6	0.267499983	0.019162536	-0.693799973
+CROSS	7	-0.267499983	0.019162536	-0.693799973
+CROSS	8	-0.267499983	0.554162502	-0.158800006
+CROSS	9	0.267499983	0.554162502	-0.158800006
+CROSS	10	0.267499983	0.554162502	-0.693799973
+CROSS	11	-0.267499983	0.554162502	-0.693799973
+CROSS	12	0.267499983	0.019162536	-0.158800006
+CROSS	13	-0.267499983	0.019162536	-0.158800006
+CROSS	14	-0.267499983	0.019162536	-0.693799973
+CROSS	15	0.267499983	0.019162536	-0.693799973
+CROSS	16	-0.267499983	0.554162502	-0.158800006
+CROSS	17	-0.267499983	0.019162536	-0.158800006
+CROSS	18	-0.267499983	0.019162536	-0.693799973
+CROSS	19	-0.267499983	0.554162502	-0.693799973
+CROSS	20	0.267499983	0.554162502	-0.158800006
+CROSS	21	0.267499983	0.019162536	-0.158800006
+CROSS	22	0.267499983	0.019162536	-0.693799973
+CROSS	23	0.267499983	0.554162502	-0.693799973

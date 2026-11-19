@@ -22,7 +22,8 @@ public readonly record struct ItemComponentInfo(
     bool HasEnchantments = false,
     string? ItemModelId = null,
     int? BaseColorId = null,
-    IReadOnlyList<BannerPatternLayer>? BannerPatternLayers = null)
+    IReadOnlyList<BannerPatternLayer>? BannerPatternLayers = null,
+    int? PotionColor = null)
 {
     /// <summary>True when some component payload could not be decoded and the rest of the packet was skipped.</summary>
     public bool HasUnknownComponents => Opaque;
@@ -479,7 +480,7 @@ internal static class ItemComponentPatchReader
 
         if (typeId == PotionContents)
         {
-            return TrySkipPotionContents(ref reader);
+            return TryReadPotionContents(ref reader, ref info);
         }
 
         if (typeId == Fireworks)
@@ -1009,13 +1010,30 @@ internal static class ItemComponentPatchReader
         return !hasHidden || TrySkipMobEffectDetails(ref reader, depth + 1);
     }
 
-    private static bool TrySkipPotionContents(ref PayloadReader reader)
+    // Wire order follows PotionContents.STREAM_CODEC (ref://mc-26.3-analysis/src/net/minecraft/world/item/alchemy/PotionContents.java:58-68):
+    // optional(potion holder) -> optional(int customColor) -> list(mobEffectInstance) -> optional(string customName).
+    // Only customColor is consumed for rendering; the potion/effects/name fields are still fully drained to keep the
+    // packet stream aligned. Effect-derived colours need the potion registry and are not available at this layer.
+    private static bool TryReadPotionContents(ref PayloadReader reader, ref ItemComponentInfo info)
     {
         if (reader.TryReadBool(out var hasPotion) != DecodeStatus.Success ||
             (hasPotion && reader.TryReadVarInt(out _) != DecodeStatus.Success) ||
-            reader.TryReadBool(out var hasColor) != DecodeStatus.Success ||
-            (hasColor && reader.TryReadInt(out _) != DecodeStatus.Success) ||
-            reader.TryReadVarInt(out var effects) != DecodeStatus.Success ||
+            reader.TryReadBool(out var hasColor) != DecodeStatus.Success)
+        {
+            return false;
+        }
+
+        int? customColor = null;
+        if (hasColor)
+        {
+            if (reader.TryReadInt(out var color) != DecodeStatus.Success)
+            {
+                return false;
+            }
+            customColor = color;
+        }
+
+        if (reader.TryReadVarInt(out var effects) != DecodeStatus.Success ||
             effects < 0)
         {
             return false;
@@ -1029,12 +1047,14 @@ internal static class ItemComponentPatchReader
             }
         }
 
-        if (reader.TryReadBool(out var hasName) != DecodeStatus.Success)
+        if (reader.TryReadBool(out var hasName) != DecodeStatus.Success ||
+            (hasName && reader.TryReadString(out _) != DecodeStatus.Success))
         {
             return false;
         }
 
-        return !hasName || reader.TryReadString(out _) == DecodeStatus.Success;
+        info = info with { PotionColor = customColor };
+        return true;
     }
 
     private static bool TrySkipFireworks(ref PayloadReader reader)

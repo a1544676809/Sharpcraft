@@ -35,6 +35,14 @@ public readonly record struct ItemTintSource(ItemTintKind Kind, int Argb, double
                 var downfall = element.TryGetProperty("downfall", out var d) ? d.GetDouble() : 1d;
                 return new ItemTintSource(ItemTintKind.Grass, 0, temperature, downfall);
 
+            case "minecraft:potion":
+                // ref://mc-26.3-analysis/src/net/minecraft/client/color/item/ItemTintSources.java:18 registers `potion`;
+                // its `default` is the colour used when the stack has no resolvable potion colour.
+                var fallback = element.TryGetProperty("default", out var def) && def.ValueKind == System.Text.Json.JsonValueKind.Number
+                    ? def.GetInt32()
+                    : PotionDefaultColor;
+                return new ItemTintSource(ItemTintKind.Potion, fallback, 0d, 0d);
+
             default:
                 return null;
         }
@@ -47,6 +55,7 @@ public readonly record struct ItemTintSource(ItemTintKind Kind, int Argb, double
         {
             ItemTintKind.Constant => Argb,
             ItemTintKind.Grass => grass?.Get(Temperature, Downfall) ?? White,
+            ItemTintKind.Potion => Argb,
             _ => White
         };
 
@@ -58,6 +67,12 @@ public readonly record struct ItemTintSource(ItemTintKind Kind, int Argb, double
 
     /// <summary>Opaque white, the neutral tint multiplier.</summary>
     public const int White = unchecked((int)0xFFFFFFFF);
+
+    /// <summary>
+    /// Reference base potion colour, <c>PotionContents.BASE_POTION_COLOR</c> and the `default` of
+    /// <c>minecraft:potion</c> in <c>items/potion.json</c> (ref://mc-26.3-analysis/src/net/minecraft/world/item/alchemy/PotionContents.java:47).
+    /// </summary>
+    public const int PotionDefaultColor = -13083194;
 }
 
 /// <summary>Which reference tint source an entry is.</summary>
@@ -68,7 +83,10 @@ public enum ItemTintKind : byte
     Constant = 0,
 
     /// <summary><c>minecraft:grass</c>: sampled from the grass colormap.</summary>
-    Grass = 1
+    Grass = 1,
+
+    /// <summary><c>minecraft:potion</c>: the potion stack colour (custom colour or potion effects).</summary>
+    Potion = 2
 }
 
 /// <summary>
