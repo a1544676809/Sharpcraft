@@ -23,34 +23,13 @@ public sealed class WitchHeldPotionTests
         AppContext.BaseDirectory, "Repro", "Data", name);
 
     /// <summary>
-    /// Locates the repository root from the running assembly by walking up to the AGENTS.md / Sharpcraft.slnx
-    /// markers, the same way StateMatrixBaseline.FindRepositoryRoot does. No absolute path is baked in.
-    /// </summary>
-    private static string FindRepositoryRoot()
-    {
-        var directory = new DirectoryInfo(Path.GetFullPath(AppContext.BaseDirectory));
-        while (directory is not null)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "AGENTS.md"))
-                || File.Exists(Path.Combine(directory.FullName, "Sharpcraft.slnx")))
-            {
-                return directory.FullName;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new DirectoryNotFoundException("repository root (AGENTS.md / Sharpcraft.slnx) not found");
-    }
-
-    /// <summary>
-    /// Reads the jar potion/effect colour table. Data rows are tab separated as kind|id|color|effects; the
+    /// Reads the jar potion/effect colour table from the test output directory, the same way every other
+    /// reference-sample test locates its data. Data rows are tab separated as kind|id|color|effects; the
     /// header documents the columns with '|' but the probe writes tabs. A missing or empty file fails the test.
     /// </summary>
     private static List<(string Kind, string Id, int Color)> LoadPotionColors()
     {
-        var path = Path.Combine(
-            FindRepositoryRoot(), "tests", "Sharpcraft.Client.Tests", "Repro", "Data", "potion-colors.reference.txt");
+        var path = SamplePath("potion-colors.reference.txt");
         Assert.True(File.Exists(path), $"jar colour sample missing: {path}");
         var rows = new List<(string, string, int)>();
         foreach (var line in File.ReadLines(path))
@@ -77,9 +56,12 @@ public sealed class WitchHeldPotionTests
         var rows = LoadPotionColors();
         var effectRows = rows.Where(r => r.Kind == "effect").ToArray();
         var potionRows = rows.Where(r => r.Kind == "potion").ToArray();
+        // Counts come from the jar probe that produced the sample, not from the file we are reading:
+        // a truncated sample or a changed kind must fail rather than silently shrink the assertion set.
+        Assert.Equal(86, rows.Count);
+        Assert.Equal(40, effectRows.Length);
+        Assert.Equal(46, potionRows.Length);
         Assert.Equal(rows.Count, effectRows.Length + potionRows.Length);
-        Assert.NotEmpty(effectRows);
-        Assert.NotEmpty(potionRows);
 
         foreach (var (_, id, color) in effectRows)
         {
