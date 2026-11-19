@@ -329,39 +329,42 @@ public sealed class LivingRawReferenceSampleTests
             // predicates (e.g. illager crossed-vs-open arms are mutually exclusive at runtime) so the
             // geometry test compares the stored cubes, not a particular animation state.
             partOrder = partOrder.Select(p => p with { VisibleWhen = null }).ToArray();
-            var single = new EntityModelDefinition(definition.Name, width, height, partOrder,
-                texturePath: texturePath, scale: definition.Scale, baselinePx: 0f, rawSourceFrame: true,
-                sourceFrameBaselinePx: definition.SourceFrameBaselinePx);
-            var geometry = BuildModelSpace(single, MakeLivingState(180f), width, height, atlas);
+            // Production is compiled-only. Rebuild the bind-pose partOrder (source parts + ancestors,
+            // runtime visibility stripped) as a compiled tree with real parent links so ancestor frames
+            // compose, then match the target's 24 source vertices by source identity. The jar sample is
+            // the independent oracle; no flat mesher is reconstructed in the test.
+            var isolated = CompiledPartHelper.DefinitionNested(definition.Name, width, height, partOrder,
+                texturePath, definition.Scale, definition.SourceFrameBaselinePx);
+            Assert.NotNull(isolated.Compiled);
+            var geometry = BuildModelSpace(isolated, MakeLivingState(180f), width, height, atlas);
             var source = group.OrderBy(r => r.Polygon).ThenBy(r => r.Vertex).ToArray();
-            // The target's 24 vertices are emitted after all preceding parts in partOrder; each part
-            // emits a variable count (0 for fully-zero/hidden parts, 8 for single-plane parts, 24 for
-            // full cubes), so sum actual emitted counts rather than assuming 24 each.
-            var vertexOffset = 0;
-            foreach (var before in partOrder)
-            {
-                if (before.Name == targetName) break;
-                vertexOffset += EmittedVertCount(before, width, height, atlas, texturePath);
-            }
-            // For the flattened Wither ribcage, all four cubes were returned; map cube index to its part.
-            if (part == "/ribcage") vertexOffset = cube * 24;
             Assert.Equal(24, source.Length);
-            Assert.True(geometry.VertexFloats / ChunkMesher.FloatsPerVertex >= vertexOffset + 24,
-                $"part={part} cube={cube} target={targetName} vertexOffset={vertexOffset} partOrder=[{string.Join(",", partOrder.Select(p => p.Name))}] geoVerts={geometry.VertexFloats / ChunkMesher.FloatsPerVertex}");
-            for (var i = 0; i < source.Length; i++)
+            var verts = geometry.VertexFloats / ChunkMesher.FloatsPerVertex;
+            var emitted = new (float X, float Y, float Z, float U, float V)[verts];
+            for (var i = 0; i < verts; i++)
             {
-                var s = source[i];
-                var p = VertexFieldReader.Position(geometry.Vertices, vertexOffset + i);
-                var uv = VertexFieldReader.Uv(geometry.Vertices, vertexOffset + i);
-                // #128: samples are in normalized render units; production built with modelScale:1.
-                // Tight 1e-5 tolerance (Book standard) for both position and UV. The sample UV is
-                // quantized to half-float first, matching what the geometry buffer actually stores.
-                Assert.True(MathF.Abs(s.X - p.X) < 1e-5f && MathF.Abs(s.Y - p.Y) < 1e-5f && MathF.Abs(s.Z - p.Z) < 1e-5f,
-                    $"part={part} cube={cube} poly={s.Polygon} v={s.Vertex}: src=({s.X},{s.Y},{s.Z}) our=({p.X},{p.Y},{p.Z})");
-                var su = QuantizeHalf(s.U);
-                var sv = QuantizeHalf(s.V);
-                Assert.True(MathF.Abs(su - uv.U) < 1e-5f && MathF.Abs(sv - uv.V) < 1e-5f,
-                    $"part={part} cube={cube} poly={s.Polygon} v={s.Vertex} UV: src=({su},{sv}) our=({uv.U},{uv.V})");
+                var pos = VertexFieldReader.Position(geometry.Vertices, i);
+                var uv = VertexFieldReader.Uv(geometry.Vertices, i);
+                emitted[i] = (pos.X, pos.Y, pos.Z, uv.U, uv.V);
+            }
+            // One-to-one match of the target's 24 source vertices against emitted geometry by the full
+            // (position, UV-half) tuple. The full model emits every part, so global matching (not a fixed
+            // contiguous slice) is required; each emitted vertex is used at most once via `used`.
+            var used = new bool[verts];
+            foreach (var src in source)
+            {
+                var ok = false;
+                var su = QuantizeHalf(src.U);
+                var sv = QuantizeHalf(src.V);
+                for (var k = 0; k < verts; k++)
+                {
+                    if (used[k]) continue;
+                    var c = emitted[k];
+                    if (MathF.Abs(su - c.U) < 1e-5f && MathF.Abs(sv - c.V) < 1e-5f
+                        && MathF.Abs(src.X - c.X) < 1e-5f && MathF.Abs(src.Y - c.Y) < 1e-5f && MathF.Abs(src.Z - c.Z) < 1e-5f)
+                    { used[k] = true; ok = true; break; }
+                }
+                Assert.True(ok, $"part={part} cube={cube} poly={src.Polygon} v={src.Vertex}: no emitted vertex matches source ({src.X:F5},{src.Y:F5},{src.Z:F5}) uv({su:F5},{sv:F5}) at 1e-5");
                 checkedVertices++;
             }
         }
@@ -383,9 +386,9 @@ public sealed class LivingRawReferenceSampleTests
     /// </summary>
     public static TheoryData<EntityModelDefinition, EntityModelDefinition, int, int, string, EntityRenderState> WorldCases => new()
     {
-        { CreeperModelDefinition.Definition, LegacyEntityTwinFactory.Creeper(), 64, 32, "entity/creeper/creeper", new EntityRenderState(1, 32, 10f, 2f, -4f, 45f, 0f) },
-        { SpiderModelDefinition.Definition, LegacyEntityTwinFactory.Spider(), 64, 32, "entity/spider/spider", new EntityRenderState(1, 127, -3f, 1f, 6f, 250f, 0f) },
-        { WitherBossModelDefinition.Definition, LegacyEntityTwinFactory.Wither(), 64, 64, "entity/wither/wither", new EntityRenderState(1, 149, 0f, 5f, 0f, 90f, 0f) }
+        { CreeperModelDefinition.Definition, CompiledPartHelper.Legacy(LegacyEntityTwinFactory.Creeper()), 64, 32, "entity/creeper/creeper", new EntityRenderState(1, 32, 10f, 2f, -4f, 45f, 0f) },
+        { SpiderModelDefinition.Definition, CompiledPartHelper.Legacy(LegacyEntityTwinFactory.Spider()), 64, 32, "entity/spider/spider", new EntityRenderState(1, 127, -3f, 1f, 6f, 250f, 0f) },
+        { WitherBossModelDefinition.Definition, CompiledPartHelper.Legacy(LegacyEntityTwinFactory.Wither()), 64, 64, "entity/wither/wither", new EntityRenderState(1, 149, 0f, 5f, 0f, 90f, 0f) }
     };
 
     [Theory]
@@ -707,7 +710,7 @@ public sealed class LivingRawReferenceSampleTests
     /// <summary>Vertex count a single part emits when meshed (depends only on its cube dimensions/visibility).</summary>
     private static int EmittedVertCount(EntityModelPart part, int w, int h, ItemAtlas atlas, string texturePath)
     {
-        var single = new EntityModelDefinition("count", w, h, [part with { VisibleWhen = null }], texturePath: texturePath, baselinePx: 0f, rawSourceFrame: true);
+        var single = CompiledPartHelper.Definition("count", w, h, part with { VisibleWhen = null }, texturePath);
         var geo = BuildModelSpace(single, MakeLivingState(180f), w, h, atlas);
         return geo.VertexFloats / ChunkMesher.FloatsPerVertex;
     }
@@ -735,6 +738,13 @@ public sealed class LivingRawReferenceSampleTests
     /// <summary>Quantize a full-float sample UV to the half-float value the geometry buffer stores.</summary>
     private static float QuantizeHalf(float value) =>
         (float)BitConverter.UInt16BitsToHalf((ushort)BitConverter.HalfToUInt16Bits((Half)value));
+
+    /// <summary>Full production compiled model in normalized model space (the source sample's frame).</summary>
+    private static DynamicGeometry FullGeometry(EntityModelDefinition def, int w, int h, string texturePath, ItemAtlas atlas) =>
+        BuildModelSpace(def, MakeLivingState(180f), w, h, atlas);
+
+    private static bool SamePos((float X, float Y, float Z, float U, float V) a, Sample b) =>
+        MathF.Abs(a.X - b.X) < 1e-5f && MathF.Abs(a.Y - b.Y) < 1e-5f && MathF.Abs(a.Z - b.Z) < 1e-5f;
 
     private static DynamicGeometry BuildModelSpace(EntityModelDefinition def, EntityRenderState state, int w, int h, ItemAtlas atlas) =>
         // #128 render units: modelScale:1 gives px=1/16, so output matches normalized samples.

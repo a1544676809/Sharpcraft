@@ -51,8 +51,11 @@ public sealed class RawMirrorSourceTests
         {
             ["entity/spider/spider"] = new(64, 32, new byte[64 * 32 * 4])
         });
-        var single = new EntityModelDefinition("mirror", 64, 32, [part],
-            texturePath: "entity/spider/spider", baselinePx: 0f, rawSourceFrame: true);
+        // The flat witness used to wrap the baked part in a Compiled=null definition (flat mesher path).
+        // Production is compiled-only now: rebuild the same isolated part as a root-level compiled node,
+        // which reproduces the identical source frame (verified byte-for-byte against the flat output).
+        var single = CompiledPartHelper.Definition("mirror", 64, 32, part, "entity/spider/spider");
+        Assert.NotNull(single.Compiled);
         var g = new EntityModelMesher().BuildModel(single,
             new EntityRenderState(1, 0, 0f, 0f, 0f, 180f, 0f),
             atlas.Get("entity/spider/spider")!, 64, 32, modelScale: 1f);

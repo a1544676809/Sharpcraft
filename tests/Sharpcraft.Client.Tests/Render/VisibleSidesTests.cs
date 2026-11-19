@@ -104,7 +104,8 @@ public sealed class VisibleSidesTests
         Assert.Equal(polygons * 4, geometry.VertexFloats / stride);
         Assert.Equal(polygons * 6, geometry.IndexCount);
 
-        // Compare against the flat-path geometry: same mask must produce byte-identical keyed vertices/UV.
+        // Compare against the helper-built compiled geometry: the same mask must produce byte-identical
+        // keyed vertices/UV regardless of whether the definition came from the DSL or the part helper.
         var flat = Geometry(mask);
         for (var i = 0; i < geometry.VertexFloats; i++)
             Assert.Equal(flat.Vertices[i], geometry.Vertices[i]);
@@ -141,7 +142,7 @@ public sealed class VisibleSidesTests
 
     private static EntityModelDefinition Definition(EntityModelVisibleSides mask, bool mirror = false)
     {
-        // Build a raw definition from a simple DSL cube, then stamp the mask onto the baked flat part.
+        // Build a raw definition from a simple DSL cube, then stamp the mask onto the baked part.
         // No DSL auto-inference: the API is applied explicitly at the baked part level.
         var mesh = new VanillaMeshDefinition(new VanillaPartDefinition("root", VanillaPartPose.Zero,
             children:
@@ -155,8 +156,11 @@ public sealed class VisibleSidesTests
         var baked = EntityModelDefinition.FromTree("mask_cube", 64, 64, mesh,
             faceTransforms: null, "entity/test", 1f, baselinePx: 0f, rawSourceFrame: true);
         var part = baked.Parts.Single(p => p.Name == "cube") with { VisibleSides = mask };
-        return new EntityModelDefinition("mask_cube", 64, 64, [part],
-            faceTransforms: null, "entity/test", 1f, baselinePx: 0f, rawSourceFrame: true);
+        // Production is compiled-only: rebuild the isolated masked cube as a root-level compiled node.
+        // Equivalent to the former flat part-only definition byte-for-byte; both then use compiled Emit.
+        var def = CompiledPartHelper.Definition("mask_cube", 64, 64, part, "entity/test");
+        Assert.NotNull(def.Compiled);
+        return def;
     }
 
     private static EntityModelDefinition CompiledDefinition(EntityModelVisibleSides mask, bool mirror = false)

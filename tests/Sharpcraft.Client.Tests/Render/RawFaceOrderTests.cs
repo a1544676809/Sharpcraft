@@ -35,9 +35,10 @@ public sealed class RawFaceOrderTests
         var leg = full.Parts.Single(part => part.Name == partName);
         // SheepModel uses createBodyMesh(12, mirrorLeftLeg:false, mirrorRightLeg:true).
         leg = leg with { Mirror = partName.StartsWith("right_", StringComparison.Ordinal) };
-        var single = new EntityModelDefinition(
-            "raw_sheep_leg", 64, 32, [leg], texturePath: "entity/sheep/sheep",
-            baselinePx: 0f, rawSourceFrame: true);
+        // Production is compiled-only: rebuild the isolated mirrored leg as a root-level compiled node.
+        // This reproduces the former flat part-only frame byte-for-byte (jar sample stays the oracle).
+        var single = CompiledPartHelper.Definition("raw_sheep_leg", 64, 32, leg, "entity/sheep/sheep");
+        Assert.NotNull(single.Compiled);
 
         var atlas = ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
         {
