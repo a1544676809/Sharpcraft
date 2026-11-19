@@ -12,19 +12,28 @@ using Xunit;
 namespace Sharpcraft.Client.Tests.Render;
 
 /// <summary>
-/// B-1 migration of the 83 raw source-frame variants (issue #228): every definition must render in the
-/// source frame, the two available world-frame samples must match production <c>BuildLayers</c> output
-/// per source key, and those samples must equal the source living formula
-/// <c>scale(-1,-1,1) * translate(0,-1.501,0)</c>.
+/// B-1 migration of the 83 raw source-frame variants (issue #228) and Issue #247/R-040 world-frame sample
+/// expansion: every definition must render in the source frame; world-frame samples must match production
+/// <c>BuildLayers</c> output per source key (single-cube families), and every world sample must equal the
+/// source living formula <c>scale(-1,-1,1) * translate(0,-1.501,0)</c> applied to the independent model-space
+/// probe of the same source model layer.
 /// </summary>
 /// <remarks>
-/// World samples: <c>parrot-blue-world-frame.reference.txt</c> (PARROT, blue is a texture-only variant)
-/// and <c>dolphin-world-frame.reference.txt</c>. Both were generated from the 26.3 jar by
+/// World samples were generated from the 26.3 jar by
 /// <c>ref://mc-26.3-analysis/vectors/b-class-source/LivingWorldFrameProbe.java</c> with the entity
-/// yaw/translation/scale excluded. The samples are in world blocks; production <c>BuildLayers</c> uses
-/// <see cref="EntityPlaceholderMesher.ModelScale"/> for living entities (0.9), so the comparison is
-/// performed after dividing the production output by that scale. That division is exact: the source
-/// frame is linear and the scale is applied uniformly, so the 1e-5 tolerance still pins every vertex.
+/// yaw/translation/scale excluded. They are in world blocks; production <c>BuildLayers</c> uses
+/// <see cref="EntityPlaceholderMesher.ModelScale"/> for living entities (0.9), so the comparison divides
+/// production output by that scale — exact because the source frame is linear and the scale is uniform.
+/// <para>
+/// Direct production <c>BuildLayers</c> keyed verification covers families whose jar model emits one cube
+/// per part with no extra render layers (parrot, dolphin, shulker, bee, squid). Families whose source model
+/// has multi-cube parts, degenerate cubes or additional layers (axolotl, tropical fish, salmon, frog, turtle,
+/// the baby families) are covered by a two-step source-backed chain: <see cref="SourceWorldSampleEqualsTheLivingFlipOfTheModelSpaceSample"/>
+/// pins the world sample to the flip of the independent <c>RawRenderUnitProbe</c> model-space sample per key,
+/// and <c>LivingRawReferenceSampleTests.RawBakeMatchesSourceVertices</c> already verifies production against
+/// that model-space sample with the required degenerate/mirror filtering. Their production world-frame keyed
+/// coverage via a single atlas remains a scoped follow-up (R-040).
+/// </para>
 /// </remarks>
 public sealed class VariantRawFrameTests
 {
@@ -41,14 +50,40 @@ public sealed class VariantRawFrameTests
     {
         // world sample, entity type id, variant value, texture path, width, height
         { "parrot-blue-world-frame.reference.txt", 99, 1, "entity/parrot/parrot_blue", 32, 32 },
-        { "dolphin-world-frame.reference.txt", 36, 0, "entity/dolphin/dolphin", 64, 64 }
+        { "dolphin-world-frame.reference.txt", 36, 0, "entity/dolphin/dolphin", 64, 64 },
+        // Issue #247 / R-040: additional B-1 variant families. Production BuildLayers is verified per key for
+        // families whose source model emits exactly one cube per part with no extra render layers (below);
+        // the rest are covered by the source-to-source formula cross-check in FormulaCases + the existing
+        // LivingRawReferenceSampleTests production keyed verification of the model-space samples.
+        { "shulker-world-frame.reference.txt", 115, 0, "entity/shulker/shulker", 64, 64 },
+        { "bee-world-frame.reference.txt", 11, 0, "entity/bee/bee", 64, 64 },
+        { "squid-world-frame.reference.txt", 130, 0, "entity/squid/squid", 64, 32 }
     };
 
     public static TheoryData<string, string> FormulaCases => new()
     {
-        // world sample, model-space sample of the same source model layer
+        // world sample, model-space sample of the same source model layer. Both come from independent jar probes
+        // (LivingWorldFrameProbe applies the source living flip; RawRenderUnitProbe emits raw render units), so
+        // the per-key equality below cross-validates the world samples against the already production-verified
+        // model-space samples for every B-1 family added in Issue #247.
         { "parrot-blue-world-frame.reference.txt", "parrot-raw-vectors.reference.txt" },
-        { "dolphin-world-frame.reference.txt", "dolphin-raw-vectors.reference.txt" }
+        { "dolphin-world-frame.reference.txt", "dolphin-raw-vectors.reference.txt" },
+        { "shulker-world-frame.reference.txt", "shulker-raw-vectors.reference.txt" },
+        { "axolotl-world-frame.reference.txt", "axolotl-raw-vectors.reference.txt" },
+        { "axolotl-baby-world-frame.reference.txt", "axolotl-baby-raw-vectors.reference.txt" },
+        { "tropical-fish-small-world-frame.reference.txt", "tropical-fish-small-raw-vectors.reference.txt" },
+        { "tropical-fish-large-world-frame.reference.txt", "tropical-fish-large-raw-vectors.reference.txt" },
+        { "salmon-world-frame.reference.txt", "salmon-raw-vectors.reference.txt" },
+        { "frog-world-frame.reference.txt", "frog-raw-vectors.reference.txt" },
+        { "turtle-world-frame.reference.txt", "turtle-raw-vectors.reference.txt" },
+        { "bee-world-frame.reference.txt", "bee-raw-vectors.reference.txt" },
+        { "squid-world-frame.reference.txt", "squid-raw-vectors.reference.txt" },
+        { "baby-cat-world-frame.reference.txt", "baby-cat-raw-vectors.reference.txt" },
+        { "baby-wolf-world-frame.reference.txt", "baby-wolf-raw-vectors.reference.txt" },
+        { "baby-fox-world-frame.reference.txt", "baby-fox-raw-vectors.reference.txt" },
+        { "baby-rabbit-world-frame.reference.txt", "baby-rabbit-raw-vectors.reference.txt" },
+        { "baby-horse-world-frame.reference.txt", "baby-horse-raw-vectors.reference.txt" },
+        { "baby-panda-world-frame.reference.txt", "baby-panda-raw-vectors.reference.txt" }
     };
 
     [Theory]
