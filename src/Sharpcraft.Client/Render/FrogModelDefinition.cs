@@ -48,7 +48,7 @@ public static class FrogModelDefinition
                 continue;
             }
 
-            variants[key] = new EntityModelDefinition("frog_" + key, 48, 48, faceTransforms: null, texturePath: "entity/frog/frog_" + key, compiled: Definition.Compiled);
+            variants[key] = new EntityModelDefinition("frog_" + key, 48, 48, faceTransforms: null, texturePath: "entity/frog/frog_" + key, compiled: Definition.Compiled, baselinePx: 0f, rawSourceFrame: true);
         }
 
         return variants;
