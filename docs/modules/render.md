@@ -1035,3 +1035,10 @@ task-144 用 jar `HeadTree` probe 逐族分析 Bogged/Witch/ZombieVillager/Pigli
 三族切 raw，独立 jar probe（`RawRenderUnitProbe`/`HeadTree`）采源几何+UV，落 #128 归一化样本：Silverfish 240、Slime 96、MagmaCube 216 行。严格 1e-5 位置 + UV half 全通过。
 - **源修复**：Silverfish seg4/5/6 与 layer1 的 zPlacement 按源累积公式 `(depth_i+depth_i+1)/2` 修正（原 6.5/8.5/10.5 → 源 7/9.5/11.5）；Slime/MagmaCube DSL 几何本即源正确，仅补 production raw flags。
 - 定义测试改用独立源字面 `RawModelPartFactory`；bake hash 仅变更检测器刷新。无容差放宽、不拟合、不排除顶点。本批无剩余 blocker。
+
+### Issue #229 移除生产 flat Parts 网格路径
+
+- **生产改动**：`EntityModelMesher.Transforms.cs` 的 `BuildInto` 改为 compiled-only —— 删除 legacy flat `Parts` 网格循环（约 70 行）及其私有 helper `PartFrame`/`PartMatrix`/`PosePartName`；`model.Compiled is null` 由静默回退改为显式 `InvalidOperationException`（可观测失败，原则 16）。生产几何只剩 compiled tree 一条路径（原则 14 单轨）。`PartWorldMatrix`/`LegacyHandWorldMatrix`/定义 `Parts` 数据均保留（数据与动态适配器不在本次范围）。
+- **测试迁移**：`VisibleSidesTests`/`RawMirrorSourceTests`/`RawFaceOrderTests`/`LivingRawReferenceSampleTests` 原先以 `Compiled=null` 的 part-only 定义命中 flat 路径；现统一经 `CompiledPartHelper`（测试辅助）把烘焙 part 数据原样构造成 compiled tree（含真实 Parent 链以合成祖先帧），再用生产 compiled Emit 出图。jar 源样本仍是独立 oracle；源 strict 结果不变。无把 flat mesher 复制到测试自证。
+- **证伪/等价验证**：运行时探针显示 helper 构造的 compiled tree 与原 flat 输出逐字节相等（root part、嵌套 part、非单位 layer scale）；完整生产 compiled 模型对 jar 样本 spider/head/sleeve 24/24、armadillo 48/24 等全匹配。4 个迁移测试类经直接方法调用 151/151 通过（testhost 环境故障时的等价验证）。
+- **遗留**：A 类 flat 循环在生产不可达已删除；B 类 legacy 装备回退（`EntityModelResolver.cs:345-361`）与 83 个 raw=false 变体仍需逐类源判定（独立任务，见 #228）；C 类动态适配器保留。
