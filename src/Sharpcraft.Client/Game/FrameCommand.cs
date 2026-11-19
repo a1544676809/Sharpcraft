@@ -465,10 +465,12 @@ internal static partial class FrameCommand
 
                     if (otherStates.Count > 0)
                     {
+                        // The placeholder merges into the terrain mesh, so its faces go through the block atlas
+                        // table: rect zero is the whole atlas and would paint a shrunken atlas on every box.
                         var mesher = new Sharpcraft.Client.Render.BlockEntityPlaceholderMesher();
                         var placeholderGeometry = mesher.Build(
                             System.Runtime.InteropServices.CollectionsMarshal.AsSpan(otherStates),
-                            new SpriteRect(0, 0, 16, 16, 1));
+                            sprites?.Missing ?? new SpriteRect(0, 0, 16, 16, 1) { RectId = 0, U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f });
 
                         var mergedVertices = new float[mesh.Vertices.Length + placeholderGeometry.VertexFloats];
                         mesh.Vertices.CopyTo(mergedVertices, 0);
@@ -986,6 +988,12 @@ internal static partial class FrameCommand
                 Console.WriteLine($"  demo block (0,{y},0) state {world.GetBlockState(0, y, 0)}");
             }
         }
+        using var resources = CreateResourceManager();
+
+        // The demo world has no biome data, so this entry passes neither layout nor tint and the diagnostic frame keeps
+        // its baseline geometry. That is a deliberate local-scene hole, not production: the live session meshes through
+        // ChunkMeshCache/ChunkWorkerPool with both, and both entries accept them (issue 227). Passing the layout here
+        // changes this scene's culling (2392 -> 4176 triangles), which is a separate question and not this issue's.
         var mesh = Sharpcraft.Client.Render.ChunkMeshCache.MeshWorldOnce(
             world, prepared?.Map, GameOptions.Get("MC_MESH_NOMERGE") != "1", prepared?.Models);
         Console.WriteLine($"local demo: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
@@ -994,7 +1002,6 @@ internal static partial class FrameCommand
         var centre = (bounds.Min + bounds.Max) / 2f;
         var (eye, target) = CameraMath.DefaultCamera(centre, 16f);
 
-        using var resources = CreateResourceManager();
         var request = new FrameRequest(
             width,
             height,
@@ -1008,6 +1015,11 @@ internal static partial class FrameCommand
             Atlas = prepared is null
                 ? null
                 : WithMips(prepared.Value.Atlas),
+
+            // The vertex carries a sprite id, not the atlas bounds, so the frame is only textured when its table
+            // travels with it. Without this the scene sampled the whole atlas and every face was a shrunken copy of
+            // it, which is what the diagnostic frame showed (issue 226).
+            SpriteRects = prepared?.Atlas.RectTable ?? [],
 
             // The local scene has no weather of its own, so it takes the forced values. Without these the
             // sandbox always renders clear weather and cannot show what rain does to the fog (T-842).

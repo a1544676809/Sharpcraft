@@ -61,6 +61,8 @@ public static partial class ChunkMesher
     /// <param name="airState">Block state treated as empty.</param>
     /// <param name="maxBlocks">Safety cap so a huge world cannot exhaust memory.</param>
     /// <param name="sprites">Atlas mapping; without it quads carry the whole-atlas rect.</param>
+    /// <param name="layout">Block state layout, needed with <paramref name="tint"/> to colour grass and leaves.</param>
+    /// <param name="tint">Biome tint, or null for none. A caller without biome data passes none and gets untinted faces.</param>
     public static MeshData Mesh(
         ClientWorld world,
         int airState = 0,
@@ -68,13 +70,15 @@ public static partial class ChunkMesher
         BlockSpriteMap? sprites = null,
         bool merge = true,
         bool ambientOcclusion = true,
-        BlockModelSet? models = null)
+        BlockModelSet? models = null,
+        Sharpcraft.Common.Registries.BlockStateLayout? layout = null,
+        BiomeTint? tint = null)
     {
         ArgumentNullException.ThrowIfNull(world);
 
         // Merging cuts the quad count by an order of magnitude, so a smaller guess is enough.
         using var buffer = new MeshBuffer(Math.Min(maxBlocks, world.LoadedChunkCount * 512));
-        var blocks = Mesh(world, buffer, airState, maxBlocks, sprites, merge, ambientOcclusion, models);
+        var blocks = Mesh(world, buffer, airState, maxBlocks, sprites, merge, ambientOcclusion, models, layout, tint);
         return buffer.ToMeshData(blocks, world.MinSectionY);
     }
 
@@ -91,7 +95,9 @@ public static partial class ChunkMesher
         BlockSpriteMap? sprites = null,
         bool merge = true,
         bool ambientOcclusion = true,
-        BlockModelSet? models = null)
+        BlockModelSet? models = null,
+        Sharpcraft.Common.Registries.BlockStateLayout? layout = null,
+        BiomeTint? tint = null)
     {
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(buffer);
@@ -106,7 +112,7 @@ public static partial class ChunkMesher
                 break;
             }
 
-            blocks += MeshChunk(world, chunk, airState, buffer, maxBlocks - blocks, sprites, merge: merge, ambientOcclusion: ambientOcclusion, models: models);
+            blocks += MeshChunk(world, chunk, airState, buffer, maxBlocks - blocks, sprites, layout: layout, tint: tint, merge: merge, ambientOcclusion: ambientOcclusion, models: models);
         }
 
         return blocks;
@@ -188,7 +194,7 @@ public static partial class ChunkMesher
 
             if (models is not null && sprites is not null)
             {
-                EmitSectionModels(neighbourhood, section, baseX, baseY, baseZ, buffer, sprites, models);
+                EmitSectionModels(neighbourhood, section, baseX, baseY, baseZ, buffer, sprites, models, tint, layout);
             }
         }
 
@@ -591,19 +597,15 @@ public static partial class ChunkMesher
         // rendered pixels against the atlas cell of a forced stone world).
         var (red, green, blue) = sprites is null ? ColourOf(state) : (1f, 1f, 1f);
 
-        if (tint is not null && layout?.BlockAt(state) is { } tintedBlock)
+        // One tint decision for every path: BlockTintTable answers the colour, and the top-face-only rule the
+        // reference uses for a cube face is asked for explicitly rather than reimplemented here.
+        if (layout?.BlockAt(state) is { } tintedBlock
+            && BlockTintTable.MultiplierForCubeFace(tint, tintedBlock, origin.X, origin.Y, origin.Z, direction == PositiveY)
+                is { } tintMultiplier)
         {
-            // The reference tints the faces whose model carries a tint index; grass tints only its top, leaves and plants
-            // tint every face.
-            var kind = BlockTintTable.KindOf(tintedBlock);
-
-            if (kind != BlockTintKind.None && (!BlockTintTable.TintsTopFaceOnly(kind) || direction == PositiveY))
-            {
-                var (tintRed, tintGreen, tintBlue) = BiomeTint.ToMultiplier(tint.ColourAt(kind, origin.X, origin.Y, origin.Z));
-                red *= tintRed;
-                green *= tintGreen;
-                blue *= tintBlue;
-            }
+            red *= tintMultiplier.R;
+            green *= tintMultiplier.G;
+            blue *= tintMultiplier.B;
         }
         // Directional face brightness follows the reference's CardinalLighting.DEFAULT: up 1.0, down 0.5, north/south
         // (Z axis) 0.8, west/east (X axis) 0.6. A single 0.75 for every side made side faces shade wrong.

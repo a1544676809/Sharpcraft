@@ -467,7 +467,10 @@ internal static class WindowCommand
         var playerSkin = customSkin ?? Sharpcraft.Client.Render.EntitySkinTexture.Load(resources);
         var entitySkinLibrary = Sharpcraft.Client.Render.EntitySkinLibrary.Load(resources, playerSkin);
         var entitySkinTextureSource = new Sharpcraft.Framework.Rendering.AtlasTextureSource();
-        entitySkinTextureSource.Update(entitySkinLibrary.Atlas?.Texture ?? playerSkin);
+        // The table travels with the texture: the vertex carries a sprite id and the shader resolves it through it.
+        entitySkinTextureSource.Update(
+            entitySkinLibrary.Atlas?.Texture ?? playerSkin,
+            entitySkinLibrary.Atlas?.RectTable ?? []);
         var itemModelResolver = new Sharpcraft.Client.Render.ItemModelResolver(resources);
         Sharpcraft.Client.Render.EntityModelResolver.ItemModels = itemModelResolver;
         itemAtlas = Sharpcraft.Client.Render.ItemAtlas.Load(resources,
@@ -478,7 +481,7 @@ internal static class WindowCommand
             Sharpcraft.Client.Render.SpecialModelDefinitions.ChestTexture
         ]);
         EnsureBlockEntityItemTextures();
-        itemAtlasSource.Update(itemAtlas.Texture);
+        itemAtlasSource.Update(itemAtlas.Texture, itemAtlas.RectTable);
         var entitySkinSprite = playerSkin is { } skin
             ? new Sharpcraft.Client.Assets.SpriteRect(0, 0, skin.Width, skin.Height, 1) { U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f }
             : (Sharpcraft.Client.Assets.SpriteRect?)null;
@@ -491,7 +494,9 @@ internal static class WindowCommand
             {
                 if (entitySkinLibrary.TryAddTexture(path, image))
                 {
-                    entitySkinTextureSource.Update(entitySkinLibrary.Atlas?.Texture);
+                    entitySkinTextureSource.Update(
+                        entitySkinLibrary.Atlas?.Texture,
+                        entitySkinLibrary.Atlas?.RectTable ?? []);
                 }
             },
             signatureKeys: signatureKeys,
@@ -641,7 +646,7 @@ internal static class WindowCommand
                 }
 
                 EnsureItemTextures(visibleEntities);
-                itemAtlasSource.Update(itemAtlas.Texture);
+                itemAtlasSource.Update(itemAtlas.Texture, itemAtlas.RectTable);
 
                 if (entitySkinLibrary.Atlas is { } entitySkinAtlas)
                 {
@@ -740,7 +745,9 @@ internal static class WindowCommand
 
             if (playerSkins.Pump() > 0)
             {
-                entitySkinTextureSource.Update(entitySkinLibrary.Atlas?.Texture);
+                entitySkinTextureSource.Update(
+                    entitySkinLibrary.Atlas?.Texture,
+                    entitySkinLibrary.Atlas?.RectTable ?? []);
             }
         },
             hasLocalScene

@@ -224,6 +224,51 @@
 
 设计意图：贪心合并会把多个方块的面合成一张大四边形，纹理必须在**该四边形内重复**；把"重复次数"和"精灵矩形"一起传给着色器，就能用 `fract(tile)` 在图集单元内部平铺，不需要在图集里做 mipmap 或 padding（最近邻 + 无 mip 时不会渗色）。
 
+#### 矩形表按纹理分开（Issue #226）
+
+矩形表里的下标**只对绑定它的那张图集有意义**，因此"一张纹理配一张表"是这条设计的硬前提，而不是可选优化：
+
+| 绑定组 | 纹理 | 表来源 |
+| --- | --- | --- |
+| 地形 / 方块实体 cutout | 方块图集 | `SpriteAtlas.RectTable`（`RectId = i + 1`，0 号=整张纹理） |
+| 方块实体段 | 方块实体图集 | `ChestAtlas.BuildRectTable` |
+| 实体皮肤层 | 实体皮肤图集 | `EntitySkinAtlas.RectTable` |
+| 物品层 | 物品图集 | `ItemAtlas.RectTable` |
+
+**T-832 落地时只有方块图集建立了表**，其余三条走了"顶点带下标、表却是方块图集那张"或"整张纹理"的退化路径。症状极具欺骗性：几何完全正确，只有贴图错——每张脸取到 0 号表项（整张纹理）后，脸面渲染成整张图集的缩略图，表现为"彩色碎片散落地面与天空"。`铜傀儡雕像` 当时正常，正是因为它走 `ChestAtlas.BuildRectTable` 自建表这条唯一被改对的路径。
+
+另一处独立漏改：`--frame` 本地场景（`FrameCommand.RenderLocal`）构造 `FrameRequest` 时未传 `SpriteRects`，`OffscreenRenderer` 因此回退到整张纹理——**离线 A/B 台自己看到的就是错图**。判定证据不再是目测：整世界刷成石头后采样得到 `rgba(102,89,31)` 橄榄色且换方块状态颜色不变（同屏幕位置逐像素相同），修复后同一机位为石灰阶。
+
+**同报告中的"天空深色四边形"未修复**：它不属于本条根因（修复前后都在，清空实体后仍在），已登记风险 R-048，不得计入本条已解决范围。
+
+回归护栏：`tests/Sharpcraft.Client.Tests/Repro/Repro_226_SpriteRectIdTests.cs` 用**独立公式**重建表（按顶点携带的下标查），要求每个精灵解析回自身矩形、下标互不重复、0 号表项恒为整张纹理；三个图集（方块 / 实体皮肤 / 物品）同一条规则。
+
+#### 元素模型路径的着色与光照（Issue #227）
+
+方块有两条网格路径：方块状态没有可解析模型时走贪心合并的立方体路径（`MergeSectionFaces` → `EmitMergedQuad`），有模型时走元素路径（`EmitSectionModels` → `BlockModelSet.Emit`）。草方块、树叶、草类植被都属于后者。元素路径长期**没有**这两件事，于是它们与立方体路径表现不一致：
+
+| 项 | 立方体路径 | 元素路径（修复前） | 元素路径（修复后） |
+| --- | --- | --- | --- |
+| 生物群系着色 | `ChunkMesher.cs:592-607` 按 `BlockTintTable.KindOf` 乘进顶点颜色 | **完全没有**：一律写 `(1,1,1)`，草与树叶呈灰白 | 按模型声明的 `tintindex` 逐面乘（`ModelQuad.TintIndex >= 0` 才着色） |
+| 面光照 | `CornerShade` 采样**面朝向的邻居空气格** | 采样**方块自己那一格**（不透明方块恒为 0）→ 整个方块发黑 | 每个方向预采 6 个邻格（`BlockModelSet.FaceOffset`），逐面取用 |
+
+实机证据（本机原版 26.3 Fabric 服务端 + `--quickPlayMultiplayer`，同机位同一帧；地面取 y≥380 非天空像素均值）：
+
+| 项 | 修复前 | 修复后 |
+| --- | --- | --- |
+| 草地地面均值 | `(135.3, 134.8, 135.7)` 中性灰 | `(79.1, 100.3, 63.1)` |
+| 草方块侧面 | 灰白 | 绿色镶边 + 泥土 |
+| 树叶 / 短草 / 蕨 | 灰白 | 绿色 |
+| 草方块顶面 | 灰 | 绿且受光 |
+
+**这组数字只作定性对比，不是严格算式**：草纹理本身不是中性灰，还叠加朝向明暗与逐面光照，因此把修复前均值乘 multiplier 复现修复后均值必然对不平（G 通道偶然吻合，R/B 分别高约 20%/11%）。能严格成立的是方向与量级：修复后 G 主导、通道序与 `BiomeTint` 一致，且 multiplier 来自同一群系样本（`(0.486, 0.741, 0.420)`）。要做严格算式需要换成中性灰方块（白色混凝土一类），当前未做——不要把这组数字当逐通道等式引用。
+
+自动化护栏（`tests/Sharpcraft.Client.Tests/Repro/Repro_227_ModelPathTintLightTests.cs`，5 项）：`TintIndex = -1` 白色 / `= 0` 乘 tint / 无 tint 时仍白色 / 六方向逐面光各自命中（把 `faceLights` 换成单值即红）/ 无邻域时回退单值；另有 `BlockTintTable.MultiplierFor` 钉住"哪些方块着色"的判定（草/叶有色、石头无色）。破坏验证：删掉 tint 乘算 → `OnlyFacesWithATintIndexTakeTheTint` 红（Expected 128 / Actual 255）；`faceLights[faceIndex]` 换成 `light` → `EachFaceTakesTheLightOfTheNeighbourItLooksAt` 红（Expected 17 / Actual 255）。
+
+**仍存在的症状**：实机天空固定位置的深色四边形**不在本次修复范围、也未定位**，见风险登记册 R-048；不要把它当作已解决。
+
+**待办（原则 14「单轨」）**：两条路径各自的着色/光照实现仍是两份拷贝，只是这次把行为对齐了；收敛成一份是本 Issue 之外的任务，见风险登记册。
+
 已完成 / 未完成：
 
 | 项 | 状态 |
@@ -538,6 +583,16 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **判定（Issue #128）**：`modelScale=1` 下生产 raw 的 Position+Rotation 已与源 `T*R` 等价；Book 报告的 `(0.364,...)` 是 `modelScale=16` probe 把混合单位整段比较造成的，不是 T/R 缺陷。`RawNodeFramePoseTests` 使用 Book `right_pages` 源样本（`x=0.997491, yRot=-1.5`, local first vertex `(5,-4,0.99)`），对单 cube 的 **24/24** 顶点逐点比较位置+UV（独立公式 `R*(v/16)+T_blocks`），并用同一 cube 的 Position+Rotation part 验证 `PartWorldMatrix(rawSourceFrame:true)`；不按实现反推。
 
 ## 已知刻意的简化
+
+### SIM-LOCAL-FRAME-NO-LAYOUT：`--frame` 本地演示场景不传 layout / tint
+
+- **简化了什么**：`FrameCommand.RenderLocal` 调 `ChunkMeshCache.MeshWorldOnce` 时**不传** `layout` 与 `tint`，因此这条诊断场景的网格没有生物群系着色，面剔除也按"没有 layout"的旧规则走。
+- **为什么**：传 `layout: DemoLayout()` 会让同一个演示世界（2045 方块不变）的三角形从 **2392 变成 4176**，说明该场景此前把**不同方块之间**的面剔掉了。改它等于静默改动所有已记录的离线 A/B 几何基线，而那个剔除缺陷与 #227 无关，按原则 14 的切片纪律必须另起任务。
+- **对等效性的影响**：只影响 `--frame` + `MC_FRAME_LOCAL` 这条**诊断**路径。生产活体路径走 `ChunkMeshCache` / `ChunkWorkerPool`，两者都带 `layout` 与 `tint`，因此着色与剔除行为不受影响；演示世界本身不含草/树叶，实际像素也无差异。
+- **当前状态与独立任务**：入口已备好参数（`ChunkMesher.Mesh` 与 `ChunkMeshCache.MeshWorldOnce` 均已接受 `layout` / `tint`），调用点写明了原因；剔除条件的修正列为独立任务，跟踪于 `docs/risks.md` **R-049**（Issue 待项目所有者建号后回填）。**不是已解决。**
+- **验收入口**：R-049 的复查条件——用带 / 不带 layout 的同世界逐面集合对比，差集应全部是"不同方块之间的面"；修好后同步把本文档 §5 的 `local demo` 几何基线从 2392 更新为修正值，并删掉本条。
+
+<!-- simplification:SIM-LOCAL-FRAME-NO-LAYOUT task:R-049 -->
 
 ### SIM-BE-BELL-NO-SHAKE：钟只渲染静态外观
 
