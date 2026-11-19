@@ -60,6 +60,14 @@ public sealed class AtlasTextureSource
 
         lock (_gate)
         {
+            // Callers that hand over the atlas every frame would otherwise bump the version every frame, which makes
+            // the renderer re-upload the texture, rebuild its bind group and renumber the same table. Both parts are
+            // immutable, so the same references mean nothing changed.
+            if (ReferenceEquals(_atlas, atlas) && ReferenceEquals(_spriteRects, spriteRects))
+            {
+                return;
+            }
+
             _atlas = atlas;
             _spriteRects = spriteRects;
             _version++;

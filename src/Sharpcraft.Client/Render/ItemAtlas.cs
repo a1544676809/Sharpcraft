@@ -29,7 +29,8 @@ public sealed class ItemAtlas : ISpriteAtlas{
         Dictionary<string, TextureData> images,
         Dictionary<string, bool> translucent,
         int cellWidth,
-        int cellHeight)
+        int cellHeight,
+        float[] rectTable)
     {
         Texture = texture;
         _sprites = sprites;
@@ -38,10 +39,18 @@ public sealed class ItemAtlas : ISpriteAtlas{
 
         CellWidth = cellWidth;
         CellHeight = cellHeight;
+        RectTable = rectTable;
     }
 
     /// <summary>The packed RGBA atlas texture.</summary>
     public TextureData Texture { get; }
+
+    /// <summary>
+    /// Sprite bounds as four floats per sprite, indexed by <see cref="SpriteRect.RectId"/>. The stitcher numbers
+    /// these sprites, so the table has to travel with the texture: the vertex carries the id and the shader
+    /// resolves it here (issue 226).
+    /// </summary>
+    public float[] RectTable { get; }
 
     /// <summary>
     /// Widest packed sprite in pixels. Informational only: sprites are packed at their own size with padding, so this
@@ -108,7 +117,8 @@ public sealed class ItemAtlas : ISpriteAtlas{
             imageCopy,
             translucent,
             cellWidth,
-            cellHeight);
+            cellHeight,
+            atlas.RectTable);
     }
 
     /// <summary>Loads the requested item texture paths through the resource manager.</summary>
@@ -204,6 +214,8 @@ public sealed class ItemAtlas : ISpriteAtlas{
             new Dictionary<string, TextureData>(StringComparer.Ordinal),
             new Dictionary<string, bool>(StringComparer.Ordinal),
             rect.Width,
-            rect.Height);
+            rect.Height,
+            // The stand-in sheet is a single whole texture, so entry zero is the only rectangle it needs.
+            [0f, 0f, 1f, 1f]);
     }
 }

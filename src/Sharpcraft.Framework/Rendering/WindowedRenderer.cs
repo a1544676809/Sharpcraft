@@ -215,14 +215,22 @@ public static class WindowedRenderer
         var bindGroup = TerrainBindGroup.Create(backend, bindGroupLayout, atlasView, atlasSamplerHandle, cameraBuffer, fogBuffer, lightmapBuffer, spriteRects);
 
         using var entitySkin = new EntitySkinTextureGpu();
+
+        // Every texture the entity pass binds carries its own sprite rectangle table. The vertex only holds an id,
+        // and that id is an index into whichever atlas the draw binds, so sharing the block atlas table here made
+        // every skin and item face resolve to a block sprite (issue 226).
+        using var entitySkinRects = new SpriteRectTable(backend);
+        entitySkinRects.Rebuild(entitySkinSource?.SpriteRects ?? []);
         if (entitySkinSource?.Atlas is { } skinData)
         {
-            entitySkin.Upload(backend, bindGroupLayout, skinData, cameraBuffer, fogBuffer, lightmapBuffer, atlasSamplerHandle, spriteRects);
+            entitySkin.Upload(backend, bindGroupLayout, skinData, cameraBuffer, fogBuffer, lightmapBuffer, atlasSamplerHandle, entitySkinRects);
         }
 
         using var itemAtlasGpu = new EntitySkinTextureGpu();
+        using var itemAtlasRects = new SpriteRectTable(backend);
+        itemAtlasRects.Rebuild(itemAtlasSource?.SpriteRects ?? []);
         if (itemAtlasSource?.Atlas is { } itemData)
-            itemAtlasGpu.Upload(backend, bindGroupLayout, itemData, cameraBuffer, fogBuffer, lightmapBuffer, atlasSamplerHandle, spriteRects);
+            itemAtlasGpu.Upload(backend, bindGroupLayout, itemData, cameraBuffer, fogBuffer, lightmapBuffer, atlasSamplerHandle, itemAtlasRects);
         // Celestial bodies and stars: the same backdrop draws the offscreen path uses, so the window and the exported
         // frame agree (docs/modules/clouds.md 6).
         using var celestial = request.CelestialDraws is { Length: > 0 } && request.CelestialTextures is { Length: > 0 }
@@ -559,10 +567,12 @@ public static class WindowedRenderer
 
                 // Player skins arrive after the world starts, so the entity atlas can grow while the window is open.
                 // Its geometry is rebuilt every frame from the current sprite rects, which makes replacing the GPU
-                // texture and its bind group sufficient.
+                // texture and its bind group sufficient. The table is renumbered with the sheet, so it is replaced
+                // together with it.
                 if (entitySkinSource.Atlas is { } refreshedSkin)
                 {
-                    entitySkin.Upload(backend, bindGroupLayout, refreshedSkin, cameraBuffer, fogBuffer, lightmapBuffer, atlasSamplerHandle, spriteRects);
+                    entitySkinRects.Rebuild(entitySkinSource.SpriteRects);
+                    entitySkin.Upload(backend, bindGroupLayout, refreshedSkin, cameraBuffer, fogBuffer, lightmapBuffer, atlasSamplerHandle, entitySkinRects);
                 }
                 else
                 {
@@ -575,7 +585,8 @@ public static class WindowedRenderer
                 appliedItemAtlasVersion = itemAtlasSource.Version;
                 if (itemAtlasSource.Atlas is { } refreshedItems)
                 {
-                    itemAtlasGpu.Upload(backend, bindGroupLayout, refreshedItems, cameraBuffer, fogBuffer, lightmapBuffer, atlasSamplerHandle, spriteRects);
+                    itemAtlasRects.Rebuild(itemAtlasSource.SpriteRects);
+                    itemAtlasGpu.Upload(backend, bindGroupLayout, refreshedItems, cameraBuffer, fogBuffer, lightmapBuffer, atlasSamplerHandle, itemAtlasRects);
                 }
                 else
                 {

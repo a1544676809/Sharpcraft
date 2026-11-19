@@ -16,17 +16,25 @@ namespace Sharpcraft.Client.Render;
 public sealed class EntitySkinAtlas : ISpriteAtlas
 {
     private readonly Dictionary<string, SpriteRect> _sprites;
-    private EntitySkinAtlas(TextureData texture, Dictionary<string, SpriteRect> sprites, int cellWidth, int cellHeight)
+    private EntitySkinAtlas(TextureData texture, Dictionary<string, SpriteRect> sprites, int cellWidth, int cellHeight, float[] rectTable)
     {
         Texture = texture;
         _sprites = sprites;
         CellWidth = cellWidth;
         CellHeight = cellHeight;
+        RectTable = rectTable;
     }
 
     public TextureData Texture { get; }
     public int CellWidth { get; }
     public int CellHeight { get; }
+
+    /// <summary>
+    /// Cell bounds as four floats per sprite, indexed by <see cref="SpriteRect.RectId"/>. The vertex carries
+    /// only that id and the shader resolves it here, so this table is what turns an entity face into its own
+    /// sheet cell (issue 226).
+    /// </summary>
+    public float[] RectTable { get; }
 
     public SpriteRect? Get(string? texturePath) =>
         texturePath is not null && _sprites.TryGetValue(texturePath, out var rect) ? rect : null;
@@ -50,6 +58,13 @@ public sealed class EntitySkinAtlas : ISpriteAtlas
         var height = rows * cellHeight;
         var pixels = new byte[width * height * 4];
         var sprites = new Dictionary<string, SpriteRect>(StringComparer.Ordinal);
+
+        // Entry zero covers the whole sheet, which is what a vertex with no atlas entry resolves to; one entry
+        // per skin follows. Without the ids every face read entry zero and sampled the whole sheet, which is the
+        // scrambled entity textures of issue 226.
+        var rectTable = new float[(images.Count + 1) * 4];
+        rectTable[2] = 1f;
+        rectTable[3] = 1f;
         var index = 0;
         foreach (var pair in images)
         {
@@ -63,17 +78,29 @@ public sealed class EntitySkinAtlas : ISpriteAtlas
 
             var logicalWidth = image.Width == 1600 ? 64 : image.Width;
             var logicalHeight = image.Height == 1600 ? 64 : image.Height;
+            var u0 = (float)x / width;
+            var v0 = (float)y / height;
+            var u1 = (float)(x + image.Width) / width;
+            var v1 = (float)(y + image.Height) / height;
+            var rectId = index + 1;
             sprites[pair.Key] = new SpriteRect(x, y, logicalWidth, logicalHeight, 1)
             {
-                U0 = (float)x / width,
-                V0 = (float)y / height,
-                U1 = (float)(x + image.Width) / width,
-                V1 = (float)(y + image.Height) / height
+                U0 = u0,
+                V0 = v0,
+                U1 = u1,
+                V1 = v1,
+                RectId = rectId
             };
+
+            var at = rectId * 4;
+            rectTable[at] = u0;
+            rectTable[at + 1] = v0;
+            rectTable[at + 2] = u1;
+            rectTable[at + 3] = v1;
             index++;
         }
 
-        return new EntitySkinAtlas(new TextureData(width, height, pixels), sprites, cellWidth, cellHeight);
+        return new EntitySkinAtlas(new TextureData(width, height, pixels), sprites, cellWidth, cellHeight, rectTable);
     }
 
     /// <summary>Chooses the grid column count that minimises the larger atlas dimension.</summary>

@@ -1009,6 +1009,11 @@ internal static partial class FrameCommand
                 ? null
                 : WithMips(prepared.Value.Atlas),
 
+            // The vertex carries a sprite id, not the atlas bounds, so the frame is only textured when its table
+            // travels with it. Without this the scene sampled the whole atlas and every face was a shrunken copy of
+            // it, which is what the diagnostic frame showed (issue 226).
+            SpriteRects = prepared?.Atlas.RectTable ?? [],
+
             // The local scene has no weather of its own, so it takes the forced values. Without these the
             // sandbox always renders clear weather and cannot show what rain does to the fog (T-842).
             RainLevel = EffectiveRainLevel(world, 1f),
