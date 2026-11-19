@@ -223,16 +223,6 @@ public static class SpecialItemModelDefinition
         baselinePx: 0f,
         rawSourceFrame: true);
 
-    /// <summary>Held trident models; the special geometry is wrapped in the humanoid arm pivot.</summary>
-    public static readonly EntityModelDefinition HeldTridentRight = EntityModelDefinition.FromTree(
-        "held_special_trident_right", 32, 32, BuildTridentMesh(held: true),
-        PlayerModelDefinition.DefaultFaceTransforms, TridentTexture, 1f,
-        additionalTexturePaths: [TridentTexture]);
-
-    public static readonly EntityModelDefinition HeldTridentLeft = EntityModelDefinition.FromTree(
-        "held_special_trident_left", 32, 32, BuildTridentMesh(held: true, left: true),
-        PlayerModelDefinition.DefaultFaceTransforms, TridentTexture, 1f,
-        additionalTexturePaths: [TridentTexture]);
 
     /// <summary>Shield model: plate plus handle (64×64 texture). Banner patterns are not yet composed.</summary>
     public static readonly EntityModelDefinition Shield = EntityModelDefinition.FromTree(
@@ -247,15 +237,6 @@ public static class SpecialItemModelDefinition
         baselinePx: 0f,
         rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition HeldShieldRight = EntityModelDefinition.FromTree(
-        "held_special_shield_right", 64, 64, BuildShieldMesh(held: true),
-        PlayerModelDefinition.DefaultFaceTransforms, ShieldTexture, 1f,
-        additionalTexturePaths: [ShieldTexture]);
-
-    public static readonly EntityModelDefinition HeldShieldLeft = EntityModelDefinition.FromTree(
-        "held_special_shield_left", 64, 64, BuildShieldMesh(held: true, left: true),
-        PlayerModelDefinition.DefaultFaceTransforms, ShieldTexture, 1f,
-        additionalTexturePaths: [ShieldTexture]);
 
     private static VanillaMeshDefinition BuildBannerMesh(bool standing)
     {
@@ -376,15 +357,10 @@ public static class SpecialItemModelDefinition
         return new VanillaMeshDefinition(root);
     }
 
-    private static VanillaMeshDefinition BuildTridentMesh(bool held = false, bool left = false)
+    private static VanillaMeshDefinition BuildTridentMesh()
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
-        var parent = held
-            ? root.AddOrReplaceChild(left ? "left_arm" : "right_arm",
-                VanillaPartPose.Offset(left ? 5f : -5f, 2f, 0f),
-                new VanillaCubeDefinition(left ? "left_arm" : "right_arm", 0, 0, 0f, 0f, 0f, 0f, 0f, 0f))
-            : root;
-        var pole = parent.AddOrReplaceChild("pole", VanillaPartPose.Zero,
+        var pole = root.AddOrReplaceChild("pole", VanillaPartPose.Zero,
             new VanillaCubeDefinition("pole", 0, 6, -0.5f, 2f, -0.5f, 1f, 25f, 1f));
         pole.AddOrReplaceChild("base", VanillaPartPose.Zero,
             new VanillaCubeDefinition("base", 4, 0, -1.5f, 0f, -0.5f, 3f, 2f, 1f));
@@ -397,17 +373,12 @@ public static class SpecialItemModelDefinition
         return new VanillaMeshDefinition(root);
     }
 
-    private static VanillaMeshDefinition BuildShieldMesh(bool held = false, bool left = false)
+    private static VanillaMeshDefinition BuildShieldMesh()
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
-        var parent = held
-            ? root.AddOrReplaceChild(left ? "left_arm" : "right_arm",
-                VanillaPartPose.Offset(left ? 5f : -5f, 2f, 0f),
-                new VanillaCubeDefinition(left ? "left_arm" : "right_arm", 0, 0, 0f, 0f, 0f, 0f, 0f, 0f))
-            : root;
-        parent.AddOrReplaceChild("plate", VanillaPartPose.Zero,
+        root.AddOrReplaceChild("plate", VanillaPartPose.Zero,
             new VanillaCubeDefinition("plate", 0, 0, -6f, -11f, -2f, 12f, 22f, 1f));
-        parent.AddOrReplaceChild("handle", VanillaPartPose.Zero,
+        root.AddOrReplaceChild("handle", VanillaPartPose.Zero,
             new VanillaCubeDefinition("handle", 26, 0, -1f, -3f, -1f, 2f, 6f, 6f));
         return new VanillaMeshDefinition(root);
     }
