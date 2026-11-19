@@ -465,14 +465,6 @@ public sealed partial class EntityModelMesher
             return true;
         }
 
-        foreach (var part in model.Parts)
-        {
-            if (part.EmissiveTexturePath is { Length: > 0 })
-            {
-                return true;
-            }
-        }
-
         if (model.Compiled is { } compiled)
         {
             foreach (var cube in compiled.Cubes)
