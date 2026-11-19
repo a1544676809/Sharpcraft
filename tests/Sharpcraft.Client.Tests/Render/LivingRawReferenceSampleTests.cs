@@ -390,9 +390,9 @@ public sealed class LivingRawReferenceSampleTests
     /// </summary>
     public static TheoryData<EntityModelDefinition, EntityModelDefinition, int, int, string, EntityRenderState> WorldCases => new()
     {
-        { CreeperModelDefinition.Definition, CompiledPartHelper.Legacy(LegacyEntityTwinFactory.Creeper()), 64, 32, "entity/creeper/creeper", new EntityRenderState(1, 32, 10f, 2f, -4f, 45f, 0f) },
-        { SpiderModelDefinition.Definition, CompiledPartHelper.Legacy(LegacyEntityTwinFactory.Spider()), 64, 32, "entity/spider/spider", new EntityRenderState(1, 127, -3f, 1f, 6f, 250f, 0f) },
-        { WitherBossModelDefinition.Definition, CompiledPartHelper.Legacy(LegacyEntityTwinFactory.Wither()), 64, 64, "entity/wither/wither", new EntityRenderState(1, 149, 0f, 5f, 0f, 90f, 0f) }
+        { CreeperModelDefinition.Definition, LegacyEntityTwinFactory.Creeper(), 64, 32, "entity/creeper/creeper", new EntityRenderState(1, 32, 10f, 2f, -4f, 45f, 0f) },
+        { SpiderModelDefinition.Definition, LegacyEntityTwinFactory.Spider(), 64, 32, "entity/spider/spider", new EntityRenderState(1, 127, -3f, 1f, 6f, 250f, 0f) },
+        { WitherBossModelDefinition.Definition, LegacyEntityTwinFactory.Wither(), 64, 64, "entity/wither/wither", new EntityRenderState(1, 149, 0f, 5f, 0f, 90f, 0f) }
     };
 
     [Theory]
@@ -500,6 +500,25 @@ public sealed class LivingRawReferenceSampleTests
     /// ModelParts own multiple cubes that our DSL declares as separate parts; the mapping reflects the
     /// CubeListBuilder.addBox order in the 26.3 source (PigModel/CowModel/ChickenModel/WitherBossModel).
     /// </summary>
+    /// <summary>#231: reconstruct a pre-scaled dragon head-box descriptor from its compiled node + cube
+    /// (source PartPose.scaled(0.75) + source UV pins), for the jar source-sample oracle only.</summary>
+    private static EntityModelPart ScaledDragonPart(EntityModelPartNode node, EntityModelCube cube, string name,
+        int uvWidth, int uvHeight, int uvDepth)
+    {
+        var s = node.ScaleX;
+        return new EntityModelPart(
+            Name: name, CentreX: cube.CentreX * s,
+            Bottom: node.PivotY + (cube.Bottom - node.PivotY) * s,
+            CentreZ: cube.CentreZ * s, Width: cube.Width * s, Height: cube.Height * s, Depth: cube.Depth * s,
+            TextureX: cube.TextureX, TextureY: cube.TextureY, Mirror: cube.Mirror,
+            OverlayLayers: cube.Overlays, TexturePath: cube.TexturePath, Grow: cube.Grow,
+            GrowXyz: cube.GrowXyz, Kind: cube.Kind, VisibleWhen: node.VisibleWhen,
+            TextureWidth: cube.TextureWidth, TextureHeight: cube.TextureHeight,
+            IncludeInEmissive: cube.IncludeInEmissive, EmissiveOnly: cube.EmissiveOnly,
+            EmissiveTexturePath: cube.EmissiveTexturePath, TextureSelector: cube.TextureSelector,
+            VisibleSides: cube.VisibleSides, UvWidth: uvWidth, UvHeight: uvHeight, UvDepth: uvDepth);
+    }
+
     private static EntityModelPart[] FlatPartsForSampleCube(EntityModelDefinition definition, string part, int cube)
     {
         // #231: dragon skull's flat head boxes were the source PartPose.scaled(0.75) group: the scale is
@@ -508,11 +527,7 @@ public sealed class LivingRawReferenceSampleTests
         if (definition.Name == "dragon_skull" && part == "/head" && cube is >= 0 and <= 5)
         {
             var headNode = definition.Compiled!.Parts.Single(n => n.Name == "head");
-            var box = headNode.CubeArray[cube];
-            var s = headNode.ScaleX; // PartPose.scaled(0.75) — uniform source scale
-            var flatName = cube switch
-            {
-                0 => "head", 1 => "upper_head", 2 => "scale_left",
+            var dragonFlatName = cube switch { 0 => "head", 1 => "upper_head", 2 => "scale_left",
                 3 => "nostril_left", 4 => "scale_right", _ => "nostril_right"
             };
             var (uw, uh, ud) = cube switch
@@ -520,22 +535,23 @@ public sealed class LivingRawReferenceSampleTests
                 0 => (12, 5, 16), 1 => (16, 16, 16),
                 2 or 4 => (2, 4, 6), _ => (2, 2, 4)
             };
-            var scaled = new EntityModelPart(
-                Name: flatName,
-                CentreX: box.CentreX * s,
-                Bottom: headNode.PivotY + (box.Bottom - headNode.PivotY) * s,
-                CentreZ: box.CentreZ * s,
-                Width: box.Width * s,
-                Height: box.Height * s,
-                Depth: box.Depth * s,
-                TextureX: box.TextureX, TextureY: box.TextureY, Mirror: box.Mirror,
-                OverlayLayers: box.Overlays, TexturePath: box.TexturePath, Grow: box.Grow,
-                GrowXyz: box.GrowXyz, Kind: box.Kind, VisibleWhen: headNode.VisibleWhen,
-                TextureWidth: box.TextureWidth, TextureHeight: box.TextureHeight,
-                IncludeInEmissive: box.IncludeInEmissive, EmissiveOnly: box.EmissiveOnly,
-                EmissiveTexturePath: box.EmissiveTexturePath, TextureSelector: box.TextureSelector,
-                VisibleSides: box.VisibleSides,
-                UvWidth: uw, UvHeight: uh, UvDepth: ud);
+            return [ScaledDragonPart(headNode, headNode.CubeArray[cube], dragonFlatName, uw, uh, ud)];
+        }
+        if (definition.Name == "dragon_skull" && part == "/head/jaw" && cube == 0)
+        {
+            // DragonHeadModel jaw: source PartPose.offset(0,4,-8) under the scaled(0.75) head. The flat bake
+            // emitted the head scale into absolute source-frame geometry; rebuild it from the compiled cube
+            // and the head/jaw source pivots (all source constants, no self-derived expectation).
+            var head = definition.Compiled!.Parts.Single(n => n.Name == "head");
+            var jaw = definition.Compiled!.Parts.Single(n => n.Name == "jaw");
+            var box = jaw.CubeArray[0];
+            var s = head.ScaleX;
+            var scaled = ScaledDragonPart(head, box, "jaw", 12, 4, 16) with
+            {
+                CentreX = (jaw.PivotX + box.CentreX) * s,
+                Bottom = head.PivotY + jaw.PivotY * s + box.Bottom * s,
+                CentreZ = (jaw.PivotZ + box.CentreZ) * s
+            };
             return [scaled];
         }
 

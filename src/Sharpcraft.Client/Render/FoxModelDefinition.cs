@@ -40,17 +40,7 @@ public static class FoxModelDefinition
         ];
     }
 
-    public static readonly EntityModelDefinition Definition = new(
-        "fox",
-        48,
-        32,
-        BuildParts(),
-        faceTransforms: null,
-        "entity/fox/fox",
-        textureSelector: state => state.IsSleeping ? "entity/fox/fox_sleep" : "entity/fox/fox",
-        additionalTexturePaths: ["entity/fox/fox_sleep"], compiled: CompiledModel,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new("fox", 48, 32, faceTransforms: null, texturePath: "entity/fox/fox", textureSelector: state => state.IsSleeping ? "entity/fox/fox_sleep" : "entity/fox/fox", additionalTexturePaths: ["entity/fox/fox_sleep"], compiled: CompiledModel, baselinePx: 0f, rawSourceFrame: true);
 
     /// <summary>Fox type names: RED and SNOW, matching the synced integer type id order.</summary>
     public static readonly IReadOnlyList<string> VariantKeys = ["red", "snow"];
@@ -59,17 +49,7 @@ public static class FoxModelDefinition
         new Dictionary<string, EntityModelDefinition>(StringComparer.Ordinal)
         {
             ["red"] = Definition,
-            ["snow"] = new(
-                "fox_snow",
-                48,
-                32,
-                Definition.Parts,
-                faceTransforms: null,
-                "entity/fox/fox_snow",
-                textureSelector: state => state.IsSleeping ? "entity/fox/fox_snow_sleep" : "entity/fox/fox_snow",
-                additionalTexturePaths: ["entity/fox/fox_snow_sleep"], compiled: CompiledModel,
-                baselinePx: 0f,
-                rawSourceFrame: true)
+            ["snow"] = new("fox_snow", 48, 32, faceTransforms: null, texturePath: "entity/fox/fox_snow", textureSelector: state => state.IsSleeping ? "entity/fox/fox_snow_sleep" : "entity/fox/fox_snow", additionalTexturePaths: ["entity/fox/fox_snow_sleep"], compiled: CompiledModel, baselinePx: 0f, rawSourceFrame: true)
         };
 
     private static VanillaMeshDefinition BuildFoxMesh()

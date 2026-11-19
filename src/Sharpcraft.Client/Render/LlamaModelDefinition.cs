@@ -18,16 +18,7 @@ public static class LlamaModelDefinition
     private static readonly CompiledEntityModel LlamaCompiled =
         VanillaMeshBakery.Build(LlamaMesh, 128, 64, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Definition = new(
-        "llama",
-        128,
-        64,
-        [.. VanillaMeshBake.Bake(LlamaMesh, 0, 0, rawSourceFrame: true)],
-        faceTransforms: null,
-        "entity/llama/llama_brown",
-        compiled: LlamaCompiled,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new("llama", 128, 64, faceTransforms: null, texturePath: "entity/llama/llama_brown", compiled: LlamaCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     /// <summary>Llama coat ids, in the <c>Llama.Variant</c> enum order used on the wire.</summary>
     public static readonly IReadOnlyList<string> VariantKeys = ["creamy", "white", "brown", "gray"];
@@ -49,16 +40,7 @@ public static class LlamaModelDefinition
                 continue;
             }
 
-            variants[key] = new EntityModelDefinition(
-                "llama_" + key,
-                128,
-                64,
-                Definition.Parts,
-                faceTransforms: null,
-                "entity/llama/llama_" + key,
-                compiled: LlamaCompiled,
-                baselinePx: 0f,
-                rawSourceFrame: true);
+            variants[key] = new EntityModelDefinition("llama_" + key, 128, 64, faceTransforms: null, texturePath: "entity/llama/llama_" + key, compiled: LlamaCompiled, baselinePx: 0f, rawSourceFrame: true);
         }
 
         return variants;

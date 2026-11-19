@@ -11,14 +11,5 @@ public static class TraderLlamaModelDefinition
 {
     public const int TraderLlamaEntityTypeId = 138;
 
-    public static readonly EntityModelDefinition Definition = new(
-        "trader_llama",
-        128,
-        64,
-        LlamaModelDefinition.Definition.Parts,
-        faceTransforms: null,
-        "entity/llama/llama_brown",
-        compiled: LlamaModelDefinition.Definition.Compiled,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new("trader_llama", 128, 64, faceTransforms: null, texturePath: "entity/llama/llama_brown", compiled: LlamaModelDefinition.Definition.Compiled, baselinePx: 0f, rawSourceFrame: true);
 }

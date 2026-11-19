@@ -430,7 +430,7 @@ public static class StateMatrixBaseline
         var baby = EntityModelResolver.TryResolve(typeId, baby: true) is not null;
         // The base body layer exists for every model with real geometry; pose animates it. Non-equipment
         // definitions keep the shared DefaultRenderLayers placeholders (Model == null) yet still have body parts.
-        var pose = definition.Parts.Count > 0;
+        var pose = definition.Compiled?.Cubes.Count > 0;
         var held = layers.Any(layer => LayerClassFor(layer) is "held" or "special" or "special_glint");
         var glint = layers.Any(layer => layer.GlintScale is not null || LayerClassFor(layer) is "glint" or "special_glint");
         // EnergySwirlLayer presence (UvOffset layer) gates both the powered and energy states on its owner.
@@ -449,8 +449,8 @@ public static class StateMatrixBaseline
         var definition = EntityModelResolver.Resolve(typeId);
 
         // Every entity with body geometry has a base layer: base/pose (+baby) are metadata-allowed there.
-        // This is derived from Parts, not from the equipment-layer Model markers used below.
-        if (definition.Parts.Count > 0)
+        // Derived from compiled geometry, not the equipment-layer Model markers used below.
+        if (definition.Compiled?.Cubes.Count > 0)
         {
             allowed.Add(("base", "base"));
             if (capabilities.Pose) allowed.Add(("pose", "base"));

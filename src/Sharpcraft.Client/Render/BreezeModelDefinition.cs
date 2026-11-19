@@ -27,18 +27,7 @@ public static class BreezeModelDefinition
     private static readonly CompiledEntityModel CompiledModel =
         VanillaMeshBakery.Build(BreezeMesh, 32, 32, texturePath: "entity/breeze/breeze", rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Definition = new(
-        "breeze",
-        32,
-        32,
-        [.. VanillaMeshBake.Bake(BreezeMesh, 0, 0, rawSourceFrame: true)],
-        faceTransforms: null,
-        "entity/breeze/breeze",
-        1f,
-        "entity/breeze/breeze_eyes",
-        additionalTexturePaths: ["entity/breeze/breeze_wind", "entity/breeze/breeze_eyes"], compiled: CompiledModel,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new("breeze", 32, 32, faceTransforms: null, texturePath: "entity/breeze/breeze", scale: 1f, emissiveTexturePath: "entity/breeze/breeze_eyes", additionalTexturePaths: ["entity/breeze/breeze_wind", "entity/breeze/breeze_eyes"], compiled: CompiledModel, baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildBreezeMesh()
     {

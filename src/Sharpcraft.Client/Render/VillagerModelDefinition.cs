@@ -21,37 +21,16 @@ public static class VillagerModelDefinition
     private static readonly CompiledEntityModel VillagerCompiled =
         VanillaMeshBakery.Build(VillagerMesh, 64, 64, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Definition = new(
-        "villager",
-        64,
-        64,
-        [.. VanillaMeshBake.Bake(VillagerMesh, 0, 0, rawSourceFrame: true)],
-        faceTransforms: null,
-        "entity/villager/villager",
-        0.9375f,
-        compiled: VillagerCompiled,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new("villager", 64, 64, faceTransforms: null, texturePath: "entity/villager/villager", scale: 0.9375f, compiled: VillagerCompiled, baselinePx: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition WanderingTrader = new(
-        "wandering_trader",
-        64,
-        64,
-        Definition.Parts,
-        faceTransforms: null,
-        "entity/wandering_trader/wandering_trader",
-        0.9375f,
-        compiled: VillagerCompiled,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition WanderingTrader = new("wandering_trader", 64, 64, faceTransforms: null, texturePath: "entity/wandering_trader/wandering_trader", scale: 0.9375f, compiled: VillagerCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly IReadOnlyList<string> VariantKeys = ["plains", "desert", "jungle", "savanna", "snow", "swamp", "taiga"];
 
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants =
-        VariantMap(Definition.Parts, "entity/villager/type/", 0.9375f, baseCompiled: VillagerCompiled);
+        VariantMap("entity/villager/type/", 0.9375f, baseCompiled: VillagerCompiled);
 
     internal static Dictionary<string, EntityModelDefinition> VariantMap(
-        IReadOnlyList<EntityModelPart> parts,
         string texturePrefix,
         float scale,
         string namePrefix = "villager_",
@@ -71,17 +50,7 @@ public static class VillagerModelDefinition
                     _ => texturePath,
                     fallbackTexture: texturePath,
                     inflate: 0.05f);
-            variants[key] = new EntityModelDefinition(
-                namePrefix + key,
-                64,
-                64,
-                EntityModelLayerHelpers.WithCopy(parts, texturePath, static _ => true, 0.05f),
-                faceTransforms: null,
-                baseTexture,
-                scale,
-                compiled: compiled,
-                baselinePx: 0f,
-                rawSourceFrame: true);
+            variants[key] = new EntityModelDefinition(namePrefix + key, 64, 64, faceTransforms: null, texturePath: baseTexture, scale: scale, compiled: compiled, baselinePx: 0f, rawSourceFrame: true);
         }
 
         return variants;

@@ -21,16 +21,7 @@ public static class RabbitModelDefinition
     private static readonly CompiledEntityModel CompiledModel =
         VanillaMeshBakery.Build(RabbitMesh, 64, 64, texturePath: "entity/rabbit/rabbit_brown", rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Definition = new(
-        "rabbit",
-        64,
-        64,
-        [.. VanillaMeshBake.Bake(RabbitMesh, 0, 0, rawSourceFrame: true)],
-        faceTransforms: null,
-        "entity/rabbit/rabbit_brown",
-        compiled: CompiledModel,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new("rabbit", 64, 64, faceTransforms: null, texturePath: "entity/rabbit/rabbit_brown", compiled: CompiledModel, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly IReadOnlyList<string> VariantKeys = ["brown", "white", "black", "white_splotched", "gold", "salt", "evil"];
 
@@ -56,7 +47,7 @@ public static class RabbitModelDefinition
         {
             if (key != "brown")
             {
-                variants[key] = new EntityModelDefinition("rabbit_" + key, 64, 64, Definition.Parts, faceTransforms: null, "entity/rabbit/" + files[key], compiled: CompiledModel, baselinePx: 0f, rawSourceFrame: true);
+                variants[key] = new EntityModelDefinition("rabbit_" + key, 64, 64, faceTransforms: null, texturePath: "entity/rabbit/" + files[key], compiled: CompiledModel, baselinePx: 0f, rawSourceFrame: true);
             }
         }
 

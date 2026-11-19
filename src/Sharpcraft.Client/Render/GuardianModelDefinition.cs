@@ -30,28 +30,9 @@ public static class GuardianModelDefinition
     private static readonly CompiledEntityModel GuardianCompiled =
         VanillaMeshBakery.Build(GuardianMesh, 64, 64, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Definition = new(
-        "guardian",
-        64,
-        64,
-        [.. VanillaMeshBake.Bake(GuardianMesh, 0, 0, rawSourceFrame: true)],
-        faceTransforms: null,
-        "entity/guardian/guardian",
-        compiled: GuardianCompiled,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new("guardian", 64, 64, faceTransforms: null, texturePath: "entity/guardian/guardian", compiled: GuardianCompiled, baselinePx: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Elder = new(
-        "elder_guardian",
-        64,
-        64,
-        [.. VanillaMeshBake.Bake(GuardianMesh, 0, 0, rawSourceFrame: true)],
-        faceTransforms: null,
-        "entity/guardian/guardian_elder",
-        2.35f,
-        compiled: GuardianCompiled,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Elder = new("elder_guardian", 64, 64, faceTransforms: null, texturePath: "entity/guardian/guardian_elder", scale: 2.35f, compiled: GuardianCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildGuardianMesh()
     {

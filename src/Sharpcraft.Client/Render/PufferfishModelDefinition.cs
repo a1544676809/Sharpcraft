@@ -36,21 +36,14 @@ public static class PufferfishModelDefinition
     /// <summary>Puff state ids: 0 small, 1 medium, 2 large.</summary>
     public static readonly IReadOnlyList<string> VariantKeys = ["small", "medium", "large"];
 
-    public static readonly EntityModelDefinition Definition = new(
-        "pufferfish",
-        32,
-        32,
-        SmallParts,
-        faceTransforms: null,
-        texturePath: "entity/fish/pufferfish",
-        compiled: SmallCompiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new("pufferfish", 32, 32, faceTransforms: null, texturePath: "entity/fish/pufferfish", compiled: SmallCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants =
         new Dictionary<string, EntityModelDefinition>(StringComparer.Ordinal)
         {
             ["small"] = Definition,
-            ["medium"] = new("pufferfish_medium", 32, 32, MediumParts, faceTransforms: null, texturePath: "entity/fish/pufferfish", compiled: MediumCompiled, baselinePx: 0f, rawSourceFrame: true),
-            ["large"] = new("pufferfish_large", 32, 32, LargeParts, faceTransforms: null, texturePath: "entity/fish/pufferfish", compiled: LargeCompiled, baselinePx: 0f, rawSourceFrame: true)
+            ["medium"] = new("pufferfish_medium", 32, 32, faceTransforms: null, texturePath: "entity/fish/pufferfish", compiled: MediumCompiled, baselinePx: 0f, rawSourceFrame: true),
+            ["large"] = new("pufferfish_large", 32, 32, faceTransforms: null, texturePath: "entity/fish/pufferfish", compiled: LargeCompiled, baselinePx: 0f, rawSourceFrame: true)
         };
 
     private static VanillaMeshDefinition BuildSmallMesh()

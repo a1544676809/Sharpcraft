@@ -15,13 +15,15 @@ public sealed class ZombieNautilusCoralTests
     public void CoralHidesWhenBodyArmorIsEquipped()
     {
         var definition = EntityModelResolver.ResolveVariantStrict(ZombieNautilusModelDefinition.ZombieNautilusEntityTypeId, "warm");
-        var coral = definition.StructuralParts().First(part => part.Name == "yellow_coral_second");
-        Assert.NotNull(coral.VisibleWhen);
+        // #231: the coral visibility predicate lives on the compiled "corals" group node, whose children
+        // (yellow_coral_second, etc.) inherit it — previously the flat bake copied it onto each part.
+        var coralGroup = definition.Compiled!.Parts.First(node => node.Name == "corals");
+        Assert.NotNull(coralGroup.VisibleWhen);
 
         var unarmored = new EntityRenderState(1, ZombieNautilusModelDefinition.ZombieNautilusEntityTypeId, 0f, 0f, 0f, 0f, 0f);
-        Assert.True(coral.VisibleWhen!(unarmored));
+        Assert.True(coralGroup.VisibleWhen!(unarmored));
 
         var armored = unarmored with { Equipment = new EntityEquipment(-1, -1, -1, -1, -1, -1, 5, -1) };
-        Assert.False(coral.VisibleWhen!(armored));
+        Assert.False(coralGroup.VisibleWhen!(armored));
     }
 }

@@ -17,14 +17,7 @@ public static class TurtleModelDefinition
     private static readonly CompiledEntityModel TurtleCompiled =
         VanillaMeshBakery.Build(TurtleMesh, 128, 64, modelHeight: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Definition = new(
-        "turtle",
-        128,
-        64,
-        [.. VanillaMeshBake.Bake(TurtleMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
-        faceTransforms: null,
-        "entity/turtle/turtle",
-        compiled: TurtleCompiled);
+    public static readonly EntityModelDefinition Definition = new("turtle", 128, 64, faceTransforms: null, texturePath: "entity/turtle/turtle", compiled: TurtleCompiled);
 
     private static VanillaMeshDefinition BuildTurtleMesh()
     {

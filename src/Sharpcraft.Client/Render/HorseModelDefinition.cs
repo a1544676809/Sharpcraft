@@ -59,58 +59,15 @@ public static class HorseModelDefinition
         ];
     }
 
-    public static readonly EntityModelDefinition Definition = new(
-        "horse",
-        64,
-        64,
-        EntityModelLayerHelpers.WithHorseMarkings(
-            BuildParts(),
-            "entity/horse/horse_markings_",
-            false),
-        faceTransforms: null,
-        "entity/horse/horse_brown",
-        1.1f,
-        compiled: HorseMarkedCompiled,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new("horse", 64, 64, faceTransforms: null, texturePath: "entity/horse/horse_brown", scale: 1.1f, compiled: HorseMarkedCompiled, baselinePx: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Donkey = new(
-        "donkey",
-        64,
-        64,
-        HorseModelDefinition.Definition.Parts,
-        faceTransforms: null,
-        "entity/horse/donkey",
-        0.87f,
-        compiled: DonkeyCompiled,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Donkey = new("donkey", 64, 64, faceTransforms: null, texturePath: "entity/horse/donkey", scale: 0.87f, compiled: DonkeyCompiled, baselinePx: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Mule = new(
-        "mule",
-        64,
-        64,
-        HorseModelDefinition.Definition.Parts,
-        faceTransforms: null,
-        "entity/horse/mule",
-        0.92f,
-        compiled: MuleCompiled,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Mule = new("mule", 64, 64, faceTransforms: null, texturePath: "entity/horse/mule", scale: 0.92f, compiled: MuleCompiled, baselinePx: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition ZombieHorse = new(
-        "zombie_horse", 64, 64, HorseModelDefinition.Definition.Parts,
-        faceTransforms: null, "entity/horse/horse_zombie",
-        compiled: ZombieHorseCompiled,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition ZombieHorse = new("zombie_horse", 64, 64, faceTransforms: null, texturePath: "entity/horse/horse_zombie", compiled: ZombieHorseCompiled, baselinePx: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition SkeletonHorse = new(
-        "skeleton_horse", 64, 64, HorseModelDefinition.Definition.Parts,
-        faceTransforms: null, "entity/horse/horse_skeleton",
-        compiled: SkeletonHorseCompiled,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition SkeletonHorse = new("skeleton_horse", 64, 64, faceTransforms: null, texturePath: "entity/horse/horse_skeleton", compiled: SkeletonHorseCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     /// <summary>Horse coat ids, in the <c>Variant</c> enum order used on the wire.</summary>
     public static readonly IReadOnlyList<string> VariantKeys =
@@ -142,17 +99,7 @@ public static class HorseModelDefinition
                 continue;
             }
 
-            variants[key] = new EntityModelDefinition(
-                "horse_" + key,
-                64,
-                64,
-                Definition.Parts,
-                faceTransforms: null,
-                "entity/horse/" + VariantFiles[i],
-                1.1f,
-                compiled: HorseMarkedCompiled,
-                baselinePx: 0f,
-                rawSourceFrame: true);
+            variants[key] = new EntityModelDefinition("horse_" + key, 64, 64, faceTransforms: null, texturePath: "entity/horse/" + VariantFiles[i], scale: 1.1f, compiled: HorseMarkedCompiled, baselinePx: 0f, rawSourceFrame: true);
         }
 
         return variants;

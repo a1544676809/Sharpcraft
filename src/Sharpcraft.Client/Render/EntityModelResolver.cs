@@ -41,12 +41,7 @@ public static partial class EntityModelResolver
         return new CompiledEntityModel(root, [node], [cube]);
     }
 
-    public static readonly EntityModelDefinition Placeholder = new(
-        "placeholder",
-        64,
-        64,
-        [PlaceholderPart],
-        compiled: BuildPlaceholderCompiled());
+    public static readonly EntityModelDefinition Placeholder = new("placeholder", 64, 64, compiled: BuildPlaceholderCompiled());
 
     private static readonly Dictionary<int, EntityModelDefinition> Models = new()
     {        [EntityPlaceholderMesher.PlayerEntityTypeId] = PlayerModelDefinition.Definition,
@@ -224,58 +219,13 @@ public static partial class EntityModelResolver
             return cached;
         }
 
-        var parts = definition.Parts;
-        if (baby && ReferenceEquals(layers, HumanoidArmorLayers))
-        {
-            foreach (var slot in HumanoidArmorSlots)
-            {
-                parts = EntityModelLayerHelpers.WithBabyArmorSlot(parts, EquipmentAssetKind.HumanoidArmorBaby, slot, "entity/equipment/humanoid_baby/iron");
-            }
-
-            parts = EntityModelLayerHelpers.WithElytra(parts, baby: true);
-        }
-        else
-        {
-            foreach (var (kind, slot, fallback) in layers)
-            {
-                parts = kind is EquipmentAssetKind.HumanoidArmor or EquipmentAssetKind.HumanoidLeggings
-                    ? EntityModelLayerHelpers.WithArmorSlot(parts, kind, slot, fallback)
-                    : EntityModelLayerHelpers.WithEquipment(parts, kind, slot, fallback, baseCopy: kind != EquipmentAssetKind.HappyGhastBody);
-            }
-
-            if (ReferenceEquals(layers, HumanoidArmorLayers))
-            {
-                parts = EntityModelLayerHelpers.WithElytra(parts);
-            }
-        }
-
-        // Wolf armor shows a crackiness overlay based on the chest/body slot durability.
-        if (typeId == 152)
-        {
-            parts = EntityModelLayerHelpers.WithCrackiness(parts);
-        }
-
         var baseCompiled = definition.Compiled;
         IReadOnlyList<EntityRenderLayerDefinition>? renderLayers = null;
         var babyArmorLayers = baby &&
             (ReferenceEquals(layers, HumanoidArmorLayers) || ReferenceEquals(layers, PiglinArmorLayers));
         if ((!baby || babyArmorLayers) && baseCompiled is not null && layers.Length > 0)
         {
-            var baseLayerModel = new EntityModelDefinition(
-                definition.Name,
-                definition.TextureWidth,
-                definition.TextureHeight,
-                definition.Parts,
-                definition.FaceTransforms,
-                definition.TexturePath,
-                definition.Scale,
-                definition.EmissiveTexturePath,
-                definition.TextureSelector,
-                definition.AdditionalTexturePaths,
-                compiled: baseCompiled,
-                baselinePx: definition.BaselinePx,
-                rawSourceFrame: definition.RawSourceFrame,
-                sourceFrameBaselinePx: definition.SourceFrameBaselinePx);
+            var baseLayerModel = new EntityModelDefinition(definition.Name, definition.TextureWidth, definition.TextureHeight, definition.FaceTransforms, definition.TexturePath, definition.Scale, definition.EmissiveTexturePath, definition.TextureSelector, definition.AdditionalTexturePaths, compiled: baseCompiled, baselinePx: definition.BaselinePx, rawSourceFrame: definition.RawSourceFrame, sourceFrameBaselinePx: definition.SourceFrameBaselinePx);
             var customLayers = new List<EntityRenderLayerDefinition>();
             foreach (var baseLayer in definition.RenderLayers)
             {
@@ -360,38 +310,12 @@ public static partial class EntityModelResolver
                                                     ? PiglinArmorModelDefinition.ForSlot(slot, baby)
                                                     : null;
                 var layerModel = rawArmor is null
-                    ? new EntityModelDefinition(
-                        layerName,
-                        definition.TextureWidth,
-                        definition.TextureHeight,
-                        [],
-                        PlayerModelDefinition.DefaultFaceTransforms,
-                        layerTexture,
-                        definition.Scale,
-                        textureSelector: selector,
-                        additionalTexturePaths: [layerTexture],
-                        compiled: EntityModelLayerHelpers.WithTint(
+                    ? new EntityModelDefinition(layerName, definition.TextureWidth, definition.TextureHeight, PlayerModelDefinition.DefaultFaceTransforms, layerTexture, definition.Scale, textureSelector: selector, additionalTexturePaths: [layerTexture], compiled: EntityModelLayerHelpers.WithTint(
                             equipmentTree,
-                            state => EntityModelResolver.ResolveEquipmentTint(state, effectiveKind, slot)),
-                        baselinePx: 24f,
-                        rawSourceFrame: false,
-                        sourceFrameBaselinePx: 24f)
-                    : new EntityModelDefinition(
-                        layerName,
-                        rawArmor.TextureWidth,
-                        rawArmor.TextureHeight,
-                        rawArmor.Parts,
-                        faceTransforms: null,
-                        layerTexture,
-                        rawArmor.Scale,
-                        textureSelector: selector,
-                        additionalTexturePaths: [layerTexture],
-                        compiled: EntityModelLayerHelpers.WithTint(
+                            state => EntityModelResolver.ResolveEquipmentTint(state, effectiveKind, slot)), baselinePx: 24f, rawSourceFrame: false, sourceFrameBaselinePx: 24f)
+                    : new EntityModelDefinition(layerName, rawArmor.TextureWidth, rawArmor.TextureHeight, faceTransforms: null, texturePath: layerTexture, scale: rawArmor.Scale, textureSelector: selector, additionalTexturePaths: [layerTexture], compiled: EntityModelLayerHelpers.WithTint(
                             rawArmor.Compiled!,
-                            state => EntityModelResolver.ResolveEquipmentTint(state, effectiveKind, slot)),
-                        baselinePx: 0f,
-                        rawSourceFrame: true,
-                        sourceFrameBaselinePx: 0f);
+                            state => EntityModelResolver.ResolveEquipmentTint(state, effectiveKind, slot)), baselinePx: 0f, rawSourceFrame: true, sourceFrameBaselinePx: 0f);
                 customLayers.Add(new EntityRenderLayerDefinition(
                     layerName,
                     EntityGeometryLayerKind.Elytra,
@@ -416,19 +340,7 @@ public static partial class EntityModelResolver
                 {
                     Func<EntityRenderState, string?> trimSelector = state => ResolveTrimTexture(state, trimType, slot);
                     var trimName = "trim_" + effectiveKind + "_" + slot;
-                    var trimModel = new EntityModelDefinition(
-                        trimName,
-                        definition.TextureWidth,
-                        definition.TextureHeight,
-                        [],
-                        PlayerModelDefinition.DefaultFaceTransforms,
-                        texturePath: null,
-                        materialScale,
-                        textureSelector: trimSelector,
-                        compiled: materialCompiled,
-                        baselinePx: materialBaseline,
-                        rawSourceFrame: rawMaterial,
-                        sourceFrameBaselinePx: materialBaseline);
+                    var trimModel = new EntityModelDefinition(trimName, definition.TextureWidth, definition.TextureHeight, PlayerModelDefinition.DefaultFaceTransforms, texturePath: null, scale: materialScale, textureSelector: trimSelector, compiled: materialCompiled, baselinePx: materialBaseline, rawSourceFrame: rawMaterial, sourceFrameBaselinePx: materialBaseline);
                     customLayers.Add(new EntityRenderLayerDefinition(
                         trimName,
                         EntityGeometryLayerKind.Elytra,
@@ -441,21 +353,7 @@ public static partial class EntityModelResolver
                 }
 
                 const string glintTexture = "misc/enchanted_glint_armor";
-                var glintModel = new EntityModelDefinition(
-                    "glint_" + effectiveKind + "_" + slot,
-                    definition.TextureWidth,
-                    definition.TextureHeight,
-                    [],
-                    PlayerModelDefinition.DefaultFaceTransforms,
-                    glintTexture,
-                    materialScale,
-                    emissiveTexturePath: glintTexture,
-                    textureSelector: state => ResolveEquipmentFoil(state, slot) ? glintTexture : null,
-                    additionalTexturePaths: [glintTexture],
-                    compiled: EntityModelLayerHelpers.WithEmissiveTexture(materialCompiled, glintTexture),
-                    baselinePx: materialBaseline,
-                    rawSourceFrame: rawMaterial,
-                    sourceFrameBaselinePx: materialBaseline);
+                var glintModel = new EntityModelDefinition("glint_" + effectiveKind + "_" + slot, definition.TextureWidth, definition.TextureHeight, PlayerModelDefinition.DefaultFaceTransforms, glintTexture, materialScale, emissiveTexturePath: glintTexture, textureSelector: state => ResolveEquipmentFoil(state, slot) ? glintTexture : null, additionalTexturePaths: [glintTexture], compiled: EntityModelLayerHelpers.WithEmissiveTexture(materialCompiled, glintTexture), baselinePx: materialBaseline, rawSourceFrame: rawMaterial, sourceFrameBaselinePx: materialBaseline);
                 customLayers.Add(new EntityRenderLayerDefinition(
                     "glint_" + effectiveKind + "_" + slot,
                     EntityGeometryLayerKind.Glint,
@@ -477,25 +375,12 @@ public static partial class EntityModelResolver
                     3 => "entity/wolf/wolf_armor_crackiness_high",
                     _ => null
                 };
-                var crackinessModel = new EntityModelDefinition(
-                    "crackiness",
-                    definition.TextureWidth,
-                    definition.TextureHeight,
-                    [],
-                    PlayerModelDefinition.DefaultFaceTransforms,
-                    "entity/wolf/wolf_armor_crackiness_low",
-                    WolfArmorModelDefinition.Definition.Scale,
-                    textureSelector: crackSelector,
-                    additionalTexturePaths:
+                var crackinessModel = new EntityModelDefinition("crackiness", definition.TextureWidth, definition.TextureHeight, PlayerModelDefinition.DefaultFaceTransforms, "entity/wolf/wolf_armor_crackiness_low", WolfArmorModelDefinition.Definition.Scale, textureSelector: crackSelector, additionalTexturePaths:
                     [
                         "entity/wolf/wolf_armor_crackiness_low",
                         "entity/wolf/wolf_armor_crackiness_medium",
                         "entity/wolf/wolf_armor_crackiness_high"
-                    ],
-                    compiled: WolfArmorModelDefinition.Definition.Compiled,
-                    baselinePx: 0f,
-                    rawSourceFrame: true,
-                    sourceFrameBaselinePx: 0f);
+                    ], compiled: WolfArmorModelDefinition.Definition.Compiled, baselinePx: 0f, rawSourceFrame: true, sourceFrameBaselinePx: 0f);
                 customLayers.Add(new EntityRenderLayerDefinition(
                     "crackiness",
                     EntityGeometryLayerKind.Elytra,
@@ -510,20 +395,7 @@ public static partial class EntityModelResolver
             if (ReferenceEquals(layers, HumanoidArmorLayers))
             {
                 var elytraCompiled = EntityModelLayerHelpers.BuildElytraLayer(baseCompiled, baby);
-                var elytraModel = new EntityModelDefinition(
-                    "elytra",
-                    definition.TextureWidth,
-                    definition.TextureHeight,
-                    [],
-                    PlayerModelDefinition.DefaultFaceTransforms,
-                    "entity/equipment/wings/elytra",
-                    definition.Scale,
-                    textureSelector: state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4),
-                    additionalTexturePaths: ["entity/equipment/wings/elytra"],
-                    compiled: elytraCompiled,
-                    baselinePx: 0f,
-                    rawSourceFrame: true,
-                    sourceFrameBaselinePx: 0f);
+                var elytraModel = new EntityModelDefinition("elytra", definition.TextureWidth, definition.TextureHeight, PlayerModelDefinition.DefaultFaceTransforms, "entity/equipment/wings/elytra", definition.Scale, textureSelector: state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4), additionalTexturePaths: ["entity/equipment/wings/elytra"], compiled: elytraCompiled, baselinePx: 0f, rawSourceFrame: true, sourceFrameBaselinePx: 0f);
                 customLayers.Add(new EntityRenderLayerDefinition(
                     "elytra",
                     EntityGeometryLayerKind.Elytra,
@@ -655,22 +527,7 @@ public static partial class EntityModelResolver
             renderLayers = poweredLayers;
         }
 
-        var decorated = new EntityModelDefinition(
-            definition.Name,
-            definition.TextureWidth,
-            definition.TextureHeight,
-            parts,
-            definition.FaceTransforms,
-            definition.TexturePath,
-            definition.Scale,
-            definition.EmissiveTexturePath,
-            definition.TextureSelector,
-            definition.AdditionalTexturePaths.Concat(EquipmentTextureCatalog.AllTexturePaths).Distinct(StringComparer.Ordinal).ToArray(),
-            compiled: compiled,
-            renderLayers: renderLayers,
-            baselinePx: definition.BaselinePx,
-            rawSourceFrame: definition.RawSourceFrame,
-            sourceFrameBaselinePx: definition.SourceFrameBaselinePx);
+        var decorated = new EntityModelDefinition(definition.Name, definition.TextureWidth, definition.TextureHeight, definition.FaceTransforms, definition.TexturePath, definition.Scale, definition.EmissiveTexturePath, definition.TextureSelector, definition.AdditionalTexturePaths.Concat(EquipmentTextureCatalog.AllTexturePaths).Distinct(StringComparer.Ordinal).ToArray(), compiled: compiled, renderLayers: renderLayers, baselinePx: definition.BaselinePx, rawSourceFrame: definition.RawSourceFrame, sourceFrameBaselinePx: definition.SourceFrameBaselinePx);
         EquippedModels[key] = decorated;
         return decorated;
     }

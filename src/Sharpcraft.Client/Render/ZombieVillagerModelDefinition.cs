@@ -19,20 +19,10 @@ public static class ZombieVillagerModelDefinition
     private static readonly CompiledEntityModel ZombieVillagerCompiled =
         VanillaMeshBakery.Build(ZombieVillagerMesh, 64, 64, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Definition = new(
-        "zombie_villager",
-        64,
-        64,
-        [.. VanillaMeshBake.Bake(ZombieVillagerMesh, 0, 0, rawSourceFrame: true)],
-        faceTransforms: null,
-        "entity/zombie_villager/zombie_villager",
-        compiled: ZombieVillagerCompiled,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new("zombie_villager", 64, 64, faceTransforms: null, texturePath: "entity/zombie_villager/zombie_villager", compiled: ZombieVillagerCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants =
         VillagerModelDefinition.VariantMap(
-            Definition.Parts,
             "entity/zombie_villager/type/",
             1f,
             "zombie_villager_",

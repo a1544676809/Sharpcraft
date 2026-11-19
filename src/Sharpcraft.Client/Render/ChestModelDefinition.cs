@@ -23,26 +23,11 @@ public static class ChestModelDefinition
 
     // Both the flat parts and the compiled tree are baked from the same source mesh so their geometry is
     // byte-identical; the production mesher now consumes only the compiled tree.
-    public static readonly EntityModelDefinition Single = new(
-        "chest_single", TextureWidth, TextureHeight,
-        [.. VanillaMeshBake.Bake(SingleMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
-        faceTransforms: null, texturePath: null,
-        compiled: VanillaMeshBakery.Build(SingleMesh, TextureWidth, TextureHeight, modelHeight: 0f, rawSourceFrame: true),
-        baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Single = new("chest_single", TextureWidth, TextureHeight, faceTransforms: null, texturePath: null, compiled: VanillaMeshBakery.Build(SingleMesh, TextureWidth, TextureHeight, modelHeight: 0f, rawSourceFrame: true), baselinePx: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition DoubleRight = new(
-        "chest_double_right", TextureWidth, TextureHeight,
-        [.. VanillaMeshBake.Bake(DoubleRightMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
-        faceTransforms: null, texturePath: null,
-        compiled: VanillaMeshBakery.Build(DoubleRightMesh, TextureWidth, TextureHeight, modelHeight: 0f, rawSourceFrame: true),
-        baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition DoubleRight = new("chest_double_right", TextureWidth, TextureHeight, faceTransforms: null, texturePath: null, compiled: VanillaMeshBakery.Build(DoubleRightMesh, TextureWidth, TextureHeight, modelHeight: 0f, rawSourceFrame: true), baselinePx: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition DoubleLeft = new(
-        "chest_double_left", TextureWidth, TextureHeight,
-        [.. VanillaMeshBake.Bake(DoubleLeftMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
-        faceTransforms: null, texturePath: null,
-        compiled: VanillaMeshBakery.Build(DoubleLeftMesh, TextureWidth, TextureHeight, modelHeight: 0f, rawSourceFrame: true),
-        baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition DoubleLeft = new("chest_double_left", TextureWidth, TextureHeight, faceTransforms: null, texturePath: null, compiled: VanillaMeshBakery.Build(DoubleLeftMesh, TextureWidth, TextureHeight, modelHeight: 0f, rawSourceFrame: true), baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildSingleMesh()
     {

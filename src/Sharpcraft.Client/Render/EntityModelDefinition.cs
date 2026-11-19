@@ -17,7 +17,6 @@ public sealed class EntityModelDefinition
         string name,
         int textureWidth,
         int textureHeight,
-        IReadOnlyList<EntityModelPart> parts,
         IReadOnlyDictionary<string, FaceUvTransform>? faceTransforms = null,
         string? texturePath = null,
         float scale = 1f,
@@ -39,7 +38,6 @@ public sealed class EntityModelDefinition
         Name = name;
         TextureWidth = textureWidth;
         TextureHeight = textureHeight;
-        Parts = parts;
         FaceTransforms = faceTransforms ?? new Dictionary<string, FaceUvTransform>();
         TexturePath = texturePath;
         Scale = scale;
@@ -66,7 +64,6 @@ public sealed class EntityModelDefinition
     public string Name { get; }
     public int TextureWidth { get; }
     public int TextureHeight { get; }
-    public IReadOnlyList<EntityModelPart> Parts { get; }
     public IReadOnlyDictionary<string, FaceUvTransform> FaceTransforms { get; }
     public string? TexturePath { get; }
     public float Scale { get; }
@@ -131,8 +128,7 @@ public sealed class EntityModelDefinition
     public float SourceFrameBaselinePx { get; }
 
     /// <summary>
-    /// Creates a definition from a declarative mesh: the legacy flat <see cref="Parts"/> remain available for compatibility,
-    /// while <see cref="Compiled"/> is produced once by the structural bakery.
+    /// Creates a definition from a declarative mesh; <see cref="Compiled"/> is produced once by the structural bakery.
     /// </summary>
     public static EntityModelDefinition FromTree(
         string name,
@@ -152,29 +148,8 @@ public sealed class EntityModelDefinition
         float sourceFrameBaselinePx = 24f)
     {
         ArgumentNullException.ThrowIfNull(mesh);
-        // Raw scaled models use the structurally-preserving compiled tree, whose NodeFrame owns the
-        // PartPose scale. The legacy flattened bake has only the restricted static scaled-subtree path.
-        var parts = rawSourceFrame && VanillaMeshBake.HasNonUnitScale(mesh)
-            ? []
-            : VanillaMeshBake.Bake(mesh, 0, 0, baselinePx, rawSourceFrame: rawSourceFrame);
         var compiled = VanillaMeshBakery.Build(mesh, textureWidth, textureHeight, baselinePx, texturePath: texturePath, rawSourceFrame: rawSourceFrame);
-        return new EntityModelDefinition(
-            name,
-            textureWidth,
-            textureHeight,
-            parts,
-            faceTransforms,
-            texturePath,
-            scale,
-            emissiveTexturePath,
-            textureSelector,
-            additionalTexturePaths,
-            compiled,
-            renderLayers,
-            baselinePx: baselinePx,
-            rawSourceFrame: rawSourceFrame,
-            sourceFrameBaselinePx: sourceFrameBaselinePx,
-            applyRootPose: applyRootPose);
+        return new EntityModelDefinition(name, textureWidth, textureHeight, faceTransforms, texturePath, scale, emissiveTexturePath, textureSelector, additionalTexturePaths, compiled, renderLayers, baselinePx: baselinePx, rawSourceFrame: rawSourceFrame, sourceFrameBaselinePx: sourceFrameBaselinePx, applyRootPose: applyRootPose);
     }
 
     public IEnumerable<string> TexturePaths
@@ -199,24 +174,29 @@ public sealed class EntityModelDefinition
                 }
             }
 
-            foreach (var part in Parts)
+            if (Compiled is null)
             {
-                if (part.TexturePath is { Length: > 0 } partTexture)
+                yield break;
+            }
+
+            foreach (var cube in Compiled.Cubes)
+            {
+                if (cube.TexturePath is { Length: > 0 } partTexture)
                 {
                     yield return partTexture;
                 }
 
-                if (part.EmissiveTexturePath is { Length: > 0 } partEmissive)
+                if (cube.EmissiveTexturePath is { Length: > 0 } partEmissive)
                 {
                     yield return partEmissive;
                 }
 
-                if (part.OverlayLayers is null)
+                if (cube.Overlays is null)
                 {
                     continue;
                 }
 
-                foreach (var layer in part.OverlayLayers)
+                foreach (var layer in cube.Overlays)
                 {
                     if (layer.TexturePath is { Length: > 0 } overlay)
                     {

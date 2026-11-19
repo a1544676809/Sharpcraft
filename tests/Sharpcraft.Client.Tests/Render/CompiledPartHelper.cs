@@ -55,7 +55,7 @@ internal static class CompiledPartHelper
         var root = new EntityModelPartNode("root", null, 0f, 0f, 0f, 0f, 0f, 0f, [], nodes);
         var compiled = new CompiledEntityModel(root, nodes, cubes);
         return new EntityModelDefinition(
-            name, width, height, [], faceTransforms: faceTransforms, texturePath, scale: scale,
+            name, width, height, faceTransforms: faceTransforms, texturePath: texturePath, scale: scale,
             compiled: compiled, baselinePx: baselinePx, rawSourceFrame: rawSourceFrame,
             sourceFrameBaselinePx: sourceFrameBaselinePx);
     }
@@ -114,20 +114,20 @@ internal static class CompiledPartHelper
         foreach (var rc in rootChildren) Collect(rc);
         var compiled = new CompiledEntityModel(root, orderedNodes, cubes);
         return new EntityModelDefinition(
-            name, width, height, [], faceTransforms: null, texturePath, scale: scale,
+            name, width, height, faceTransforms: null, texturePath: texturePath, scale: scale,
             compiled: compiled, baselinePx: 0f, rawSourceFrame: true,
             sourceFrameBaselinePx: sourceFrameBaselinePx);
     }
 
     /// <summary>Rebuild a legacy (y-up, rawSourceFrame:false) definition with a compiled tree for the now
     /// compiled-only mesher, preserving its baked geometry, baseline and face transforms verbatim.</summary>
-    public static EntityModelDefinition Legacy(EntityModelDefinition legacy)
+    public static EntityModelDefinition Legacy(EntityModelPart[] parts, EntityModelDefinition template)
     {
         // Legacy baked parts may carry Parent links (Wither rib_N -> ribcage); wire them as a real tree
         // so the compiled Emit composes the same ancestor frames the legacy flat path did.
-        var cubes = new List<EntityModelCube>(legacy.Parts.Count);
+        var cubes = new List<EntityModelCube>(parts.Length);
         var byName = new Dictionary<string, EntityModelPart>(StringComparer.Ordinal);
-        foreach (var part in legacy.Parts)
+        foreach (var part in parts)
         {
             cubes.Add(new EntityModelCube(
                 part.Name, part.CentreX, part.Bottom, part.CentreZ, part.Width, part.Height, part.Depth,
@@ -142,13 +142,13 @@ internal static class CompiledPartHelper
         {
             var part = byName[partName];
             var cube = cubes.First(c => c.Name == partName);
-            var children = legacy.Parts.Where(p => p.Parent == partName).Select(p => Build(p.Name)).ToArray();
+            var children = parts.Where(p => p.Parent == partName).Select(p => Build(p.Name)).ToArray();
             return new EntityModelPartNode(
                 part.Name, part.Parent, part.PivotX, part.PivotY, part.PivotZ, part.RotationX, part.RotationY,
                 part.RotationZ, [cube], children, visibleWhen: part.VisibleWhen);
         }
 
-        var rootChildren = legacy.Parts.Where(p => p.Parent is null || !byName.ContainsKey(p.Parent))
+        var rootChildren = parts.Where(p => p.Parent is null || !byName.ContainsKey(p.Parent))
             .Select(p => Build(p.Name)).ToArray();
         var root = new EntityModelPartNode("root", null, 0f, 0f, 0f, 0f, 0f, 0f, [], rootChildren);
         var ordered = new List<EntityModelPartNode>();
@@ -156,8 +156,6 @@ internal static class CompiledPartHelper
         foreach (var rc in rootChildren) Collect(rc);
         var compiled = new CompiledEntityModel(root, ordered, cubes);
         return new EntityModelDefinition(
-            legacy.Name, legacy.TextureWidth, legacy.TextureHeight, [], faceTransforms: legacy.FaceTransforms,
-            legacy.TexturePath, scale: legacy.Scale, compiled: compiled,
-            baselinePx: legacy.BaselinePx, rawSourceFrame: false);
+            template.Name, template.TextureWidth, template.TextureHeight, faceTransforms: template.FaceTransforms, texturePath: template.TexturePath, scale: template.Scale, compiled: compiled, baselinePx: template.BaselinePx, rawSourceFrame: false);
     }
 }

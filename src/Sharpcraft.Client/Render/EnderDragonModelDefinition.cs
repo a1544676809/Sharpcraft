@@ -19,17 +19,7 @@ public static class EnderDragonModelDefinition
     private static readonly CompiledEntityModel DragonCompiled =
         VanillaMeshBakery.Build(DragonMesh, 256, 256, modelHeight: 0f, rawSourceFrame: true);
 
-    public static readonly EntityModelDefinition Definition = new(
-        "ender_dragon",
-        256,
-        256,
-        BuildParts(),
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/enderdragon/dragon",
-        compiled: DragonCompiled,
-        applyRootPose: true,
-        baselinePx: 0f,
-        rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new("ender_dragon", 256, 256, PlayerModelDefinition.DefaultFaceTransforms, "entity/enderdragon/dragon", compiled: DragonCompiled, applyRootPose: true, baselinePx: 0f, rawSourceFrame: true);
 
     private static EntityModelPart[] BuildParts()
     {

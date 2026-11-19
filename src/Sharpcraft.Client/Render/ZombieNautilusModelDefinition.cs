@@ -51,27 +51,13 @@ public static class ZombieNautilusModelDefinition
         return result;
     }
 
-    public static readonly EntityModelDefinition Definition = new(
-        "zombie_nautilus",
-        128,
-        128,
-        NautilusModelDefinition.Definition.Parts,
-        faceTransforms: null,
-        texturePath: "entity/nautilus/zombie_nautilus",
-        compiled: NautilusModelDefinition.Definition.Compiled, baselinePx: 0f, rawSourceFrame: true);
+    public static readonly EntityModelDefinition Definition = new("zombie_nautilus", 128, 128, faceTransforms: null, texturePath: "entity/nautilus/zombie_nautilus", compiled: NautilusModelDefinition.Definition.Compiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants =
         new Dictionary<string, EntityModelDefinition>(StringComparer.Ordinal)
         {
             ["temperate"] = Definition,
-            ["warm"] = new(
-                "zombie_nautilus_coral",
-                128,
-                128,
-                [.. NautilusModelDefinition.Definition.Parts, .. CoralPartsWhileUnarmored],
-                faceTransforms: null,
-                texturePath: "entity/nautilus/zombie_nautilus_coral",
-                compiled: CoralCompiled, baselinePx: 0f, rawSourceFrame: true)
+            ["warm"] = new("zombie_nautilus_coral", 128, 128, faceTransforms: null, texturePath: "entity/nautilus/zombie_nautilus_coral", compiled: CoralCompiled, baselinePx: 0f, rawSourceFrame: true)
         };
 
     /// <summary>Base nautilus body plus the coral growth subtree attached under the real shell node.</summary>
