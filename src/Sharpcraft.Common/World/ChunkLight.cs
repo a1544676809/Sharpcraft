@@ -92,20 +92,20 @@ public sealed class ChunkLight
     /// <summary>Fills every light section with the same level; the top section is assumed lit.</summary>
     public void FillSkyLight(byte level)
     {
-        var data = Pack(level);
+        // One array per section: sharing a single array made every section the same buffer, so the per cell writes the
+        // light engine does afterwards changed every section at once.
         for (var i = 0; i < _sky.Length; i++)
         {
-            _sky[i] = data;
+            _sky[i] = Pack(level);
         }
     }
 
     /// <summary>Fills every block light section with the same level.</summary>
     public void FillBlockLight(byte level)
     {
-        var data = Pack(level);
         for (var i = 0; i < _block.Length; i++)
         {
-            _block[i] = data;
+            _block[i] = Pack(level);
         }
     }
 

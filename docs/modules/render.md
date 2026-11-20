@@ -626,11 +626,25 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 ### 规则（实现照此）
 
-1. **光源**：同一柱中，某格"上方（含世界顶）没有任何 `lightDampening > 0` 的方块" → 该格为 15。
-2. **扩散**：六向 BFS，`候选 = 源等级 − max(1, 目标格 lightDampening)`；`候选 > 当前` 才写入并继续推。
-   因为 `max(1, ·)`，空气每格 −1，玻璃（dampening 0）也 −1，石头（15）直接挡住。
+1. **光源**：同一柱中，某格"上方（含世界顶）没有任何**挡天格**" → 该格为 15。**挡天格判据 = `lightDampening > 0` 或 `SolidRender`**（后者是生成表里的"遮挡形状为满方块"，对应原版 `isEdgeOccluded` 的形状分支，`ref://…/lighting/ChunkSkyLightSources.java:140-147`）。石头两者皆真；玻璃两者皆假（透光）；树叶 `lightDampening = 1` 但 `SolidRender = false`——**它会挡住"开天柱"但只按 1 衰减**，与游戏观感一致。
+2. **扩散**：六向 BFS，`候选 = 源等级 − max(1, 目标格 lightDampening)`；`候选 > 当前` 才写入并继续推。目标格是"挡天格"时直接不传播（对应原版的 `shapeOccludes`）。因为 `max(1, ·)`，空气每格 −1，玻璃（dampening 0）也 −1，石头（15）直接挡住。
 3. **下降**：不做特殊处理——开天柱的每一格都已是 15（规则 1），所以"向下不衰减"自然成立。
 4. **回落**：放置方块后按同一流程重算，柱子不再开天，等级自然归零。
+
+
+
+### 实测成本（未优化，朴素版）
+
+用测试内置的计时（`Repro_269_SkyLightTests.TheCostOfOneRelightIsMeasured`，本机 Debug 构建）：
+
+| 指标 | 数值 |
+| --- | --- |
+| 单次 `CheckBlock` | **9.83 ms** |
+| 连续 10 次方块变化 | **99.54 ms**（**9.95 ms/次**） |
+| 每次变化的分配 | 稳态 **约 7 字节/次**（11 次共 80 字节）；**light section 首次写入会分配 2048 字节** |
+| 10 次变化重写的光照格 | 2520（252/次） |
+
+结论：**单次挖方约 10 ms，占 16.7 ms 帧预算的一半以上**，连续挖掘会掉帧。这正是 R-055 要解决的增量优化，本轮按原则 14 先朴素后优化，不做性能声称。
 
 ### 实现结构
 
@@ -645,6 +659,16 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **增量队列与柱高缓存**：原版用 `DynamicGraphMinFixedPoint` 队列 + `ChunkSkyLightSources` 高度图；本仓每次改动重算 33³ 立方体并逐柱扫描，见 `SIM-CLIENT-LIGHT-FULL-RECOMPUTE` / R-055（未做基准）。
 - 斜向传播、区块卸载时的光照释放：不做。
 ## 已知刻意的简化
+
+### SIM-CLIENT-LIGHT-NO-FACE-SHAPE：天空光只看"一个方块是否挡满"，不看两个半形状拼合
+
+- **简化了什么**：原版判断"光能否跨过一个面"用的是 `Shapes.faceShapeOccludes(两个相邻形状)`，也就是**两个半高形状拼起来盖满一个面**时也算挡住（例如两个紧贴的台阶、台阶 + 雪层）。本仓没有逐状态形状数据，只用"挡天格 = `lightDampening > 0` 或 `SolidRender`"，即**单个方块自身是否挡满**。
+- **为什么**：状态级形状表要按 `getCollisionShape/getOcclusionShape` 落盘（含 AABB 列表），远大于本轮的生成表；先做能做的部分。
+- **对等效性的影响**：光会**掠过**本应被两个半形状合起来挡住的一格。受影响方块：台阶（双层/侧面相接）、雪层（多层）、栅栏/墙（相邻柱）、以及任何两个相邻的非满方块。视觉上表现为贴缝处偏亮一格。
+- **当前状态与独立任务**：跟踪 `docs/risks.md` **R-056**（Issue 待建）。**不是已解决。**
+- **验收入口**：接入状态级形状后，用"两个台阶拼缝上下各一格"的场景断言缝下格为 0；届时删除本条。
+
+<!-- simplification:SIM-CLIENT-LIGHT-NO-FACE-SHAPE task:R-056 -->
 
 ### SIM-CLIENT-LIGHT-NO-BLOCK-LIGHT：客户端光照只做天空光
 

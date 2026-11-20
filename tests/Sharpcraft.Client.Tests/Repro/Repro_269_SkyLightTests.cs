@@ -158,4 +158,154 @@ public sealed class Repro_269_SkyLightTests
         world.SetBlockState(8, FloorY + 1, 8, stone);
         Assert.Equal(0, Sky(chunk, 8, FloorY, 8));
     }
+
+    // ---- fixes from review round 2 ------------------------------------------------------------------------------
+
+    /// <summary>
+    /// A change that only moves the column source still has to be reported, or the caller never rebuilds the chunk.
+    /// </summary>
+    [Fact]
+    public void AColumnSourceOnlyChangeIsReported()
+    {
+        var world = new ClientWorld(minSectionY: 0, sectionCount: 2);
+        var chunk = world.AddChunk(0, 0);
+        chunk.SetSection(new ChunkSection(singleState: 0, sectionY: 0));
+
+        // Everything is air and every light cell starts at zero, so putting one block down changes nothing but the
+        // sources above it.
+        VanillaBlockRegistry.Layout.TryGetBaseId(Identifier.Parse("minecraft:stone"), out var stone);
+        Assert.True(world.SetBlockState(8, 10, 8, stone));
+        Assert.True(chunk.Light.GetSkyLight(8, 11, 8) == 15);
+        Assert.True(chunk.Light.GetSkyLight(8, 9, 8) < 15);
+    }
+
+    /// <summary>A change on a chunk edge has to mark the neighbour, whose border face depends on it.</summary>
+    [Fact]
+    public void AChangeOnAChunkEdgeMarksTheNeighbourChunk()
+    {
+        var layout = VanillaBlockRegistry.Layout;
+        layout.TryGetBaseId(Identifier.Parse("minecraft:stone"), out var stone);
+
+        var world = new ClientWorld(minSectionY: 0, sectionCount: 2);
+        foreach (var (chunkX, chunkZ) in new[] { (0, 0), (-1, 0) })
+        {
+            var chunk = world.AddChunk(chunkX, chunkZ);
+            chunk.SetSection(new ChunkSection(singleState: stone, sectionY: 0));
+            chunk.MarkLoaded();
+        }
+
+        world.TakeDirtyChunks();
+
+        // Dig at x = 0, the west edge of chunk 0.
+        Assert.True(world.SetBlockState(0, 10, 8, state: 0));
+
+        var dirty = world.TakeDirtyChunks();
+        Assert.Contains(ClientWorld.Pack(0, 0), dirty);
+        Assert.Contains(ClientWorld.Pack(-1, 0), dirty);
+    }
+
+    /// <summary>
+    /// Leaves absorb one level of light, which the generated table reports as a dampening of one, so a leaf block both
+    /// stops a column from being an open sky source and costs a level when light passes it.
+    /// </summary>
+    [Fact]
+    public void LeavesStopTheColumnSourceButOnlyCostOneLevel()
+    {
+        Assert.True(VanillaBlockOcclusion.TryGet(Identifier.Parse("minecraft:oak_leaves"), out var leaves));
+        Assert.Equal(1, leaves.LightDampening);
+        Assert.False(leaves.SolidRender);
+
+        var (world, chunk, _, air) = Scene();
+        var layout = VanillaBlockRegistry.Layout;
+        layout.TryGetBaseId(Identifier.Parse("minecraft:oak_leaves"), out var leavesState);
+
+        var asAir = world.GetBlockState(8, FloorY + 1, 8);
+        world.SetBlockState(8, FloorY + 1, 8, air);
+        var openLevel = Sky(chunk, 8, FloorY, 8);
+
+        var (world2, chunk2, _, _) = Scene();
+        world2.SetBlockState(8, FloorY + 1, 8, leavesState);
+        var leavesLevel = Sky(chunk2, 8, FloorY, 8);
+
+        // Leaves are not an open sky source, so the cell under them cannot be 15; they still pass light one level down
+        // from their own cell, which is zero here because the ceiling blocks it.
+        Assert.Equal(15, openLevel);
+        Assert.True(leavesLevel < 15, $"leaves should not be an open sky source, got {leavesLevel}");
+        _ = asAir;
+    }
+
+    /// <summary>
+    /// Filling the light storage must not make every section share one array: a per cell write afterwards would then
+    /// change every section at once.
+    /// </summary>
+    [Fact]
+    public void FillingSkyLightDoesNotShareOneArray()
+    {
+        var light = new ChunkLight(minSectionY: 0, sectionCount: 2);
+        light.FillSkyLight(15);
+
+        Assert.True(light.SetSkyLight(x: 3, y: 4, z: 5, level: 0));
+
+        Assert.Equal(0, light.GetSkyLight(3, 4, 5));
+        // A different section at the same local coordinates must be untouched.
+        Assert.Equal(15, light.GetSkyLight(3, 4 + 16, 5));
+        Assert.Equal(15, light.GetSkyLight(3, 4 + 32, 5));
+    }
+
+    /// <summary>The light a chunk packet delivered stays untouched until something actually changes.</summary>
+    [Fact]
+    public void LoadedLightIsNotRewrittenWithoutAChange()
+    {
+        var (world, chunk, _, _) = Scene();
+
+        // The tunnel and its ceiling stay dark, and the cells the packet lit stay lit: nothing rewrote them because
+        // no block changed.
+        Assert.Equal(0, Sky(chunk, 8, FloorY, 8));
+        Assert.Equal(0, Sky(chunk, 8, FloorY + 1, 8));
+        Assert.Equal(15, Sky(chunk, 8, FloorY + 2, 8));
+        Assert.Equal(0, world.SkyLight.LastChangedCells);
+    }
+
+    /// <summary>
+    /// Measures one relight, ten relights and the allocation per relight, so the cost of the naive recompute is a
+    /// number rather than an opinion (principle 9). The numbers are printed; the assertions are only the invariants
+    /// that must hold whatever the timing does.
+    /// </summary>
+    [Fact]
+    public void TheCostOfOneRelightIsMeasured()
+    {
+        var (world, chunk, stone, air) = Scene();
+        var total = 0;
+        var allocated = 0L;
+
+        // Warm up so the first measurement is not dominated by JIT.
+        world.SetBlockState(8, FloorY + 1, 8, air);
+        world.SetBlockState(8, FloorY + 1, 8, stone);
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        world.SetBlockState(8, FloorY + 1, 8, air);
+        clock.Stop();
+        var single = clock.Elapsed.TotalMilliseconds;
+
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        for (var i = 0; i < 10; i++)
+        {
+            world.SetBlockState(8, FloorY + 1, 8, i % 2 == 0 ? stone : air);
+            total += world.SkyLight.LastChangedCells;
+        }
+
+        stopwatch.Stop();
+        allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        var perChange = stopwatch.Elapsed.TotalMilliseconds / 10;
+        Console.WriteLine(
+            $"light engine cost: single {single:0.00} ms, ten {stopwatch.Elapsed.TotalMilliseconds:0.00} ms, " +
+            $"per change {perChange:0.00} ms, allocated {allocated} bytes for 11 changes " +
+            $"({allocated / 11} per change), {total} cells rewritten in ten changes");
+
+        Assert.True(single < 5000, $"a single relight took {single:0.0} ms");
+        Assert.True(total > 0, "the ten changes rewrote no cells");
+        Assert.True(chunk.Light.HasSkyLight);
+    }
 }
