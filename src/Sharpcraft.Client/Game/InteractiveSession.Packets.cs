@@ -28,40 +28,17 @@ internal sealed partial class InteractiveSession
 
         while (_live.TryDequeue(out var body))
         {
-            var peekReader = new PayloadReader(body);
-            if (peekReader.TryReadVarInt(out var peekPacketId) == DecodeStatus.Success &&
-                peekPacketId == PacketIds.PlayClientbound.BundleDelimiter)
-            {
-                if (_inBundle)
-                {
-                    _inBundle = false;
-                    foreach (var bundled in _bundleBuffer)
-                    {
-                        DispatchPacket(bundled);
-                    }
-
-                    _bundleBuffer.Clear();
-                }
-                else
-                {
-                    _inBundle = true;
-                }
-
-                continue;
-            }
-
-            if (_inBundle)
-            {
-                _bundleBuffer.Add(body);
-                continue;
-            }
-
-            DispatchPacket(body);
+            _bundleAssembler.Process(body, DispatchPacket);
         }
     }
 
     private void DispatchPacket(byte[] body)
     {
+        if (_live is null)
+        {
+            return;
+        }
+
         var reader = new PayloadReader(body);
         if (reader.TryReadVarInt(out var packetId) != DecodeStatus.Success)
         {
@@ -82,7 +59,7 @@ internal sealed partial class InteractiveSession
                 var batchSize = 0;
                 reader.TryReadVarInt(out batchSize);
                 _chunkBatchCalculator.OnBatchFinished(batchSize);
-                _live!.Send(PlayPackets.BuildChunkBatchReceived(_chunkBatchCalculator.DesiredChunksPerTick));
+                _live.Send(PlayPackets.BuildChunkBatchReceived(_chunkBatchCalculator.DesiredChunksPerTick));
                 return;
             }
 
@@ -94,7 +71,7 @@ internal sealed partial class InteractiveSession
             if (PlaySession.TryHandleTransport(
                     packetId,
                     ref reader,
-                    pkt => { _live!.Send(pkt); },
+                    pkt => { _live.Send(pkt); },
                     ref transportKeepAlives,
                     ref transportPings,
                     ref transportBatches,

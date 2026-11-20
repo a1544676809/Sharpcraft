@@ -37,6 +37,17 @@ public sealed class ChunkBatchSizeCalculator
 
         var elapsedTicks = Stopwatch.GetTimestamp() - _batchStartTimestamp;
         var batchDurationNanos = elapsedTicks * (1_000_000_000.0 / Stopwatch.Frequency);
+        RecordBatchDurationNanos(batchDurationNanos, batchSize);
+    }
+
+    /// <summary>Updates the EMA with an explicit batch duration in nanoseconds (exposed for deterministic tests).</summary>
+    internal void RecordBatchDurationNanos(double batchDurationNanos, int batchSize)
+    {
+        if (batchSize <= 0)
+        {
+            return;
+        }
+
         var nanosPerChunk = Math.Max(1.0, batchDurationNanos / batchSize);
         var clampedNanosPerChunk = Math.Clamp(
             nanosPerChunk,

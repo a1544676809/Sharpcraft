@@ -17,11 +17,7 @@ internal sealed class LivePlaySession : IDisposable
 {
     private readonly MinecraftConnection _connection;
     private readonly BoundedReceiveQueue _incoming = new();
-    private readonly Channel<byte[]> _outgoing = Channel.CreateUnbounded<byte[]>(new UnboundedChannelOptions
-    {
-        SingleReader = true,
-        SingleWriter = false
-    });
+    private readonly OutboundPacketChannel _outgoing = new();
     private readonly CancellationTokenSource _stop = new();
     private Task _pump = Task.CompletedTask;
     private Task _writer = Task.CompletedTask;
@@ -140,23 +136,17 @@ internal sealed class LivePlaySession : IDisposable
             return false;
         }
 
-        return _outgoing.Writer.TryWrite(packet.ToArray());
+        return _outgoing.TryEnqueue(packet);
     }
 
     private async Task WriteLoopAsync(CancellationToken cancellationToken)
     {
         try
         {
-            var reader = _outgoing.Reader;
-            while (await reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false))
-            {
-                while (reader.TryRead(out var packet))
-                {
-                    _connection.SendWithoutFlush(packet);
-                }
-
-                _connection.Flush();
-            }
+            await _outgoing.DrainAsync(
+                packet => _connection.SendWithoutFlush(packet),
+                () => _connection.Flush(),
+                cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -177,7 +167,7 @@ internal sealed class LivePlaySession : IDisposable
     /// <inheritdoc />
     public void Dispose()
     {
-        _outgoing.Writer.TryComplete();
+        _outgoing.Complete();
         _stop.Cancel();
         _connection.Dispose();
 
@@ -209,7 +199,10 @@ internal sealed class LivePlaySession : IDisposable
     /// <summary>
     /// Answers only KeepAlive on the pump thread so the 30s server timeout cannot fire while startup is busy.
     /// Ping and ChunkBatchFinished stay in the incoming queue so the game thread answers them in exact packet order
-    /// after applying preceding world/chunk/entity state.
+    /// after applying preceding world/chunk/entity state (if the main thread stalls, chunk flow control pauses,
+    /// matching vanilla's game-thread handling).
+    /// SendFromPump enqueues onto the same <see cref="OutboundPacketChannel"/> so only the single writer loop ever
+    /// writes to <see cref="_connection"/>, preventing interleaved or torn frames.
     /// </summary>
     private bool TryAnswerTransport(byte[] body)
     {
@@ -263,6 +256,41 @@ internal sealed class LivePlaySession : IDisposable
         {
             // Any other failure (protocol/decode, socket, disposal) must surface through IsAlive/Failure.
             _failure = DescribePumpFailure(exception);
+        }
+    }
+}
+
+/// <summary>
+/// Single-reader, multi-writer outbound packet channel used by <see cref="LivePlaySession"/>.
+/// Both the game thread and the receive pump (keep-alive replies) enqueue complete packet bodies here,
+/// and a single writer loop drains and flushes them in order so frames are never torn across threads.
+/// </summary>
+internal sealed class OutboundPacketChannel
+{
+    private readonly Channel<byte[]> _channel = Channel.CreateUnbounded<byte[]>(new UnboundedChannelOptions
+    {
+        SingleReader = true,
+        SingleWriter = false
+    });
+
+    public bool TryEnqueue(ReadOnlySpan<byte> packet) => _channel.Writer.TryWrite(packet.ToArray());
+
+    public void Complete() => _channel.Writer.TryComplete();
+
+    public async Task DrainAsync(
+        Action<byte[]> writeWithoutFlush,
+        Action flush,
+        CancellationToken cancellationToken)
+    {
+        var reader = _channel.Reader;
+        while (await reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false))
+        {
+            while (reader.TryRead(out var packet))
+            {
+                writeWithoutFlush(packet);
+            }
+
+            flush();
         }
     }
 }

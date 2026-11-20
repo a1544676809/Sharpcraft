@@ -2,7 +2,12 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Sharpcraft.Client.Game;
+using Sharpcraft.Common.Network;
 using Xunit;
 
 namespace Sharpcraft.Client.Tests.Game;
@@ -78,5 +83,68 @@ public sealed class LivePlaySessionQueueTests
         Assert.Contains("receive pump failed", text);
         Assert.Contains("InvalidOperationException", text);
         Assert.Contains("bad packet", text);
+    }
+
+    [Fact]
+    public async Task OutboundPacketChannelPreservesOrderAndNeverTearsFramesAcrossConcurrentWriters()
+    {
+        var channel = new OutboundPacketChannel();
+        var writtenFrames = new ConcurrentQueue<byte[]>();
+        var flushCount = 0;
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var drainTask = channel.DrainAsync(
+            frame => writtenFrames.Enqueue(PacketFrameBuffer.Wrap(frame)),
+            () => Interlocked.Increment(ref flushCount),
+            cts.Token);
+
+        // Two concurrent producers (simulating game thread + pump keep-alive replies).
+        var gameThreadTask = Task.Run(() =>
+        {
+            for (var i = 0; i < 50; i++)
+            {
+                Assert.True(channel.TryEnqueue([(byte)1, (byte)i]));
+            }
+        });
+
+        var pumpThreadTask = Task.Run(() =>
+        {
+            for (var i = 0; i < 50; i++)
+            {
+                Assert.True(channel.TryEnqueue([(byte)2, (byte)i]));
+            }
+        });
+
+        await Task.WhenAll(gameThreadTask, pumpThreadTask);
+        channel.Complete();
+        await drainTask;
+
+        Assert.Equal(100, writtenFrames.Count);
+        Assert.True(flushCount >= 1);
+
+        // Every frame must decode cleanly without tearing, and each producer's sequence must be monotonic.
+        var lastGameSeq = -1;
+        var lastPumpSeq = -1;
+        var frameBuffer = new PacketFrameBuffer();
+        foreach (var raw in writtenFrames)
+        {
+            frameBuffer.Append(raw);
+            Assert.Equal(DecodeStatus.Success, frameBuffer.TryReadFrame(out var body));
+            Assert.Equal(2, body.Length);
+            if (body[0] == 1)
+            {
+                Assert.Equal(lastGameSeq + 1, body[1]);
+                lastGameSeq = body[1];
+            }
+            else
+            {
+                Assert.Equal(2, body[0]);
+                Assert.Equal(lastPumpSeq + 1, body[1]);
+                lastPumpSeq = body[1];
+            }
+        }
+
+        Assert.Equal(49, lastGameSeq);
+        Assert.Equal(49, lastPumpSeq);
     }
 }
