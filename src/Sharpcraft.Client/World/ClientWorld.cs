@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
+using Sharpcraft.Client.Lighting;
 using Sharpcraft.Common.Coordinates;
 using Sharpcraft.Common.Network;
 using Sharpcraft.Common.World;
@@ -37,6 +38,7 @@ public sealed class ClientWorld
 
         _minSectionY = minSectionY;
         _sectionCount = sectionCount;
+        SkyLight = new SkyLightEngine(this);
     }
 
     /// <summary>Local player entity id, from JoinGame.</summary>
@@ -237,6 +239,12 @@ public sealed class ClientWorld
 
     /// <summary>Lowest section index of every column.</summary>
     public int MinSectionY => _minSectionY;
+
+    /// <summary>Highest block section index of a column.</summary>
+    public int MaxSectionY => _minSectionY + _sectionCount - 1;
+
+    /// <summary>Client side sky light, recomputed on every block change (issue 269).</summary>
+    public SkyLightEngine SkyLight { get; }
 
     /// <summary>Sections per column.</summary>
     public int SectionCount => _sectionCount;
@@ -477,6 +485,21 @@ public sealed class ClientWorld
 
         // A change on a seam changes which faces the neighbour draws, so both columns go stale.
         MarkChunkDirty(chunk.ChunkX, chunk.ChunkZ, borderX: localX == 0 || localX == 15, borderZ: localZ == 0 || localZ == 15);
+
+        // The server sends no light for a block change, so the client has to relight the cell itself: breaking a block
+        // opens a column to the sky and lights up the faces around it (issue 269). The reference does the same in
+        // LevelChunk.setBlockState -> LightEngine.checkBlock and runs the queue once per tick
+        // (ClientLevel.java:497); this version runs it inline.
+        if (SkyLight.CheckBlock(x, y, z))
+        {
+            foreach (var (dirtyX, dirtyZ) in SkyLight.DirtyChunks)
+            {
+                // The engine already returned every chunk whose light changed, so no seam flag is added here:
+                // that keeps "one change dirties one chunk" true for callers and tests that rely on it.
+                MarkChunkDirty(dirtyX, dirtyZ);
+            }
+        }
+
         return true;
     }
 

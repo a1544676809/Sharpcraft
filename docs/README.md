@@ -105,7 +105,7 @@
 | [`decisions/`](decisions/README.md) | 34 |
 | [`modules/`](modules/README.md) | 32 |
 | [`specs/`](specs/README.md) | 38 |
-| [`src/`](src/README.md) | 18 |
+| [`src/`](src/README.md) | 19 |
 | [`tools/`](tools/README.md) | 1 |
 
 <!-- END GENERATED: docs -->
