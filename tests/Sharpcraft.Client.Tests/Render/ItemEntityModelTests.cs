@@ -42,4 +42,35 @@ public sealed class ItemEntityModelTests
 
         Assert.NotEmpty(layers);
     }
+
+    [Fact]
+    public void AnItemNextToAModelledEntityStillProducesNoPlaceholder()
+    {
+        // The first regression only covered a batch made entirely of item entities, which resolves no
+        // model-backed layer and therefore took the plan path. As soon as a modelled entity shares the
+        // frame the model-backed path runs and hands every entity its own model as an override, which
+        // used to slip item entities past the T-763 guard and put the skin-atlas box back around drops.
+        var mesher = new EntityModelMesher();
+        var zombie = new EntityRenderState(2, HumanoidMobModelDefinition.ZombieEntityTypeId, 0f, 64f, 0f, 0f, 0f);
+        var item = new EntityRenderState(1, EntityTracker.ItemEntityTypeId, 0f, 64f, 0f, 0f, 0f);
+        var skin = new Sharpcraft.Client.Assets.SpriteRect(0, 0, 64, 64, 1) { U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f };
+
+        var alone = Snapshot(mesher.BuildLayers([zombie], skin, 64, 64));
+        var together = Snapshot(mesher.BuildLayers([zombie, item], skin, 64, 64));
+
+        Assert.Equal(alone, together);
+        Assert.NotEmpty(alone);
+    }
+
+    private static List<string> Snapshot(IReadOnlyList<Sharpcraft.Framework.Rendering.EntityGeometryLayer> layers)
+    {
+        var snapshot = new List<string>(layers.Count);
+        foreach (var layer in layers)
+        {
+            snapshot.Add(
+                $"{layer.Name}|{layer.Kind}|{layer.Order}|{layer.Geometry.VertexFloats}|{layer.Geometry.IndexCount}");
+        }
+
+        return snapshot;
+    }
 }
