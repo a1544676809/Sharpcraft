@@ -9,7 +9,7 @@ using Sharpcraft.Common.World;
 namespace Sharpcraft.Client.Lighting;
 
 /// <summary>
-/// Client side sky light, recomputed locally whenever a block changes.
+/// Client side sky light, kept up to date incrementally whenever a block changes.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -17,41 +17,46 @@ namespace Sharpcraft.Client.Lighting;
 /// so the reference client owns a light engine and runs it every tick
 /// (ref://mc-26.3-analysis/src/net/minecraft/client/multiplayer/ClientChunkCache.java:38 creates it,
 /// LevelChunk.java:292 and 301 feed a block change to it, ClientLevel.java:497 runs the queued updates).
-/// Without that layer a cell that becomes visible after a break keeps the zero it was loaded with and draws black.
-/// </para>
-/// <para>
-/// This is the naive first version: one block change recomputes a cube of radius <see cref="Radius"/> around the cell
-/// by reloading the sky sources of every affected column and then flooding light outwards to a fixed point. It allocates
-/// and touches far more cells than the reference's incremental queue; that is deliberate (principle 14), and the
-/// optimisation is a separate task (R-055).
 /// </para>
 /// <para>
 /// Rules, all from the reference sky light engine
-/// (ref://mc-26.3-analysis/src/net/minecraft/world/level/lighting/SkyLightEngine.java):
-/// a cell open to the sky holds 15, light moves to a neighbour with <c>level - opacity</c> where
-/// <c>opacity = max(1, lightDampening)</c> (LightEngine.java:77-79), and the downward direction does not decay for a
-/// column that is open to the sky because every such cell is itself a source (SkyLightEngine.java:113-135).
+/// (ref://mc-26.3-analysis/src/net/minecraft/world/level/lighting/SkyLightEngine.java): a cell open to the sky holds
+/// 15, light moves to a neighbour with <c>level - opacity</c> where <c>opacity = max(1, lightDampening)</c>
+/// (LightEngine.java:77-79), and the downward direction does not decay for a column that is open to the sky because
+/// every such cell is itself a source (SkyLightEngine.java:113-135).
 /// </para>
 /// <para>
-/// Two things decide whether the sky reaches a cell at all: how much light a block absorbs, and whether its collision
-/// shape covers the face. We only have the first per state plus the generated "occlusion shape is a full block" flag, so
-/// a cell blocks the sky when <c>lightDampening &gt; 0</c> or when the block renders solid (glass and leaves are
-/// neither). The reference also refuses a step when two partial shapes together cover the face
-/// (<c>faceShapeOccludes</c>), which needs per-state shapes we do not have; that residue is registered as
-/// SIM-CLIENT-LIGHT-NO-FACE-SHAPE / R-056.
+/// Two things decide whether the sky reaches a cell at all: how much light a block absorbs, and whether its shape
+/// covers the face. We only have the first per state plus the generated "occlusion shape is a full block" flag, so a
+/// cell blocks the sky when <c>lightDampening &gt; 0</c> or when the block renders solid. The reference also refuses a
+/// step when two partial shapes together cover the face (<c>faceShapeOccludes</c>), which needs per-state shapes we do
+/// not have; that residue is SIM-CLIENT-LIGHT-NO-FACE-SHAPE / R-056.
+/// </para>
+/// <para>
+/// Issue 280 made this incremental. A change used to rebuild a 33 cubed box and rescan the column heights of all 1089
+/// columns in it, which cost about 10 ms per broken block. Now only the height of the changed column is rescanned
+/// (heights depend on the column alone), and the light itself is repaired by the two queues the reference uses: a
+/// removal pass that clears everything the old level could reach, followed by an addition pass from the cells that kept
+/// their light plus the new sources. <see cref="RecomputeAll"/> keeps the original brute force recompute as the
+/// reference the equivalence tests compare against.
 /// </para>
 /// </remarks>
-[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.level.lighting.LevelLightEngine", "ref://mc-26.3-analysis/src/net/minecraft/world/level/lighting/LevelLightEngine.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Sky light only, naive full recompute instead of the incremental queue")]
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.level.lighting.LevelLightEngine", "ref://mc-26.3-analysis/src/net/minecraft/world/level/lighting/LevelLightEngine.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Sky light only; removal and addition queues plus a per column height cache")]
 public sealed class SkyLightEngine
 {
     /// <summary>Highest light level.</summary>
     public const int MaxLevel = 15;
 
-    /// <summary>How far a change can reach: one level per block, so a change cannot move a cell beyond this.</summary>
+    /// <summary>
+    /// How far a change can reach: one level per block. Only used by the brute force recompute; the incremental path
+    /// is bounded by the light levels themselves.
+    /// </summary>
     public const int Radius = MaxLevel + 1;
 
     private readonly ClientWorld _world;
-    private readonly Queue<(int X, int Y, int Z)> _queue = new();
+    private readonly Queue<(int X, int Y, int Z)> _increase = new();
+    private readonly Queue<(int X, int Y, int Z, int Level)> _decrease = new();
+    private readonly Dictionary<long, int> _columnHeights = [];
 
     /// <summary>Creates an engine over one world.</summary>
     /// <param name="world">World whose chunks hold the light storage.</param>
@@ -67,8 +72,11 @@ public sealed class SkyLightEngine
     /// <summary>How many cells the last <see cref="CheckBlock"/> call rewrote, for diagnostics and tests.</summary>
     public int LastChangedCells { get; private set; }
 
+    /// <summary>How many column heights were rescanned by the last <see cref="CheckBlock"/> call.</summary>
+    public int LastScannedColumns { get; private set; }
+
     /// <summary>
-    /// Recomputes the sky light around one cell, which is what a block change has to trigger.
+    /// Repairs the sky light around one block change.
     /// </summary>
     /// <param name="x">Block X.</param>
     /// <param name="y">Block Y.</param>
@@ -78,61 +86,245 @@ public sealed class SkyLightEngine
     {
         DirtyChunks.Clear();
         LastChangedCells = 0;
+        LastScannedColumns = 0;
 
-        var minX = x - Radius;
-        var maxX = x + Radius;
-        var minZ = z - Radius;
-        var maxZ = z + Radius;
-        var minY = Math.Max(_world.MinSectionY * 16, y - Radius);
-        var maxY = Math.Min((_world.MaxSectionY * 16) + 15, y + Radius);
+        // The cell the block changed in may still hold the light it had before, and the source pass below can overwrite
+        // it, so its old level is captured first.
+        var selfLevel = Read(x, y, z);
 
-        // Every column in range gets its sources reloaded first: a cell is open to the sky when nothing above it in the
-        // column blocks it, and such a cell holds 15 rather than 14 from its neighbour (that is exactly how the
-        // reference models "no attenuation downwards"). The source write counts as a change like any other, otherwise a
-        // break that only moves the column source would report "nothing to do" and the caller would not rebuild.
-        for (var columnX = minX; columnX <= maxX; columnX++)
+        // 1. The changed column is the only column whose sky source can move, because the height of a column depends on
+        //    that column's blocks alone.
+        // A column the cache has never seen (a chunk that just arrived) is treated as if every cell above the new
+        // height had just become a source: the light storage holds whatever the packet delivered, and this engine has
+        // not established its own fixpoint there yet.
+        var oldHeight = _columnHeights.TryGetValue(ColumnKey(x, z), out var cached) ? cached : (_world.MaxSectionY * 16) + 16;
+        var newHeight = ScanHeight(x, z);
+        _columnHeights[ColumnKey(x, z)] = newHeight;
+        LastScannedColumns++;
+
+        var minY = _world.MinSectionY * 16;
+        var maxY = (_world.MaxSectionY * 16) + 15;
+
+        // 2. Cells that were sources and are not any more lose their light, and take everything they lit with them.
+        for (var y2 = Math.Max(oldHeight + 1, minY); y2 <= Math.Min(newHeight, maxY); y2++)
         {
-            for (var columnZ = minZ; columnZ <= maxZ; columnZ++)
+            var level = Read(x, y2, z);
+            if (level > 0)
             {
-                if (ChunkAt(columnX, columnZ) is null)
+                _decrease.Enqueue((x, y2, z, level));
+            }
+        }
+
+        // 3. Cells that became sources go straight to 15 before anything propagates: a source written through the queue
+        //    could be beaten there by a neighbour's lower value and keep it, which is exactly the bug this ordering
+        //    removes.
+        for (var y2 = Math.Max(newHeight + 1, minY); y2 <= Math.Min(oldHeight, maxY); y2++)
+        {
+            if (Store(x, y2, z, MaxLevel))
+            {
+                LastChangedCells++;
+            }
+
+            _increase.Enqueue((x, y2, z));
+        }
+
+        // The changed cell itself: when it sits under an open column it is a source and is already 15, otherwise the
+        // level it held before the block changed has to be taken away.
+        if (y > newHeight)
+        {
+            if (Store(x, y, z, MaxLevel))
+            {
+                LastChangedCells++;
+            }
+
+            _increase.Enqueue((x, y, z));
+        }
+        else
+        {
+            if (selfLevel > 0)
+            {
+                _decrease.Enqueue((x, y, z, selfLevel));
+            }
+
+            // The cell is not a source, but the block that used to be here may have blocked light that a neighbour can
+            // now shine in, so it is always re-evaluated as an addition seed (level 0 makes the queue pull the level
+            // from its neighbours).
+            _increase.Enqueue((x, y, z));
+        }
+
+        RunQueues();
+
+        return LastChangedCells > 0;
+    }
+
+    /// <summary>
+    /// Recomputes every loaded chunk from scratch, which is the brute force reference the incremental path is checked
+    /// against (and the shape an initial full relight would take).
+    /// </summary>
+    internal void RecomputeAll()
+    {
+        DirtyChunks.Clear();
+        LastChangedCells = 0;
+        LastScannedColumns = 0;
+
+        var minY = _world.MinSectionY * 16;
+        var maxY = (_world.MaxSectionY * 16) + 15;
+
+        foreach (var chunk in _world.GetChunks())
+        {
+            var baseX = chunk.ChunkX * 16;
+            var baseZ = chunk.ChunkZ * 16;
+            for (var localX = 0; localX < 16; localX++)
+            {
+                for (var localZ = 0; localZ < 16; localZ++)
+                {
+                    var x = baseX + localX;
+                    var z = baseZ + localZ;
+                    var height = ScanHeight(x, z);
+                    _columnHeights[ColumnKey(x, z)] = height;
+                    LastScannedColumns++;
+
+                    for (var y = minY; y <= maxY; y++)
+                    {
+                        var level = y > height ? (byte)MaxLevel : (byte)0;
+                        if (Store(x, y, z, level))
+                        {
+                            LastChangedCells++;
+                        }
+                    }
+                }
+            }
+        }
+
+        _increase.Clear();
+        foreach (var chunk in _world.GetChunks())
+        {
+            var baseX = chunk.ChunkX * 16;
+            var baseZ = chunk.ChunkZ * 16;
+            for (var localX = 0; localX < 16; localX++)
+            {
+                for (var localZ = 0; localZ < 16; localZ++)
+                {
+                    for (var y = minY; y <= maxY; y++)
+                    {
+                        if (Read(baseX + localX, y, baseZ + localZ) > 0)
+                        {
+                            _increase.Enqueue((baseX + localX, y, baseZ + localZ));
+                        }
+                    }
+                }
+            }
+        }
+
+        _decrease.Clear();
+        RunQueues();
+    }
+
+    /// <summary>Drops the height cache of a chunk, which a reloaded chunk has to do.</summary>
+    /// <param name="chunkX">Chunk X.</param>
+    /// <param name="chunkZ">Chunk Z.</param>
+    public void ForgetChunk(int chunkX, int chunkZ)
+    {
+        var baseX = chunkX * 16;
+        var baseZ = chunkZ * 16;
+        for (var localX = 0; localX < 16; localX++)
+        {
+            for (var localZ = 0; localZ < 16; localZ++)
+            {
+                _columnHeights.Remove(ColumnKey(baseX + localX, baseZ + localZ));
+            }
+        }
+    }
+
+    /// <summary>Best level a cell can take from its neighbours, or zero when it stays dark.</summary>
+    private int PullLevel(int x, int y, int z)
+    {
+        if (BlocksSky(x, y, z))
+        {
+            return 0;
+        }
+
+        var opacity = Opacity(x, y, z);
+        var best = Math.Max(
+            Math.Max(Read(x - 1, y, z), Read(x + 1, y, z)),
+            Math.Max(
+                Math.Max(Read(x, y - 1, z), Read(x, y + 1, z)),
+                Math.Max(Read(x, y, z - 1), Read(x, y, z + 1))));
+
+        return Math.Max(0, best - opacity);
+    }
+
+    /// <summary>Runs the removal queue, then the addition queue, until both are empty.</summary>
+    private void RunQueues()
+    {
+        Span<(int X, int Y, int Z)> neighbours = stackalloc (int, int, int)[6];
+
+        while (_decrease.Count > 0)
+        {
+            var (fromX, fromY, fromZ, oldLevel) = _decrease.Dequeue();
+            if (Read(fromX, fromY, fromZ) != oldLevel)
+            {
+                // Already cleared or rewritten by another removal, so this entry is stale.
+                continue;
+            }
+
+            if (Store(fromX, fromY, fromZ, 0))
+            {
+                LastChangedCells++;
+            }
+
+            neighbours[0] = (fromX - 1, fromY, fromZ);
+            neighbours[1] = (fromX + 1, fromY, fromZ);
+            neighbours[2] = (fromX, fromY - 1, fromZ);
+            neighbours[3] = (fromX, fromY + 1, fromZ);
+            neighbours[4] = (fromX, fromY, fromZ - 1);
+            neighbours[5] = (fromX, fromY, fromZ + 1);
+
+            foreach (var (toX, toY, toZ) in neighbours)
+            {
+                var level = Read(toX, toY, toZ);
+                if (level == 0)
                 {
                     continue;
                 }
 
-                var topAbsorber = TopAbsorberY(columnX, columnZ);
-                for (var columnY = minY; columnY <= maxY; columnY++)
+                if (level < oldLevel)
                 {
-                    var level = columnY > topAbsorber ? (byte)MaxLevel : (byte)0;
-                    if (Store(columnX, columnY, columnZ, level))
-                    {
-                        LastChangedCells++;
-                    }
+                    _decrease.Enqueue((toX, toY, toZ, level));
+                }
+                else
+                {
+                    // This neighbour was not lit by the removed level, so it survives and can light the gap again.
+                    _increase.Enqueue((toX, toY, toZ));
                 }
             }
         }
 
-        // Flood outwards. The shell just outside the recomputed cube keeps whatever it holds and only feeds inwards, so
-        // light that was already there is not thrown away.
-        _queue.Clear();
-        for (var queueX = minX - 1; queueX <= maxX + 1; queueX++)
+        while (_increase.Count > 0)
         {
-            for (var queueZ = minZ - 1; queueZ <= maxZ + 1; queueZ++)
+            var (fromX, fromY, fromZ) = _increase.Dequeue();
+            int fromLevel = Read(fromX, fromY, fromZ);
+            if (fromLevel == 0)
             {
-                for (var queueY = minY - 1; queueY <= maxY + 1; queueY++)
+                // An addition seed with no level of its own pulls the best level its neighbours can give it, which is
+                // how a cell that just became transparent gets lit again.
+                fromLevel = PullLevel(fromX, fromY, fromZ);
+                if (fromLevel == 0)
                 {
-                    if (Read(queueX, queueY, queueZ) > 0)
-                    {
-                        _queue.Enqueue((queueX, queueY, queueZ));
-                    }
+                    continue;
+                }
+
+                if (Store(fromX, fromY, fromZ, (byte)fromLevel))
+                {
+                    LastChangedCells++;
                 }
             }
-        }
 
-        Span<(int X, int Y, int Z)> neighbours = stackalloc (int, int, int)[6];
-        while (_queue.Count > 0)
-        {
-            var (fromX, fromY, fromZ) = _queue.Dequeue();
-            var fromLevel = Read(fromX, fromY, fromZ);
+            if (fromLevel <= 1)
+            {
+                continue;
+            }
+
             if (fromLevel <= 1)
             {
                 continue;
@@ -147,15 +339,7 @@ public sealed class SkyLightEngine
 
             foreach (var (toX, toY, toZ) in neighbours)
             {
-                if (toX < minX || toX > maxX || toZ < minZ || toZ > maxZ || toY < minY || toY > maxY)
-                {
-                    continue;
-                }
-
-                // The reference refuses the step when the two shapes together cover the face (shapeOccludes). We only
-                // know whether one of them is a full block, which is enough to stop light entering a solid cell and is
-                // registered as an approximation for two partial shapes (R-056).
-                if (BlocksSky(toX, toY, toZ))
+                if (ChunkAt(toX, toZ) is null || BlocksSky(toX, toY, toZ))
                 {
                     continue;
                 }
@@ -173,13 +357,15 @@ public sealed class SkyLightEngine
 
                 if (candidate > 1)
                 {
-                    _queue.Enqueue((toX, toY, toZ));
+                    _increase.Enqueue((toX, toY, toZ));
                 }
             }
         }
-
-        return LastChangedCells > 0;
     }
+
+    /// <summary>Highest cell in a column that blocks the sky, from the cache when it is known.</summary>
+    private int CachedHeight(int x, int z) =>
+        _columnHeights.TryGetValue(ColumnKey(x, z), out var height) ? height : ScanHeight(x, z);
 
     /// <summary>
     /// Highest cell in a column that blocks the sky; every cell above it is a source of 15.
@@ -189,8 +375,13 @@ public sealed class SkyLightEngine
     /// not zero) or when its shape fills a face
     /// (ref://mc-26.3-analysis/src/net/minecraft/world/level/lighting/ChunkSkyLightSources.java:140-147).
     /// </remarks>
-    private int TopAbsorberY(int x, int z)
+    private int ScanHeight(int x, int z)
     {
+        if (ChunkAt(x, z) is null)
+        {
+            return int.MinValue;
+        }
+
         var top = (_world.MaxSectionY * 16) + 15;
         for (var y = top; y >= _world.MinSectionY * 16; y--)
         {
@@ -233,6 +424,8 @@ public sealed class SkyLightEngine
 
         return VanillaBlockOcclusion.TryGet(block, out var info) ? info : new BlockOcclusionInfo(true, true, MaxLevel);
     }
+
+    private static long ColumnKey(int x, int z) => ((long)x << 32) ^ (uint)z;
 
     private byte Read(int x, int y, int z) =>
         ChunkAt(x, z) is { } chunk ? chunk.Light.GetSkyLight(x & 15, y, z & 15) : (byte)0;

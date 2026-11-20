@@ -40,6 +40,6 @@
 
 | Project | Sharpcraft type | Kind | Status | Reference class | Reference path | Note |
 | --- | --- | --- | --- | --- | --- | --- |
-| Sharpcraft.Client | Sharpcraft.Client.Lighting.SkyLightEngine | Mirror | Partial | net.minecraft.world.level.lighting.LevelLightEngine | ref://mc-26.3-analysis/src/net/minecraft/world/level/lighting/LevelLightEngine.java | Sky light only, naive full recompute instead of the incremental queue |
+| Sharpcraft.Client | Sharpcraft.Client.Lighting.SkyLightEngine | Mirror | Partial | net.minecraft.world.level.lighting.LevelLightEngine | ref://mc-26.3-analysis/src/net/minecraft/world/level/lighting/LevelLightEngine.java | Sky light only; removal and addition queues plus a per column height cache |
 
 <!-- END GENERATED: class-map -->
