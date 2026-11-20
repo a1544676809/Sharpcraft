@@ -112,7 +112,7 @@
   - `isSolidRender()` → `!solidRender || lightDampening == 0` 这条透光判据的一半（`ref://…/BlockBehaviour.java:808-810`）；
   - `getLightDampening()` → 另一半。
   
-  三者由 `VanillaBlockOcclusion`（生成表，见下表）回答。它们不一致是常态：玻璃与冰的**碰撞形状是满方块**而**遮挡形状为空**（所以明暗 0.2、同时透光），树叶同理，台阶不碰撞满但确实遮挡。按贴图透明度判断会把这三类全部判反——这正是 #255 里"树叶没有环境光遮蔽"的那一半。
+  三者由 `VanillaBlockOcclusion`（生成表，见下表）回答，**按方块标识、取 default state**：这是已知限制，见 `SIM-BLOCK-OCCLUSION-DEFAULT-STATE` 与 R-053。它们不一致是常态：玻璃与冰的**碰撞形状是满方块**而**遮挡形状为空**（所以明暗 0.2、同时透光），树叶同理；台阶（`stone_slab` 的 default state）则相反：既不是碰撞满方块、也不是 solid render，所以明暗 1.0 且透光，与玻璃的差别恰好只在"碰撞是否满"。按贴图透明度判断会把玻璃、冰、树叶三类全部判反——这正是 #255 里"树叶没有环境光遮蔽"的那一半。
 - **对角规则**：只有当对角的两侧"沿面法线再外推一格"都**不透光**时才跳过对角采样，直接复用**角 0** 的值。12 / 13 两个对角复用的也是**角 0**（原版如此，不是角 1）；这是原版最容易抄错的一处，已有专项测试。
 - **两条分支**：
   - **整面**：四个角值原样分配，一个计算顶点一组，不做权重混合。
@@ -130,12 +130,16 @@
 | 朝向亮度 | `ref://mc-26.3-analysis/src/net/minecraft/world/level/CardinalLighting.java` `DEFAULT` | 下 0.5 / 上 1.0 / 南北 0.8 / 东西 0.6 |
 | 遮蔽判据 | `ref://mc-26.3-analysis/src/net/minecraft/world/level/block/state/BlockBehaviour.java:310` | 碰撞形状满方块 → 0.2，否则 1.0 |
 | 通道量化 | `ref://mc-26.3-analysis/src/net/minecraft/util/ARGB.java:341` | `floor(value × 255)` |
-| 三个遮挡判据（1286 个方块） | `ref://mc-26.3-analysis/vectors/BlockOcclusionVectors.java`（`run-probe.ps1 -Name BlockOcclusionVectors -Args block-occlusion.tsv`） | `collisionFull` / `solidRender` / `lightDampening`，生成表 `VanillaBlockOcclusion`，门禁 `generate-block-occlusion-table.ps1 -Check` |
+| 三个遮挡判据（1286 个方块） | `ref://mc-26.3-analysis/vectors/BlockOcclusionVectors.java`（`run-probe.ps1 -Name BlockOcclusionVectors -Args block-occlusion.tsv`） | `collisionFull` / `solidRender` / `lightDampening`，生成表 `VanillaBlockOcclusion`。**CI 门禁是架构测试** `VanillaBlockOcclusionTests`（条数 1286 + 8 个代表值 + 生成器存在）；`generate-block-occlusion-table.ps1 -Check` 需要 `MC_ANALYSIS_ROOT`，用于对分析工作区做**全量**漂移检查（手动 / 发布前跑），不进 CI |
 | 真值向量（混合数学 14 组） | `ref://mc-26.3-analysis/vectors/LightBlendVectors.java`（`run-probe.ps1 -Name LightBlendVectors`，跑在 26.3 客户端 jar 上） | 10 组 `smoothBlend` + 4 组 `smoothWeightedBlend`，逐组断言于 `Repro_255_LightBlendVectorsTests` |
 
 **已加载边界处理**：位于加载区域边缘的面会采样到不属于任何区块的格子，此时该格按 0 光处理（与原版越界读 0 一致）；`Neighbourhood.TryGetLight` 对世界上下边界同样返回 0，不再越界索引。
 
-**两条路径同一套算法**（原则 14 单轨）：元素模型路径（`EmitSectionModels` → `BlockModelSet.Emit`）与立方体面路径调用同一个 `ResolveQuadLighting`。模型路径由 `EmitSectionModels` 按四边形的**模型内包围盒**逐 quad 采样（`SampleQuadCorners`），并按 `(方向, 是否整面)` 共享同一组采样（同一方向多个 quad 只采一次），`BlockModelSet.Emit` 再用"顶点在四边形内的位置"（`uMax`/`vMax` 两个符号位）定位它属于烘焙四边形的哪个顶点，因此模型文件可以任意排列顶点顺序；四边形是否"部分面"由包围盒判定，加权分支因此在**生产路径**上真实生效（草方块、树叶、花草都走这条路径）。
+**两条路径同一套算法**（原则 14 单轨）：元素模型路径（`EmitSectionModels` → `BlockModelSet.Emit`）与立方体面路径调用同一个 `ResolveQuadLighting`。模型路径由 `EmitSectionModels` 按四边形的**模型内包围盒**逐 quad 采样（`SampleQuadCorners`），并按 `(方向, 是否整面)` 共享同一组采样（同一方向多个 quad 只采一次；该共享**未做基准验证**，见 R-051），`BlockModelSet.Emit` 再用"顶点在四边形内的位置"（`uMax`/`vMax` 两个符号位）定位它属于烘焙四边形的哪个顶点，因此模型文件可以任意排列顶点顺序；四边形是否"部分面"由包围盒判定，加权分支因此在**生产路径**上真实生效（草方块、树叶、花草都走这条路径）。
+
+
+
+**采样成本（实测自代码路径，非基准）**：整面（cubic）面每次采样 = 4 角邻 + 4 个透气探针 + 4 对角 + 1 中心 = **13 次方块状态读、9 次取光**；部分面因中心光多读一格 = **14 次状态读、10 次取光**。六面 cube 模型因此是 **78/54**（全部整面）或 **84/60**（全部部分面）；32 quad 上限最坏约 288 次取光。这是原版每 quad 都付的代价（原版用 100 项 LRU 缓存抵消，我们未做）。
 
 **仍未实现（已登记）**：① 单个模型 quad 数超过 32 时该方块退回"每面一组光"（`MaxModelQuads` 守卫，现有模型远低于此，见 `SIM-MODEL-QUAD-COUNT-CAP` / R-051）；② **带 `rotation` 的元素**：我们的模型读取器在旋转后不保持原版烘焙四边形的顶点顺序（实测：绕 Y 轴 90° 后 +Y 面的顶点序由 `0,2,3,1` 变成 `1,0,2,3`），因此"按声明方向逐角对齐"对旋转面暂时不可验证，登记为 R-052；③ 天空亮度随时间的曲线、方块发光等级仍未接。
 
@@ -604,6 +608,16 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **判定（Issue #128）**：`modelScale=1` 下生产 raw 的 Position+Rotation 已与源 `T*R` 等价；Book 报告的 `(0.364,...)` 是 `modelScale=16` probe 把混合单位整段比较造成的，不是 T/R 缺陷。`RawNodeFramePoseTests` 使用 Book `right_pages` 源样本（`x=0.997491, yRot=-1.5`, local first vertex `(5,-4,0.99)`），对单 cube 的 **24/24** 顶点逐点比较位置+UV（独立公式 `R*(v/16)+T_blocks`），并用同一 cube 的 Position+Rotation part 验证 `PartWorldMatrix(rawSourceFrame:true)`；不按实现反推。
 
 ## 已知刻意的简化
+
+### SIM-BLOCK-OCCLUSION-DEFAULT-STATE：遮挡判据按方块的 default state 取
+
+- **简化了什么**：`VanillaBlockOcclusion` 的键是**方块标识**，三条谓词取该方块的 **default state**。原版的 `isCollisionShapeFullBlock` / `isSolidRender` / `getLightDampening` 都是 **BlockState 级**，同一方块的不同状态可能不同。
+- **为什么**：状态级表要为每个 state 落一行（26.3 全部状态数万条），当前 `BlockStateLayout` 也不保证能稳定复现原版的状态顺序；本轮的病灶是"整类透明方块被判反"，按 default state 已能修对绝大多数，状态级留作独立任务。
+- **对等效性的影响**：**受影响的典型状态**——台阶的 top / double 变体（`stone_slab` 的 default 是 bottom：`false/false/0`，double 在原版是满方块）、雪层（`snow` default 1 层，层数变化会改碰撞形状）、楼梯朝向不影响形状但双层变体影响、告示牌/墙的连接变体。这些状态的 AO 明暗与透光会按 default 判断：例如双层台阶在本仓仍是"不遮挡、透光"，而原版按满方块处理。
+- **当前状态与独立任务**：跟踪 `docs/risks.md` **R-053**（Issue 待建号）。**不是已解决。**
+- **验收入口**：做到状态级表后，把 `stone_slab` 的 top/double、`snow` 各层加入 `Repro_255` 的用例，断言明暗分别等于原版的 0.2/1.0；届时删除本条。
+
+<!-- simplification:SIM-BLOCK-OCCLUSION-DEFAULT-STATE task:R-053 -->
 
 ### SIM-MODEL-QUAD-COUNT-CAP：模型 quad 超过 32 个时该方块退回单点光照
 

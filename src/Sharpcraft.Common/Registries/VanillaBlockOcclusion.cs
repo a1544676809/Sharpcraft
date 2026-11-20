@@ -29,20 +29,34 @@ public static class VanillaBlockOcclusion
     /// <summary>How many blocks the reference registers.</summary>
     public const int Count = 1286;
 
-    /// <summary>Looks a block up, or reports that it is unknown so the caller can fall back visibly.</summary>
-    /// <param name="block">Block identifier.</param>
+    /// <summary>Looks a block up, or reports that it is unknown and counts the miss.</summary>
+    /// <param name="block">Block identifier; only the minecraft namespace is in this table.</param>
     /// <param name="info">Predicates the reference reports for the default state.</param>
+    /// <remarks>
+    /// The miss count is the visible signal: a modded block or a layout that cannot resolve a block would otherwise
+    /// fall back to the old texture proxy without anyone noticing (principle 16). Read <see cref="FallbackCount"/> in
+    /// diagnostics; a non-zero value means some block was judged by the proxy rather than by the reference.
+    /// </remarks>
     public static bool TryGet(Sharpcraft.Common.Identifiers.Identifier block, out BlockOcclusionInfo info)
     {
-        if (Table.TryGetValue(block.Path, out var code))
+        // Keyed by namespace and path so a modded block that happens to be called glass cannot borrow the vanilla
+        // entry and quietly inherit stone-like shading.
+        if (block.Namespace == Sharpcraft.Common.Identifiers.Identifier.DefaultNamespace &&
+            Table.TryGetValue(block.Path, out var code))
         {
             info = new BlockOcclusionInfo((code & 1) != 0, (code & 2) != 0, code >> 2);
             return true;
         }
 
+        System.Threading.Interlocked.Increment(ref _fallbackCount);
         info = default;
         return false;
     }
+
+    /// <summary>How many lookups fell back to the texture proxy, which should be zero in a vanilla world.</summary>
+    public static int FallbackCount => System.Threading.Volatile.Read(ref _fallbackCount);
+
+    private static int _fallbackCount;
 
     /// <summary>Encoded predicates per block path: bit 0 collision full, bit 1 solid render, bits 2..5 dampening.</summary>
     private static readonly Dictionary<string, byte> Table = new(StringComparer.Ordinal)

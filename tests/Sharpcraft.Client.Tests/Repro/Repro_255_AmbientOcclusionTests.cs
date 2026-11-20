@@ -112,9 +112,21 @@ public sealed class Repro_255_AmbientOcclusionTests
     {
         var data = new byte[16 * 16 * 4];
         Array.Fill(data, (byte)255);
+
+        // Leaves need a sprite that actually has holes: judging occlusion by the texture has to see them as see-through,
+        // which is the wrong answer the reference gives for a full collision shape. Without this the leaf case would
+        // pass against the texture proxy by accident, because the missing sprite is fully opaque.
+        var leaves = new byte[16 * 16 * 4];
+        Array.Fill(leaves, (byte)255);
+        for (var at = 3; at < leaves.Length; at += 4)
+        {
+            leaves[at] = 0;
+        }
+
         var entries = new List<(Sharpcraft.Common.Identifiers.Identifier Location, RgbaImage Image, int Frames)>
         {
-            (SpriteAtlas.MissingSprite, new RgbaImage(16, 16, data), 1)
+            (SpriteAtlas.MissingSprite, new RgbaImage(16, 16, data), 1),
+            (Sharpcraft.Common.Identifiers.Identifier.Parse("minecraft:block/oak_leaves"), new RgbaImage(16, 16, leaves), 1)
         };
 
         return new BlockSpriteMap(SpriteAtlasBuilder.Stitch(entries));
