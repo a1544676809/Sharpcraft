@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using System.Globalization;
+using Sharpcraft.Common.Diagnostics;
 using Sharpcraft.Framework.Rendering;
 
 namespace Sharpcraft.Client.Ui;
@@ -39,19 +40,21 @@ public static class UiColours
 }
 
 /// <summary>Pre-parsed values for one element, so building a frame does not touch strings.</summary>
-/// <param name="Colour">Packed colour, zero when the element has none.</param>
-/// <param name="Height">Requested height, or a negative value when absent.</param>
-/// <param name="Padding">Inner padding.</param>
-/// <param name="Spacing">Gap after the element inside a panel.</param>
-public readonly record struct UiStyle(uint Colour, float Height, float Padding, float Spacing);
+public readonly record struct UiStyle(
+    uint Colour,
+    float Height,
+    float Padding,
+    float Spacing,
+    float Width = -1f,
+    float Margin = 0f,
+    byte Anchor = 0,
+    bool Horizontal = false,
+    bool Shadow = true,
+    string? BindingKey = null);
 
 /// <summary>
-/// Numbers and colours read once per element (docs/modules/ui.md 10).
+/// Numbers, anchors, orientations and bindings read once per element (docs/modules/ui.md 10).
 /// </summary>
-/// <remarks>
-/// Parsing text on every frame would allocate and show up in the per frame budget, so the document is walked once
-/// when it is loaded and every element's parsed values are kept here. Building a frame then only does arithmetic.
-/// </remarks>
 public sealed class UiStyles
 {
     private readonly Dictionary<UiNode, UiStyle> _styles = new(ReferenceEqualityComparer.Instance);
@@ -79,17 +82,81 @@ public sealed class UiStyles
                 ? UiColours.Parse(backgroundText)
                 : 0u;
 
+        var horizontal = node.Attributes.TryGetValue("Orientation", out var orientation) &&
+                         ParseOrientation(orientation);
+        var anchor = node.Attributes.TryGetValue("Anchor", out var anchorText)
+            ? ParseAnchor(anchorText)
+            : (byte)0;
+        var shadow = !node.Attributes.TryGetValue("Shadow", out var shadowText) ||
+                     ParseBool(shadowText);
+        var bindingKey = node.Attributes.TryGetValue("Text", out var textValue)
+            ? ExtractBindingKey(textValue)
+            : null;
+
         _styles[node] = new UiStyle(
             colour,
             ReadFloat(node, "Height", -1f),
             ReadFloat(node, "Padding", 0f),
-            ReadFloat(node, "Spacing", 0f));
+            ReadFloat(node, "Spacing", 0f),
+            ReadFloat(node, "Width", -1f),
+            ReadFloat(node, "Margin", 0f),
+            anchor,
+            horizontal,
+            shadow,
+            bindingKey);
 
         for (var index = 0; index < node.Children.Count; index++)
         {
             Walk(node.Children[index]);
         }
     }
+
+    private static string? ExtractBindingKey(string text)
+    {
+        if (!text.Contains('{') && !text.Contains('}'))
+        {
+            return null;
+        }
+
+        if (text.Length > 10 && text.StartsWith("{Binding ", StringComparison.Ordinal) && text[^1] == '}')
+        {
+            var key = text[9..^1].Trim();
+            if (key.Length > 0 && !key.Contains('{') && !key.Contains('}'))
+            {
+                return key;
+            }
+        }
+
+        throw new FormatException($"invalid binding expression: {text}");
+    }
+
+    private static bool ParseOrientation(string value) => value switch
+    {
+        "Vertical" => false,
+        "Horizontal" => true,
+        _ => throw new FormatException($"invalid Orientation: {value}")
+    };
+
+    private static bool ParseBool(string value) => value switch
+    {
+        "true" or "True" => true,
+        "false" or "False" => false,
+        _ => throw new FormatException($"invalid boolean: {value}")
+    };
+
+    private static byte ParseAnchor(string value) => value switch
+    {
+        "TopLeft" => UiScreenLayout.AnchorTopLeft,
+        "TopCenter" => UiScreenLayout.AnchorTopCenter,
+        "TopRight" => UiScreenLayout.AnchorTopRight,
+        "CenterLeft" => UiScreenLayout.AnchorCenterLeft,
+        "Center" => UiScreenLayout.AnchorCenter,
+        "CenterRight" => UiScreenLayout.AnchorCenterRight,
+        "BottomLeft" => UiScreenLayout.AnchorBottomLeft,
+        "BottomCenter" => UiScreenLayout.AnchorBottomCenter,
+        "BottomRight" => UiScreenLayout.AnchorBottomRight,
+        _ => throw new FormatException($"invalid Anchor: {value}")
+    };
 
     private static float ReadFloat(UiNode node, string name, float fallback) =>
         node.Attributes.TryGetValue(name, out var value)
@@ -100,14 +167,20 @@ public sealed class UiStyles
 /// <summary>
 /// Turns a parsed document into interface geometry (docs/modules/ui.md 6).
 /// </summary>
-/// <remarks>
-/// One pass, no measurement pass: heights come from the document or from the element kind, so a screen's layout
-/// never depends on a sibling's layout beyond the running cursor. Given a font, text becomes textured quads from
-/// the glyph sheet; without one it falls back to one bar per character, which keeps the kernel testable and
-/// usable before assets are available.
-/// </remarks>
 public static class UiScreenLayout
 {
+    /// <summary>Nine-point screen anchor constants matching vanilla relative screen placement.</summary>
+    public const byte AnchorNone = 0;
+    public const byte AnchorTopLeft = 1;
+    public const byte AnchorTopCenter = 2;
+    public const byte AnchorTopRight = 3;
+    public const byte AnchorCenterLeft = 4;
+    public const byte AnchorCenter = 5;
+    public const byte AnchorCenterRight = 6;
+    public const byte AnchorBottomLeft = 7;
+    public const byte AnchorBottomCenter = 8;
+    public const byte AnchorBottomRight = 9;
+
     /// <summary>Height of one text line when no font is supplied.</summary>
     public const float LineHeight = 12f;
 
@@ -133,13 +206,18 @@ public static class UiScreenLayout
 """;
 
     /// <summary>Builds the geometry for one frame. Allocates nothing once the buffers are warm.</summary>
-    /// <param name="screen">Parsed root element.</param>
-    /// <param name="styles">Pre-parsed values for that tree.</param>
-    /// <param name="width">Virtual width.</param>
-    /// <param name="height">Virtual height.</param>
-    /// <param name="geometry">Receives the quads; cleared first.</param>
-    /// <param name="font">Glyph metrics, or null to draw placeholder bars.</param>
-    /// <param name="textScale">Scale from font pixels to virtual pixels.</param>
+    /// <param name="screen">Parsed root <c>Screen</c> node.</param>
+    /// <param name="styles">Pre-compiled style table from <see cref="UiStyles.Compile"/>.</param>
+    /// <param name="width">Canvas width in virtual GUI pixels.</param>
+    /// <param name="height">Canvas height in virtual GUI pixels.</param>
+    /// <param name="geometry">Reusable geometry buffer cleared and populated in place.</param>
+    /// <param name="font">Optional bitmap font; when <c>null</c>, placeholder bars are emitted.</param>
+    /// <param name="textScale">Scale factor applied to bitmap font metrics.</param>
+    /// <param name="resolveBinding">
+    /// Optional resolver for whole-string <c>{Binding Key}</c> expressions on <c>TextBlock</c>.
+    /// When <c>null</c> or when it returns <c>null</c>, the bound text falls back to <see cref="string.Empty"/>.
+    /// </param>
+    [HotPath("per-frame UI layout")]
     public static void Build(
         UiNode screen,
         UiStyles styles,
@@ -147,7 +225,8 @@ public static class UiScreenLayout
         float height,
         UiGeometry geometry,
         BitmapFont? font = null,
-        float textScale = 1f)
+        float textScale = 1f,
+        Func<string, string?>? resolveBinding = null)
     {
         ArgumentNullException.ThrowIfNull(screen);
         ArgumentNullException.ThrowIfNull(styles);
@@ -168,16 +247,100 @@ public static class UiScreenLayout
             geometry.AddRectangle(0f, 0f, width, height, style.Colour);
         }
 
-        var cursor = style.Padding;
-        LayoutChildren(
-            screen,
-            styles,
-            style.Padding,
-            ref cursor,
-            width - (style.Padding * 2f),
-            geometry,
-            font,
-            textScale);
+        var pad = style.Padding;
+        var innerWidth = Math.Max(0f, width - (pad * 2f));
+        var innerHeight = Math.Max(0f, height - (pad * 2f));
+        var cursor = pad;
+        var spacing = style.Spacing;
+
+        for (var index = 0; index < screen.Children.Count; index++)
+        {
+            var child = screen.Children[index];
+            var childStyle = styles.Of(child);
+
+            if (childStyle.Anchor != AnchorNone)
+            {
+                var (cw, ch) = MeasureNode(child, styles, font, textScale, resolveBinding);
+                var (ax, ay) = ResolveAnchorOrigin(childStyle.Anchor, pad, pad, innerWidth, innerHeight, cw, ch, childStyle.Margin);
+                var y = ay;
+                EmitNode(child, styles, ax, ref y, Math.Max(cw, innerWidth), geometry, font, textScale, resolveBinding);
+                continue;
+            }
+
+            EmitNode(child, styles, pad, ref cursor, innerWidth, geometry, font, textScale, resolveBinding);
+            if (index < screen.Children.Count - 1)
+            {
+                cursor += spacing;
+            }
+        }
+    }
+
+    private static (float X, float Y) ResolveAnchorOrigin(
+        byte anchor,
+        float areaX,
+        float areaY,
+        float areaW,
+        float areaH,
+        float elemW,
+        float elemH,
+        float margin)
+    {
+        var x = anchor switch
+        {
+            AnchorTopLeft or AnchorCenterLeft or AnchorBottomLeft => areaX + margin,
+            AnchorTopCenter or AnchorCenter or AnchorBottomCenter => areaX + ((areaW - elemW) * 0.5f),
+            _ => areaX + areaW - elemW - margin
+        };
+        var y = anchor switch
+        {
+            AnchorTopLeft or AnchorTopCenter or AnchorTopRight => areaY + margin,
+            AnchorCenterLeft or AnchorCenter or AnchorCenterRight => areaY + ((areaH - elemH) * 0.5f),
+            _ => areaY + areaH - elemH - margin
+        };
+        return (x, y);
+    }
+
+    private static void EmitNode(
+        UiNode node,
+        UiStyles styles,
+        float left,
+        ref float cursor,
+        float available,
+        UiGeometry geometry,
+        BitmapFont? font,
+        float textScale,
+        Func<string, string?>? resolveBinding)
+    {
+        switch (node.Name)
+        {
+            case "StackPanel":
+                LayoutPanel(node, styles, left, ref cursor, available, geometry, font, textScale, resolveBinding);
+                break;
+
+            case "TextBlock":
+                LayoutText(node, styles, left, ref cursor, geometry, font, textScale, resolveBinding);
+                break;
+
+            case "Spacer":
+                LayoutSpacer(node, styles, left, ref cursor, geometry);
+                break;
+
+            default:
+                throw new FormatException($"element {node.Name} cannot appear inside parent");
+        }
+    }
+
+    private static void LayoutSpacer(UiNode spacer, UiStyles styles, float left, ref float cursor, UiGeometry geometry)
+    {
+        var style = styles.Of(spacer);
+        var w = style.Width >= 0f ? style.Width : 0f;
+        var h = style.Height >= 0f ? style.Height : 0f;
+        if (style.Colour != 0u && w > 0f && h > 0f)
+        {
+            geometry.AddRectangle(left, cursor, w, h, style.Colour);
+        }
+
+        cursor += h;
     }
 
     private static void LayoutChildren(
@@ -188,28 +351,36 @@ public static class UiScreenLayout
         float available,
         UiGeometry geometry,
         BitmapFont? font,
-        float textScale)
+        float textScale,
+        Func<string, string?>? resolveBinding)
     {
-        var spacing = styles.Of(parent).Spacing;
+        var parentStyle = styles.Of(parent);
+        var spacing = parentStyle.Spacing;
+
+        if (parentStyle.Horizontal)
+        {
+            var penX = left;
+            var maxH = 0f;
+            for (var index = 0; index < parent.Children.Count; index++)
+            {
+                var child = parent.Children[index];
+                var rowY = cursor;
+                var (cw, ch) = MeasureNode(child, styles, font, textScale, resolveBinding);
+                EmitNode(child, styles, penX, ref rowY, cw, geometry, font, textScale, resolveBinding);
+                penX += cw + (index < parent.Children.Count - 1 ? spacing : 0f);
+                if (ch > maxH)
+                {
+                    maxH = ch;
+                }
+            }
+
+            cursor += maxH;
+            return;
+        }
 
         for (var index = 0; index < parent.Children.Count; index++)
         {
-            var child = parent.Children[index];
-
-            switch (child.Name)
-            {
-                case "StackPanel":
-                    LayoutPanel(child, styles, left, ref cursor, available, geometry, font, textScale);
-                    break;
-
-                case "TextBlock":
-                    LayoutText(child, styles, left, ref cursor, geometry, font, textScale);
-                    break;
-
-                default:
-                    throw new FormatException($"element {child.Name} cannot appear inside {parent.Name}");
-            }
-
+            EmitNode(parent.Children[index], styles, left, ref cursor, available, geometry, font, textScale, resolveBinding);
             if (index < parent.Children.Count - 1)
             {
                 cursor += spacing;
@@ -225,110 +396,95 @@ public static class UiScreenLayout
         float available,
         UiGeometry geometry,
         BitmapFont? font,
-        float textScale)
+        float textScale,
+        Func<string, string?>? resolveBinding)
     {
         var style = styles.Of(panel);
-
         var innerLeft = left + style.Padding;
         var innerWidth = Math.Max(0f, available - (style.Padding * 2f));
 
         if (style.Colour != 0u)
         {
-            // Sized to its content rather than to the row: a HUD panel should frame its text, not tint the width
-            // of the screen.
-            var panelHeight = MeasurePanel(panel, styles, font, textScale) + (style.Padding * 2f);
-            var contentWidth = MeasurePanelWidth(panel, styles, font, textScale) + (style.Padding * 2f);
-            geometry.AddRectangle(left, cursor, Math.Min(available, contentWidth), panelHeight, style.Colour);
+            var (panelWidth, panelHeight) = MeasureNode(panel, styles, font, textScale, resolveBinding);
+            geometry.AddRectangle(left, cursor, Math.Min(available, panelWidth), panelHeight, style.Colour);
         }
 
         cursor += style.Padding;
-        LayoutChildren(panel, styles, innerLeft, ref cursor, innerWidth, geometry, font, textScale);
+        LayoutChildren(panel, styles, innerLeft, ref cursor, innerWidth, geometry, font, textScale, resolveBinding);
         cursor += style.Padding;
     }
 
-    private static float MeasurePanel(UiNode panel, UiStyles styles, BitmapFont? font, float textScale)
+    private static (float Width, float Height) MeasureNode(
+        UiNode node,
+        UiStyles styles,
+        BitmapFont? font,
+        float textScale,
+        Func<string, string?>? resolveBinding)
     {
-        var total = 0f;
-        var spacing = styles.Of(panel).Spacing;
-
-        for (var index = 0; index < panel.Children.Count; index++)
-        {
-            total += spacing;
-            total += MeasureChild(panel.Children[index], styles, font, textScale);
-        }
-
-        return total;
-    }
-
-    private static float MeasureChild(UiNode node, UiStyles styles, BitmapFont? font, float textScale)
-    {
-        if (node.Name != "TextBlock")
-        {
-            return MeasurePanel(node, styles, font, textScale) + (styles.Of(node).Padding * 2f);
-        }
-
-        return LineHeightOf(node, styles, font, textScale);
-    }
-
-    private static float MeasurePanelWidth(UiNode node, UiStyles styles, BitmapFont? font, float textScale)
-    {
+        var style = styles.Of(node);
         if (node.Name == "TextBlock")
         {
-            var text = node.Get("Text");
-
-            if (font is null)
-            {
-                return text.Length * CharacterAdvance;
-            }
-
-            return font.MeasureWidth(text) * textScale;
+            var text = ResolveText(node, style, resolveBinding);
+            var w = font is null ? text.Length * CharacterAdvance : font.MeasureWidth(text) * textScale;
+            return (w, LineHeightOf(style, font, textScale));
         }
 
-        var widest = 0f;
-
-        for (var index = 0; index < node.Children.Count; index++)
+        if (node.Name == "Spacer")
         {
-            widest = Math.Max(widest, MeasurePanelWidth(node.Children[index], styles, font, textScale));
+            return (style.Width >= 0f ? style.Width : 0f, style.Height >= 0f ? style.Height : 0f);
         }
 
-        // Padding comes from the pre-parsed styles: reading the attribute here would parse a string every frame,
-        // which the allocation test catches.
-        return widest + (styles.Of(node).Padding * 2f);
+        var contentW = 0f;
+        var contentH = 0f;
+        var count = node.Children.Count;
+
+        for (var index = 0; index < count; index++)
+        {
+            var (cw, ch) = MeasureNode(node.Children[index], styles, font, textScale, resolveBinding);
+            if (style.Horizontal)
+            {
+                contentW += cw + (index < count - 1 ? style.Spacing : 0f);
+                if (ch > contentH)
+                {
+                    contentH = ch;
+                }
+            }
+            else
+            {
+                if (cw > contentW)
+                {
+                    contentW = cw;
+                }
+
+                contentH += ch + (index < count - 1 ? style.Spacing : 0f);
+            }
+        }
+
+        var totalW = style.Width >= 0f ? style.Width : contentW + (style.Padding * 2f);
+        var totalH = style.Height >= 0f ? style.Height : contentH + (style.Padding * 2f);
+        return (totalW, totalH);
     }
 
-    private static float LineHeightOf(UiNode node, UiStyles styles, BitmapFont? font, float textScale)
-    {
-        var declared = styles.Of(node).Height;
+    private static string ResolveText(UiNode node, UiStyle style, Func<string, string?>? resolveBinding) =>
+        style.BindingKey is { } key
+            ? resolveBinding?.Invoke(key) ?? string.Empty
+            : node.Get("Text");
 
-        if (declared >= 0f)
+    private static float LineHeightOf(UiStyle style, BitmapFont? font, float textScale)
+    {
+        if (style.Height >= 0f)
         {
-            return declared;
+            return style.Height;
         }
 
         return font is null ? LineHeight : font.Height * textScale;
     }
 
-
-    /// <summary>Adds one line of text as textured quads, starting at <paramref name="x"/> and <paramref name="y"/>.</summary>
-    /// <param name="geometry">Receives the quads.</param>
-    /// <param name="font">Glyph metrics.</param>
-    /// <param name="content">Text to draw.</param>
-    /// <param name="x">Left edge.</param>
-    /// <param name="y">Top edge of the glyph cell.</param>
-    /// <param name="textScale">Scale from font pixels to virtual pixels.</param>
-    /// <param name="colour">Ink colour.</param>
-    /// <remarks>
-    /// Every glyph draws its whole cell and the pen advances by the glyph's own advance, so the transparent margin
-    /// of a narrow glyph overlaps the next cell without adding ink.
-    /// </remarks>
-    /// <summary>
-    /// Darkens a colour the way the reference darkens a drop shadow, keeping the alpha.
-    /// </summary>
-    /// <param name="colour">Packed vertex colour.</param>
     private static uint ShadowOf(uint colour) =>
         (colour & 0xFF000000u)
         | ((colour >> 2) & 0x003F3F3Fu);
 
+    /// <summary>Adds one line of text as textured quads, starting at <paramref name="x"/> and <paramref name="y"/>.</summary>
     public static void AddText(
         UiGeometry geometry,
         BitmapFont font,
@@ -340,14 +496,6 @@ public static class UiScreenLayout
         AddText(geometry, font, content.AsSpan(), x, y, textScale, colour);
 
     /// <summary>Adds one run of text, given as a span so wrapped chat lines need no substring.</summary>
-    /// <param name="geometry">Receives the quads.</param>
-    /// <param name="font">Glyph metrics.</param>
-    /// <param name="content">Characters to draw.</param>
-    /// <param name="x">Left edge.</param>
-    /// <param name="y">Top edge of the glyph cell.</param>
-    /// <param name="textScale">Scale from font pixels to virtual pixels.</param>
-    /// <param name="colour">Ink colour.</param>
-
     public static void AddText(
         UiGeometry geometry,
         BitmapFont font,
@@ -358,22 +506,15 @@ public static class UiScreenLayout
         uint colour,
         bool shadow = true)
     {
-        // The cell is scaled down to the declared height, so a high resolution sheet draws finer ink without
-        // changing the layout (docs/analysis/assets/font-slicing.md).
         var cellWidth = font.CellWidth * font.Scale * textScale;
         var cellHeight = font.CellHeight * font.Scale * textScale;
         var pen = x;
-
-        // The reference draws every glyph twice: once offset by a pixel in both directions in a darkened colour, then
-        // the glyph itself. Without it the text looks thin and washes out over a bright world.
         var shadowColour = ShadowOf(colour);
 
         for (var index = 0; index < content.Length; index++)
         {
             var character = content[index];
 
-            // The advance comes from the font's lookup, not from the glyph: a space has no glyph width at all and
-            // takes its advance from the font definition, so reading the glyph directly would collapse every space.
             if (font.TryGet(character, out var glyph) && character != ' ')
             {
                 var (u0, v0, u1, v1) = font.Uv(glyph);
@@ -405,16 +546,16 @@ public static class UiScreenLayout
         ref float cursor,
         UiGeometry geometry,
         BitmapFont? font,
-        float textScale)
+        float textScale,
+        Func<string, string?>? resolveBinding)
     {
-        var content = text.Get("Text");
-        var colour = styles.Of(text).Colour;
-        colour = colour == 0u ? 0xFFFFFFFFu : colour;
-        var lineHeight = LineHeightOf(text, styles, font, textScale);
+        var style = styles.Of(text);
+        var content = ResolveText(text, style, resolveBinding);
+        var colour = style.Colour == 0u ? 0xFFFFFFFFu : style.Colour;
+        var lineHeight = LineHeightOf(style, font, textScale);
 
         if (font is null)
         {
-            // Placeholder: one bar per character, so layout and batching stay verifiable without any asset.
             var barPen = left;
 
             for (var index = 0; index < content.Length; index++)
@@ -436,7 +577,7 @@ public static class UiScreenLayout
             return;
         }
 
-        AddText(geometry, font, content, left, cursor + ((lineHeight - (font.CellHeight * font.Scale * textScale)) / 2f), textScale, colour);
+        AddText(geometry, font, content, left, cursor + ((lineHeight - (font.CellHeight * font.Scale * textScale)) / 2f), textScale, colour, style.Shadow);
         cursor += lineHeight;
     }
 }

@@ -118,10 +118,24 @@
 
 范围控制：
 
-- 首批控件类型限于 `Screen / StackPanel / Grid / Panel / TextBlock / RichText / Button / TextBox / List / Item / Image`
+- 首批控件类型限于 `Screen / StackPanel / Spacer / Grid / Panel / TextBlock / RichText / Button / TextBox / List / Item / Image`
 - **不实现**依赖属性系统的完整语义（样式继承、触发器、模板重写）；需要时以代码屏幕解决
 - 未知元素或未知属性 = **可定位的报错**；文档必须带架构版本，解析失败**原子回退**到上一份可用文档
 - 解析在后台线程完成；**渲染线程不解析任何文件**
+
+### 7.1 当前已实现的 XAML 子集与契约（2026-11-20）
+
+| 元素 | 允许属性 | 说明 |
+| --- | --- | --- |
+| `Screen` | `Background`、`Padding`、`Spacing`、`Id`、`x:Class`、`xmlns` / `xmlns:*` | 根元素；`xmlns*` 仅校验接受不写入属性表 |
+| `StackPanel` | `Background`、`Padding`、`Spacing`、`Orientation`（`Vertical`/`Horizontal`）、`Anchor`、`Margin`、`Width`、`Height`、`Id` | 容器；默认垂直堆叠 |
+| `TextBlock` | `Text`、`Colour`、`Height`、`Anchor`、`Margin`、`Shadow`（`true`/`false`）、`Id` | 文本；`Shadow` 默认 `true` |
+| `Spacer` | `Width`、`Height`、`Background`、`Anchor`、`Margin`、`Id` | 占位/分割矩形；`Width` 与 `Height` 均 `> 0` 且有 `Background` 时绘制矩形 |
+
+- **XML 实体解码**：属性值中的 `&lt;`、`&gt;`、`&quot;`、`&apos;`、`&amp;` 在解析期按单次扫描语义解码（`&amp;` 最后替换）。
+- **九点锚点（`UiScreenLayout.Anchor*`）**：`AnchorNone = 0`（流式垂直排布）、`AnchorTopLeft = 1`（`TopLeft`）、`AnchorTopCenter = 2`（`TopCenter`）、`AnchorTopRight = 3`（`TopRight`）、`AnchorCenterLeft = 4`（`CenterLeft`）、`AnchorCenter = 5`（`Center`）、`AnchorCenterRight = 6`（`CenterRight`）、`AnchorBottomLeft = 7`（`BottomLeft`）、`AnchorBottomCenter = 8`（`BottomCenter`）、`AnchorBottomRight = 9`（`BottomRight`）。锚定元素在 `Screen` 内边距区域内扣除 `Margin` 定位，不破坏 `Anchor = 0` 的原有流式布局。
+- **`{Binding}` 语法与限制**：`Text` 目前**仅支持整串绑定**（如 `Text="{Binding Health}"`），不支持混排文本（如 `Text="HP: {Binding Health}"`）。若 `Text` 含 `{` 或 `}` 但不是合法整串 `{Binding <非空键>}`，`UiStyles.Compile` 直接抛 `FormatException`。
+- **`resolveBinding` 契约**：`UiScreenLayout.Build(..., Func<string, string?>? resolveBinding = null)` 标有 `[HotPath]`；若未传 `resolveBinding` 或其返回 `null`，绑定文本回退为空串 `string.Empty`，不会将原始 `{Binding ...}` 花括号画到屏幕上。
 
 ## 8. 热加载边界
 
@@ -404,7 +418,7 @@
 | --- | --- | --- |
 | 2D 几何与批处理 | 已完成 | `UiGeometry`：20 字节顶点、scissor 区间、稳态零分配（T-099）|
 | 2D GPU 管线 | 已实现 | 正交、无深度、alpha 混合、逐区间 scissor（T-100）；**截图不覆盖**，见下 |
-| 最小声明式（3 元素）| 已完成 | `Screen` / `StackPanel` / `TextBlock`，未知元素与属性一律拒绝（T-102）|
+| 最小声明式（4 元素）| 已完成 | `Screen` / `StackPanel` / `TextBlock` / `Spacer`，含 9 点锚点、横向面板、`{Binding}` 与 `[HotPath]` 零分配布局 |
 | 文本 | 占位 | 按字符画 6×8 占位格；真实字形随位图字体（T-101）|
 | 热加载 | 未实现 | T-103 |
 
