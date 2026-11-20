@@ -312,6 +312,10 @@ public sealed class ClientWorld
         _chunks[Pack(chunk.ChunkX, chunk.ChunkZ)] = chunk;
         RefreshSnapshot();
 
+        // The sky light engine caches one height per column, and a chunk that arrives again can have different blocks,
+        // so its cached heights have to go (issue 280).
+        SkyLight.ForgetChunk(chunk.ChunkX, chunk.ChunkZ);
+
         // A new neighbour changes which border faces are hidden, so any column already meshed beside it must be
         // rebuilt. Without this its stale border faces stay coplanar with the new chunk's faces, which shows up
         // as overlapping texture along the seam (docs/specs/network/play-movement.md 7.22).

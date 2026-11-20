@@ -633,18 +633,26 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 
 
-### 实测成本（未优化，朴素版）
+### 实测成本（增量版，Issue #280）
 
-用测试内置的计时（`Repro_269_SkyLightTests.TheCostOfOneRelightIsMeasured`，本机 Debug 构建）：
+同一机位、同一场景、同一测试（`Repro_269_SkyLightTests.TheCostOfOneRelightIsMeasured`，本机 Debug 构建）：
 
-| 指标 | 数值 |
-| --- | --- |
-| 单次 `CheckBlock` | **9.83 ms** |
-| 连续 10 次方块变化 | **99.54 ms**（**9.95 ms/次**） |
-| 每次变化的分配 | 稳态 **约 7 字节/次**（11 次共 80 字节）；**light section 首次写入会分配 2048 字节** |
-| 10 次变化重写的光照格 | 2520（252/次） |
+| 指标 | 朴素版（#269） | 增量版（#280） | 变化 |
+| --- | --- | --- | --- |
+| 单次 `CheckBlock` | 9.83 ms | **0.53 ms** | **÷18.5** |
+| 连续 10 次方块变化 | 99.54 ms | **3.77 ms**（0.38 ms/次） | **÷26** |
+| 每次变化的分配 | ≈7 字节 | **≈7 字节**（11 次共 80 字节；section 首次写入另 2048 字节） | 持平 |
+| 10 次变化重写的光照格 | 2520 | **2520** | 完全相同（同一不动点） |
 
-结论：**单次挖方约 10 ms，占 16.7 ms 帧预算的一半以上**，连续挖掘会掉帧。这正是 R-055 要解决的增量优化，本轮按原则 14 先朴素后优化，不做性能声称。
+增量版做法（对应 R-055 的整改项）：
+
+1. **柱高缓存**：每列"最高挡天格 Y"记在 `Dictionary<long,int>`，`CheckBlock` 只重扫**被改动的那一列**（`LastScannedColumns == 1`，朴素版是 1089 列）。
+2. **增量传播**：两段队列——先"移除"（把旧等级能照到的格子清零，边界上的存活格进入加光种子），再"加光"（从光源与存活格 BFS），不再重建 33³ 立方体。
+3. **脏区裁剪**：只有真正被改写的格子才会经 `MarkDirty` 进入 `DirtyChunks`。
+
+等价性由 `Repro_280_IncrementalSkyLightTests` 保证：朴素重算保留为 `SkyLightEngine.RecomputeAll()`，50 组随机布局 + 随机变化逐格比对（0 差异），另有"改动点亮未改动列"与"区块重载后"两组场景。
+
+**已知残余**：柱高缓存只由方块变化与 `ClientWorld.AddChunk` 的 `ForgetChunk` 失效；区块卸载没有通知路径（目前无区块卸载），登记见 `SIM-CLIENT-LIGHT-HEIGHT-CACHE-NO-UNLOAD` / R-057。
 
 ### 实现结构
 
@@ -656,7 +664,7 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 ### 未实现（已登记）
 
 - **方块光**（火把、荧石、岩浆）：本阶段只做天空光，见 `SIM-CLIENT-LIGHT-NO-BLOCK-LIGHT` / R-054。
-- **增量队列与柱高缓存**：原版用 `DynamicGraphMinFixedPoint` 队列 + `ChunkSkyLightSources` 高度图；本仓每次改动重算 33³ 立方体并逐柱扫描，见 `SIM-CLIENT-LIGHT-FULL-RECOMPUTE` / R-055（未做基准）。
+- ~~**增量队列与柱高缓存**~~：**已在 Issue #280 解决**（柱高缓存 + 移除/加光两段队列，0.53 ms/次，与朴素版逐格相等，见 R-055 的关闭记录）。
 - 斜向传播、区块卸载时的光照释放：不做。
 ## 已知刻意的简化
 
@@ -680,15 +688,15 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 <!-- simplification:SIM-CLIENT-LIGHT-NO-BLOCK-LIGHT task:R-054 -->
 
-### SIM-CLIENT-LIGHT-FULL-RECOMPUTE：一次方块变化重算整个受影响立方体
+### SIM-CLIENT-LIGHT-HEIGHT-CACHE-NO-UNLOAD：柱高缓存没有区块卸载的失效路径
 
-- **简化了什么**：`CheckBlock` 每次都把 `x/z ±16`、`y ±16` 的立方体（约 3.6 万格）按光源规则重设一遍，再从壳层与内部光源做 BFS 到不动点；柱子的"最高吸光格"也每列现扫。原版用增量队列（`DynamicGraphMinFixedPoint`）+ 每柱高度图（`ChunkSkyLightSources`），只碰真正变化的格子。
-- **为什么**：原则 14 要求首版是 1:1 朴素实现；先把"挖开就亮"跑对，再谈增量。朴素版同时是后续优化的逐值基准。
-- **对等效性的影响**：**结果应相同**，差异在开销：单次方块变化的状态读取量比原版高两个数量级（未做基准，故不声称可接受）。内存上额外分配受影响 section 的 nibble 数组。
-- **当前状态与独立任务**：跟踪 `docs/risks.md` **R-055**（Issue 待建号）。**不是已优化。**
-- **验收入口**：增量版必须以本朴素版输出做逐格不退化回归（同一世界两次计算逐格相等）+ 区块网格时间基准对比；届时删除本条。
+- **简化了什么**：`SkyLightEngine` 为每列缓存"最高挡天格 Y"。缓存由两种事件失效：该列的方块变化，以及 `ClientWorld.AddChunk`（区块被重新安装）调用 `ForgetChunk`。**区块卸载没有通知路径**，所以卸载后残留的缓存条目会一直留着。
+- **为什么**：当前客户端没有区块卸载逻辑（区块只增不减），加一套卸载通知属于另一个任务的架构改动；而缓存条目只是内存占用（每列 8 字节级），不影响正确性。
+- **对等效性的影响**：**当前为零**——缓存只在该列自身被改动时被读取（`CheckBlock` 会先重扫该列），残留条目永远不会被用作别列的依据。真正的风险是将来加入区块卸载：若卸载后重新加载而没走 `AddChunk`，静区可能出现一列错误的光。内存上，卸载的列会留下条目直到进程结束。
+- **当前状态与独立任务**：跟踪 `docs/risks.md` **R-057**（Issue 待建）。**不是已解决。**
+- **验收入口**：加入区块卸载后，用"卸载 → 重载 → 改动该列"的场景断言与 `RecomputeAll` 逐格相等，并删除本条。
 
-<!-- simplification:SIM-CLIENT-LIGHT-FULL-RECOMPUTE task:R-055 -->
+<!-- simplification:SIM-CLIENT-LIGHT-HEIGHT-CACHE-NO-UNLOAD task:R-057 -->
 
 ### SIM-BLOCK-OCCLUSION-DEFAULT-STATE：遮挡判据按方块的 default state 取
 
