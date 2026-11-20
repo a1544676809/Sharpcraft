@@ -17,20 +17,21 @@ public sealed record UiNode(string Name, IReadOnlyDictionary<string, string> Att
 }
 
 /// <summary>
-/// Reads the small XAML subset the interface layer understands (docs/modules/ui.md 7).
+/// Reads the XAML subset the interface layer understands (docs/modules/ui.md 7).
 /// </summary>
 /// <remarks>
 /// Deliberately small and loud: unknown elements and unknown attributes are rejected with a message that names
 /// the offending item, because a silently ignored property is far more expensive to debug than a refusal at load
-/// time. Supported today are <c>Screen</c>, <c>StackPanel</c> and <c>TextBlock</c>, the three the kernel needs.
+/// time. Supported elements are <c>Screen</c>, <c>StackPanel</c>, <c>TextBlock</c> and <c>Spacer</c>.
 /// </remarks>
 public static class UiMarkup
 {
     private static readonly Dictionary<string, string[]> Allowed = new(StringComparer.Ordinal)
     {
-        ["Screen"] = ["Background", "Padding"],
-        ["StackPanel"] = ["Background", "Padding", "Spacing"],
-        ["TextBlock"] = ["Text", "Colour", "Height"]
+        ["Screen"] = ["Background", "Padding", "Spacing", "Id", "x:Class"],
+        ["StackPanel"] = ["Background", "Padding", "Spacing", "Orientation", "Anchor", "Margin", "Width", "Height", "Id"],
+        ["TextBlock"] = ["Text", "Colour", "Height", "Anchor", "Margin", "Shadow", "Id"],
+        ["Spacer"] = ["Width", "Height", "Background", "Anchor", "Margin", "Id"]
     };
 
     /// <summary>Parses a document into a node tree.</summary>
@@ -107,8 +108,9 @@ public static class UiMarkup
             }
 
             var attributeName = ReadName(text, ref position);
+            var isXmlns = name == "Screen" && (attributeName == "xmlns" || attributeName.StartsWith("xmlns:", StringComparison.Ordinal));
 
-            if (!allowedAttributes.Contains(attributeName))
+            if (!isXmlns && !allowedAttributes.Contains(attributeName))
             {
                 throw new FormatException($"unknown attribute {attributeName} on {name}");
             }
@@ -116,7 +118,11 @@ public static class UiMarkup
             SkipWhitespace(text, ref position);
             Expect(text, ref position, '=');
             SkipWhitespace(text, ref position);
-            attributes[attributeName] = ReadQuoted(text, ref position);
+            var value = ReadQuoted(text, ref position);
+            if (!isXmlns)
+            {
+                attributes[attributeName] = value;
+            }
         }
 
         var children = new List<UiNode>();
@@ -159,8 +165,8 @@ public static class UiMarkup
     {
         string[] allowedChildren = node.Name switch
         {
-            "Screen" => ["StackPanel", "TextBlock"],
-            "StackPanel" => ["StackPanel", "TextBlock"],
+            "Screen" => ["StackPanel", "TextBlock", "Spacer"],
+            "StackPanel" => ["StackPanel", "TextBlock", "Spacer"],
             _ => []
         };
 
@@ -242,8 +248,16 @@ public static class UiMarkup
 
         var value = text[position..end];
         position = end + 1;
-        return value;
+        return value.Contains('&') ? DecodeEntities(value) : value;
     }
+
+    private static string DecodeEntities(string value) =>
+        value
+            .Replace("&lt;", "<", StringComparison.Ordinal)
+            .Replace("&gt;", ">", StringComparison.Ordinal)
+            .Replace("&quot;", "\"", StringComparison.Ordinal)
+            .Replace("&apos;", "'", StringComparison.Ordinal)
+            .Replace("&amp;", "&", StringComparison.Ordinal);
 
     private static void Expect(string text, ref int position, char expected)
     {
