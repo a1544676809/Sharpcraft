@@ -614,7 +614,7 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **简化了什么**：`VanillaBlockOcclusion` 的键是**方块标识**，三条谓词取该方块的 **default state**。原版的 `isCollisionShapeFullBlock` / `isSolidRender` / `getLightDampening` 都是 **BlockState 级**，同一方块的不同状态可能不同。
 - **为什么**：状态级表要为每个 state 落一行（26.3 全部状态数万条），当前 `BlockStateLayout` 也不保证能稳定复现原版的状态顺序；本轮的病灶是"整类透明方块被判反"，按 default state 已能修对绝大多数，状态级留作独立任务。
 - **对等效性的影响**：**受影响的典型状态**——台阶的 top / double 变体（`stone_slab` 的 default 是 bottom：`false/false/0`，double 在原版是满方块）、雪层（`snow` default 1 层，层数变化会改碰撞形状）、楼梯朝向不影响形状但双层变体影响、告示牌/墙的连接变体。这些状态的 AO 明暗与透光会按 default 判断：例如双层台阶在本仓仍是"不遮挡、透光"，而原版按满方块处理。
-- **当前状态与独立任务**：跟踪 `docs/risks.md` **R-053**（Issue 待建号）。**不是已解决。**
+- **当前状态与独立任务**：跟踪 `docs/risks.md` **R-053**（Issue #264）。**不是已解决。**
 - **验收入口**：做到状态级表后，把 `stone_slab` 的 top/double、`snow` 各层加入 `Repro_255` 的用例，断言明暗分别等于原版的 0.2/1.0；届时删除本条。
 
 <!-- simplification:SIM-BLOCK-OCCLUSION-DEFAULT-STATE task:R-053 -->
