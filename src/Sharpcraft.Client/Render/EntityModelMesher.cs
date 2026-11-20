@@ -223,6 +223,15 @@ public sealed partial class EntityModelMesher
     /// Builds the batch's layer plan from every model's explicit render-layer definitions. Duplicate kinds collapse to
     /// the earliest declared order, then the plan is sorted by <see cref="EntityRenderLayerDefinition.Order"/>.
     /// </summary>
+    /// <summary>True when the entity is drawn by <see cref="ItemEntityMesher"/> rather than a model.</summary>
+    /// <remarks>
+    /// The reference has no <c>ModelPart</c> model for item entities, so any placeholder box built for
+    /// one is wrong by construction (T-763). The guard lives in a predicate because three separate
+    /// loops decide which entities get baked.
+    /// </remarks>
+    private static bool IsDrawnByItemMesher(in Sharpcraft.Client.World.EntityRenderState entity) =>
+        entity.TypeId == Sharpcraft.Client.World.EntityTracker.ItemEntityTypeId;
+
     private static List<EntityRenderLayerDefinition> BuildLayerPlan(
         ReadOnlySpan<EntityRenderState> entities,
         EntityVariantTable? variants)
@@ -230,6 +239,12 @@ public sealed partial class EntityModelMesher
         var byKind = new Dictionary<EntityGeometryLayerKind, EntityRenderLayerDefinition>();
         foreach (var entity in entities)
         {
+    // T-763: item entities are drawn by ItemEntityMesher and never bake a ModelPart model, so they
+    // must not reach the placeholder fallback either.
+    if (IsDrawnByItemMesher(entity))
+    {
+        continue;
+    }
             var model = ResolveEntityModel(entity, variants);
             foreach (var layer in model.RenderLayers)
             {
@@ -250,6 +265,12 @@ public sealed partial class EntityModelMesher
     {
         foreach (var entity in entities)
         {
+    // T-763: item entities are drawn by ItemEntityMesher and never bake a ModelPart model, so they
+    // must not reach the placeholder fallback either.
+    if (IsDrawnByItemMesher(entity))
+    {
+        continue;
+    }
             foreach (var layer in ResolveEntityModel(entity, variants).RenderLayers)
             {
                 if (layer.Model is not null)
@@ -284,6 +305,12 @@ public sealed partial class EntityModelMesher
         _modelBackedPlanByKey.Clear();
         foreach (var entity in entities)
         {
+    // T-763: item entities are drawn by ItemEntityMesher and never bake a ModelPart model, so they
+    // must not reach the placeholder fallback either.
+    if (IsDrawnByItemMesher(entity))
+    {
+        continue;
+    }
             foreach (var layer in ResolveEntityModel(entity, variants).RenderLayers)
             {
                 _modelBackedPlanByKey[(layer.Name, layer.Kind, layer.Order)] = layer;
@@ -321,6 +348,13 @@ public sealed partial class EntityModelMesher
             for (var entityIndex = 0; entityIndex < entities.Length; entityIndex++)
             {
                 var entity = entities[entityIndex];
+
+                // T-763: an item entity resolves to the placeholder model, which would otherwise join the
+                // group of any modelled neighbour and get baked as the skin-atlas box around the drop.
+                if (IsDrawnByItemMesher(entity))
+                {
+                    continue;
+                }
                 var model = ResolveEntityModel(entity, variants);
                 EntityRenderLayerDefinition? entityLayer = null;
                 foreach (var candidate in model.RenderLayers)

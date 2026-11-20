@@ -415,6 +415,12 @@ special 模型 MUST 按**物品模型坐标系**烘焙（与普通 `elements` �
 
 修法：`EntityModelMesher.BuildInto` 对 `EntityTracker.ItemEntityTypeId` 直接跳过，掉落物几何只由 `ItemEntityMesher` 产出。回归：`ItemEntityModelTests`。
 
+**复发（#267 第二次）**：守卫写成 `modelOverride is null && TypeId == ItemEntityTypeId`，而后来新增的 **model-backed 路径**（`HasModelBackedLayers` → `BuildModelBackedLayers`）会把每个实体自己的模型当作 `modelOverride` 传进 `BuildInto`，于是守卫被绕过：只要画面里有**任何真正带模型的实体**（另一个玩家、僵尸……），物品实体就又被烘焙成占位盒。
+
+第一次回归只测了"批次里全是物品实体"的场景（那时走的是 plan 路径，守卫有效），因此漏掉了"物品 + 带模型实体同屏"这个组合。
+
+现修法：把判据收敛为谓词 `IsDrawnByItemMesher(entity)`，在**四条**决定"谁被烘焙"的循环里统一跳过——`BuildLayerPlan`、`HasModelBackedLayers`、`BuildModelBackedLayers` 的 plan 收集、以及**按实体分组**那一圈（分组圈才是真正的漏洞：物品实体解析出的占位模型会加入邻居的同一分组，随后被 `BuildInto` 以非空 `modelOverride` 烘焙）。回归补 `AnItemNextToAModelledEntityStillProducesNoPlaceholder`：同一 `BuildLayers` 调用里放"僵尸 + 物品"，其层快照必须与"只有僵尸"逐项相同（名称/Kind/Order/顶点数/索引数）。破坏验证：去掉分组圈守卫 → `Expected 1008 / Actual 1152`。
+
 ### 3.5.9a 手持锚点：拟合解与审计结论（T-777）
 
 `ReferenceFrame.HeldItemAnchor` 不是逐因子推导，而是**从参考捕获求解**出来的矩阵（两组姿态 × 两种 display 共四组一致）：
@@ -745,6 +751,12 @@ special 模型 MUST 按**物品模型坐标系**烘焙（与普通 `elements` �
 本仓曾把 item entity 当作普通实体交给 `EntityModelMesher`，模型解析失败后落到 `EntityModelResolver.Placeholder`（14³ 盒子，按 64×64 皮肤 UV 采样实体皮肤图集），于是每个掉落物外面都出现一个"皮肤图集碎片拼贴"的立方体——即用户报告的悬浮彩色碎片。
 
 修法：`EntityModelMesher.BuildInto` 对 `EntityTracker.ItemEntityTypeId` 直接跳过，掉落物几何只由 `ItemEntityMesher` 产出。回归：`ItemEntityModelTests`。
+
+**复发（#267 第二次）**：守卫写成 `modelOverride is null && TypeId == ItemEntityTypeId`，而后来新增的 **model-backed 路径**（`HasModelBackedLayers` → `BuildModelBackedLayers`）会把每个实体自己的模型当作 `modelOverride` 传进 `BuildInto`，于是守卫被绕过：只要画面里有**任何真正带模型的实体**（另一个玩家、僵尸……），物品实体就又被烘焙成占位盒。
+
+第一次回归只测了"批次里全是物品实体"的场景（那时走的是 plan 路径，守卫有效），因此漏掉了"物品 + 带模型实体同屏"这个组合。
+
+现修法：把判据收敛为谓词 `IsDrawnByItemMesher(entity)`，在**四条**决定"谁被烘焙"的循环里统一跳过——`BuildLayerPlan`、`HasModelBackedLayers`、`BuildModelBackedLayers` 的 plan 收集、以及**按实体分组**那一圈（分组圈才是真正的漏洞：物品实体解析出的占位模型会加入邻居的同一分组，随后被 `BuildInto` 以非空 `modelOverride` 烘焙）。回归补 `AnItemNextToAModelledEntityStillProducesNoPlaceholder`：同一 `BuildLayers` 调用里放"僵尸 + 物品"，其层快照必须与"只有僵尸"逐项相同（名称/Kind/Order/顶点数/索引数）。破坏验证：去掉分组圈守卫 → `Expected 1008 / Actual 1152`。
 
 ### 3.5.9a 手持锚点：拟合解与审计结论（T-777）
 
@@ -1099,6 +1111,12 @@ special 模型 MUST 按**物品模型坐标系**烘焙（与普通 `elements` �
 本仓曾把 item entity 当作普通实体交给 `EntityModelMesher`，模型解析失败后落到 `EntityModelResolver.Placeholder`（14³ 盒子，按 64×64 皮肤 UV 采样实体皮肤图集），于是每个掉落物外面都出现一个"皮肤图集碎片拼贴"的立方体——即用户报告的悬浮彩色碎片。
 
 修法：`EntityModelMesher.BuildInto` 对 `EntityTracker.ItemEntityTypeId` 直接跳过，掉落物几何只由 `ItemEntityMesher` 产出。回归：`ItemEntityModelTests`。
+
+**复发（#267 第二次）**：守卫写成 `modelOverride is null && TypeId == ItemEntityTypeId`，而后来新增的 **model-backed 路径**（`HasModelBackedLayers` → `BuildModelBackedLayers`）会把每个实体自己的模型当作 `modelOverride` 传进 `BuildInto`，于是守卫被绕过：只要画面里有**任何真正带模型的实体**（另一个玩家、僵尸……），物品实体就又被烘焙成占位盒。
+
+第一次回归只测了"批次里全是物品实体"的场景（那时走的是 plan 路径，守卫有效），因此漏掉了"物品 + 带模型实体同屏"这个组合。
+
+现修法：把判据收敛为谓词 `IsDrawnByItemMesher(entity)`，在**四条**决定"谁被烘焙"的循环里统一跳过——`BuildLayerPlan`、`HasModelBackedLayers`、`BuildModelBackedLayers` 的 plan 收集、以及**按实体分组**那一圈（分组圈才是真正的漏洞：物品实体解析出的占位模型会加入邻居的同一分组，随后被 `BuildInto` 以非空 `modelOverride` 烘焙）。回归补 `AnItemNextToAModelledEntityStillProducesNoPlaceholder`：同一 `BuildLayers` 调用里放"僵尸 + 物品"，其层快照必须与"只有僵尸"逐项相同（名称/Kind/Order/顶点数/索引数）。破坏验证：去掉分组圈守卫 → `Expected 1008 / Actual 1152`。
 
 ### 3.5.9a 手持锚点：拟合解与审计结论（T-777）
 
