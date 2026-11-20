@@ -34,6 +34,8 @@ internal sealed partial class InteractiveSession
     private bool _geometryDirty;
     private readonly ChunkWorkerPool? _pool;
     private readonly EntityTracker _entities = new();
+    private readonly ChunkBatchSizeCalculator _chunkBatchCalculator = new();
+    private readonly PacketBundleAssembler _bundleAssembler = new(PacketIds.PlayClientbound.BundleDelimiter);
     private readonly PlayerListRoster _playerList = new();
     private readonly ChatInput _chat = new();
     private readonly ChatLog _chatLog = new();
@@ -780,7 +782,6 @@ internal sealed partial class InteractiveSession
         _last = now;
 
         EnsureStreaming();
-        DrainIncoming();
         ApplyParsedChunks();
 
         // Streaming telemetry, only under the existing diagnostic switch: the equivalence matrix reads these lines to prove
@@ -792,10 +793,16 @@ internal sealed partial class InteractiveSession
                 $"pendingParsed={_pool?.ParsedReady ?? 0} pendingMesh={_pool?.MeshesReady ?? 0}");
         }
 
+        var drainedThisFrame = false;
         _loop.Advance(
             elapsed,
             () =>
             {
+                if (!drainedThisFrame)
+                {
+                    drainedThisFrame = true;
+                    DrainIncoming();
+                }
                 if (frame.Jump)
                 {
                     _jumpPressed++;
@@ -986,7 +993,7 @@ internal sealed partial class InteractiveSession
             mainHand: 1,
             textFiltering: false,
             allowListing: true));
-        _live.Send(PlayPackets.BuildChunkBatchReceived(8f));
+        _live.Send(PlayPackets.BuildChunkBatchReceived(_chunkBatchCalculator.DesiredChunksPerTick));
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
+using System.Buffers;
 using System.IO.Compression;
 
 namespace Sharpcraft.Common.Network;
@@ -11,6 +12,9 @@ namespace Sharpcraft.Common.Network;
 /// </summary>
 public static class PacketCompression
 {
+    [ThreadStatic]
+    private static MemoryStream? s_compressStream;
+
     /// <summary>Compresses or passes through a packet body, writing into <paramref name="destination"/>.</summary>
     /// <returns>Bytes written.</returns>
     /// <exception cref="ArgumentOutOfRangeException">The body exceeds the 8 MiB ceiling.</exception>
@@ -30,7 +34,9 @@ public static class PacketCompression
         }
 
         var header = VarInt.Write(destination, body.Length);
-        using var output = new MemoryStream();
+        var output = s_compressStream ??= new MemoryStream();
+        output.SetLength(0);
+        output.Position = 0;
         using (var zlib = new ZLibStream(output, CompressionLevel.Fastest, leaveOpen: true))
         {
             zlib.Write(body);
@@ -73,18 +79,27 @@ public static class PacketCompression
         }
 
         var result = new byte[uncompressedLength];
-        using var input = new MemoryStream(payload.ToArray(), writable: false);
-        using var zlib = new ZLibStream(input, CompressionMode.Decompress);
-        var read = 0;
-        while (read < uncompressedLength)
+        var rented = ArrayPool<byte>.Shared.Rent(payload.Length);
+        try
         {
-            var chunk = zlib.Read(result, read, uncompressedLength - read);
-            if (chunk == 0)
+            payload.CopyTo(rented);
+            using var input = new MemoryStream(rented, 0, payload.Length, writable: false);
+            using var zlib = new ZLibStream(input, CompressionMode.Decompress);
+            var read = 0;
+            while (read < uncompressedLength)
             {
-                return DecodeStatus.Invalid;
-            }
+                var chunk = zlib.Read(result, read, uncompressedLength - read);
+                if (chunk == 0)
+                {
+                    return DecodeStatus.Invalid;
+                }
 
-            read += chunk;
+                read += chunk;
+            }
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(rented);
         }
 
         body = result;

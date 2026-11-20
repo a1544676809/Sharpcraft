@@ -28,11 +28,22 @@ internal sealed partial class InteractiveSession
 
         while (_live.TryDequeue(out var body))
         {
-            var reader = new PayloadReader(body);
-            if (reader.TryReadVarInt(out var packetId) != DecodeStatus.Success)
-            {
-                continue;
-            }
+            _bundleAssembler.Process(body, DispatchPacket);
+        }
+    }
+
+    private void DispatchPacket(byte[] body)
+    {
+        if (_live is null)
+        {
+            return;
+        }
+
+        var reader = new PayloadReader(body);
+        if (reader.TryReadVarInt(out var packetId) != DecodeStatus.Success)
+        {
+            return;
+        }
 
             // Host-only join packet capture (MC_PACKET_LOG=1): id/length/prefix of the first packets, so the clock source
             // can be found against the reference (principle 13: parsed here, in the host; no LINQ on this hot path).
@@ -43,6 +54,15 @@ internal sealed partial class InteractiveSession
                 Console.WriteLine($"pkt#{_packetLogCount} id={packetId} len={body.Length} hex={Convert.ToHexString(prefix)}");
             }
 
+            if (packetId == PacketIds.PlayClientbound.ChunkBatchFinished)
+            {
+                var batchSize = 0;
+                reader.TryReadVarInt(out batchSize);
+                _chunkBatchCalculator.OnBatchFinished(batchSize);
+                _live.Send(PlayPackets.BuildChunkBatchReceived(_chunkBatchCalculator.DesiredChunksPerTick));
+                return;
+            }
+
             // Transport-level replies (keep-alive, ping, chunk batch) share one implementation with the warm-up
             // session, so the reply encoding lives in exactly one place (AGENTS.md principle 14).
             var transportKeepAlives = 0;
@@ -51,12 +71,13 @@ internal sealed partial class InteractiveSession
             if (PlaySession.TryHandleTransport(
                     packetId,
                     ref reader,
-                    pkt => { _live!.Send(pkt); },
+                    pkt => { _live.Send(pkt); },
                     ref transportKeepAlives,
                     ref transportPings,
-                    ref transportBatches))
+                    ref transportBatches,
+                    _chunkBatchCalculator.DesiredChunksPerTick))
             {
-                continue;
+                return;
             }
 
             switch (packetId)
@@ -562,7 +583,7 @@ internal sealed partial class InteractiveSession
                     break;
 
                 case PacketIds.PlayClientbound.ChunkBatchStart:
-                    // Empty marker packet; batch-finished (id 11) drives the ack. Nothing to apply.
+                    _chunkBatchCalculator.OnBatchStart();
                     break;
 
                 case PacketIds.PlayClientbound.ForgetLevelChunk:
@@ -753,6 +774,5 @@ internal sealed partial class InteractiveSession
 
                     break;
             }
-        }
     }
 }

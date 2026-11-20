@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
+using System.Buffers;
 using System.Net.Sockets;
 
 namespace Sharpcraft.Common.Network;
@@ -43,7 +44,10 @@ public sealed class MinecraftConnection : IDisposable
     /// <summary>Opens a TCP connection.</summary>
     public static async Task<MinecraftConnection> ConnectAsync(string host, int port, TimeSpan timeout, CancellationToken cancellationToken)
     {
-        var client = new TcpClient();
+        var client = new TcpClient
+        {
+            NoDelay = true
+        };
         try
         {
             await client.ConnectAsync(host, port, cancellationToken)
@@ -70,26 +74,59 @@ public sealed class MinecraftConnection : IDisposable
     /// <summary>Enables compression for both directions.</summary>
     public void EnableCompression(int threshold) => _compressionThreshold = Math.Max(0, threshold);
 
-    /// <summary>Writes one packet body.</summary>
+    /// <summary>Writes one packet body and flushes the stream.</summary>
     public void Send(ReadOnlySpan<byte> body)
     {
-        byte[] payload;
-        if (_compressionThreshold < 0)
-        {
-            payload = body.ToArray();
-        }
-        else
-        {
-            var buffer = new byte[body.Length + 16 + (body.Length / 8)];
-            var written = PacketCompression.Compress(buffer, body, _compressionThreshold);
-            payload = buffer.AsSpan(0, written).ToArray();
-        }
-
-        var frame = PacketFrameBuffer.Wrap(payload);
-        _outbound?.TransformInPlace(frame);
-        _stream.Write(frame);
+        SendWithoutFlush(body);
         _stream.Flush();
     }
+
+    /// <summary>Writes one packet body to the stream without flushing, for batched async writes.</summary>
+    public void SendWithoutFlush(ReadOnlySpan<byte> body)
+    {
+        byte[]? rentedCompressed = null;
+        byte[]? rentedFrame = null;
+        try
+        {
+            ReadOnlySpan<byte> payload;
+            if (_compressionThreshold < 0)
+            {
+                payload = body;
+            }
+            else
+            {
+                var maxCompressedSize = body.Length + 16 + (body.Length / 8);
+                rentedCompressed = ArrayPool<byte>.Shared.Rent(maxCompressedSize);
+                var written = PacketCompression.Compress(rentedCompressed, body, _compressionThreshold);
+                payload = rentedCompressed.AsSpan(0, written);
+            }
+
+            var prefixLength = VarInt.GetByteSize(payload.Length);
+            var frameLength = prefixLength + payload.Length;
+            rentedFrame = ArrayPool<byte>.Shared.Rent(frameLength);
+            var frame = rentedFrame.AsSpan(0, frameLength);
+            var headerBytes = PacketFramer.WriteLengthPrefix(frame, payload.Length);
+            payload.CopyTo(frame[headerBytes..]);
+
+            _outbound?.TransformInPlace(frame);
+            _stream.Write(frame);
+        }
+        finally
+        {
+            if (rentedFrame is not null)
+            {
+                ArrayPool<byte>.Shared.Return(rentedFrame);
+            }
+
+            if (rentedCompressed is not null)
+            {
+                ArrayPool<byte>.Shared.Return(rentedCompressed);
+            }
+        }
+    }
+
+    /// <summary>Flushes buffered outbound bytes on the underlying stream.</summary>
+    public void Flush() => _stream.Flush();
 
     /// <summary>Reads the next packet body, or throws when the peer closes.</summary>
     public async Task<byte[]> ReceiveAsync(CancellationToken cancellationToken)
