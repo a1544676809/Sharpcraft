@@ -101,22 +101,34 @@
 
 管线侧对应 `CullMode = Back` + `FrontFace = CCW`（WebGPU 在 framebuffer 空间判定正面，因此这一组取值是"我们推导的逆时针"的镜像补偿；改任何一方都要重新出图验证）。
 
-### 5.2.1 光照与顶点亮度
+### 5.2.1 光照与顶点亮度（2026-11-20 对齐原版，Issue #255）
 
-光照来自区块包自带的 nibble 数组（`ChunkLight`，每段 2048 字节，低半字节为偶数索引），按掩码顺序装入 `LevelChunk.Light`。网格生成时对**每个可见面采样它所朝向的空气格**的光照，取 `max(sky, block)` 归一到 0..15，再乘朝向系数：
+顶点亮度与环境光遮蔽（AO）乘进顶点颜色；**光照坐标**（lightmap UV）单独携带平滑后的天空 / 方块光。两者在原版里就是两个独立属性、各自平滑，最后在片元里合成——本仓按同一结构实现，`ChunkMesher.PrepareQuadLighting` 一次算出四个角的两组值。
 
-| 朝向 | 系数 |
-| --- | --- |
-| 上 (+Y) | 1.00 |
-| 水平 (四个侧面) | 0.75 |
-| 下 (-Y) | 0.50 |
-| 最低亮度（避免纯黑） | 0.12 |
+采样与混合对齐 `BlockModelLighter.prepareQuadAmbientOcclusion`：
 
-亮度直接乘进顶点颜色，因此**顶点格式不变**（仍是位置 3 + 颜色 3），代价是同一方块不同朝向的面颜色不同——这与原版"面朝向决定明暗"的观感一致。
+- **采样点**：立方体面从"面所朝的那一格"（`base`）出发，取四个角邻、四个对角（角 i + 角 j）与中心格；`getShadeBrightness` 用"满方块碰撞形状 → 0.2，否则 1.0"，本仓以 `Occludes` 作等价判据（半透明 / 带透明像素的方块算透光）。
+- **对角规则**：只有当对角的两侧"沿面法线再外推一格"都**不透光**时才跳过对角采样，直接复用**角 0** 的值。12 / 13 两个对角复用的也是**角 0**（原版如此，不是角 1）；这是原版最容易抄错的一处，已有专项测试。
+- **两条分支**：
+  - **整面**：四个角值原样分配，一个计算顶点一组，不做权重混合。
+  - **部分面**（`facePartial && doNonCubicWeight`；26.3 六面该标志全为 `true`，因此实际只由四边形形状决定）：按 `faceShape × vertNWeights` 的八个形状项两两相乘得到四个权重，对四个角值加权求和；**同一组权重**同时用于亮度与光照坐标。
+- **顶点重映射**：原版把"计算顶点"重排到烘焙四边形的顶点序；本仓四边形的角序由合并的 UV 轴决定，因此两张表串联 `ourSlot = QuadCornerForFaceVertex[FaceVertexRemap[computed]]`，六面各自用"单个遮挡物只压暗它接触的两个角"的测试定位。
+- **量化**：光照在 0..240 尺度（原版 nibble 打包后的量纲）混合并逐通道截断，写入顶点时量化到 0..255；原版 `ARGB.gray` 用截断、本仓顶点写入用四舍五入，单通道最多差 1/255。
 
-**已加载边界处理**：位于加载区域边缘的面会采样到不属于任何区块的格子。此时回退到方块自身格子的光照，而不是按 0 处理（否则边缘墙面会是纯黑）。
+| 量 | 原版出处 | 常量 / 约定 |
+| --- | --- | --- |
+| 角邻方向表（六面 ×4） | `ref://mc-26.3-analysis/src/net/minecraft/client/renderer/block/BlockModelLighter.java` 289/334/379/424/469/514 | 行内 4 项，`ChunkMesher.CornerNeighbours` |
+| 权重索引表（六面 ×4 顶点 ×8） | 同上 292-331 / 337-376 / 382-421 / 427-466 / 472-511 / 517-556 | `SizeInfo` 序：DOWN,UP,NORTH,SOUTH,WEST,EAST,FLIP_×6（同上 699-713） |
+| 顶点重映射 | 同上 597-602 | DOWN(0,1,2,3) UP(2,3,0,1) NORTH(3,0,1,2) SOUTH(0,1,2,3) WEST(3,0,1,2) EAST(1,2,3,0) |
+| 烘焙四边形顶点序 | `ref://mc-26.3-analysis/src/net/minecraft/client/renderer/FaceInfo.java` | 每面四个 `(MIN/MAX_X, MIN/MAX_Y, MIN/MAX_Z)` 组合 |
+| 平滑混合 | `ref://mc-26.3-analysis/src/net/minecraft/util/LightCoordsUtil.java` `smoothBlend` / `smoothWeightedBlend` | 中心 `sky>2 || block>2` 时做零邻修正；加权混合逐通道截断 |
+| 朝向亮度 | `ref://mc-26.3-analysis/src/net/minecraft/world/level/CardinalLighting.java` `DEFAULT` | 下 0.5 / 上 1.0 / 南北 0.8 / 东西 0.6 |
+| 遮蔽判据 | `ref://mc-26.3-analysis/src/net/minecraft/world/level/block/state/BlockBehaviour.java:310` | 碰撞形状满方块 → 0.2，否则 1.0 |
+| 通道量化 | `ref://mc-26.3-analysis/src/net/minecraft/util/ARGB.java:341` | `floor(value × 255)` |
 
-与原版的关系：这是**等效优先的近似**，不追求逐像素对齐。未实现：环境光遮蔽（AO）、天空亮度随时间的曲线、平滑光照（smooth lighting）的顶点插值、方块的发光等级（light emission）。
+**已加载边界处理**：位于加载区域边缘的面会采样到不属于任何区块的格子，此时该格按 0 光处理（与原版越界读 0 一致）；`Neighbourhood.TryGetLight` 对世界上下边界同样返回 0，不再越界索引。
+
+**未实现（已登记）**：元素模型路径（`EmitSectionModels`）仍按"每个面一组光"渲染，没有逐顶点 AO，因此上面的**部分面分支目前只在测试中执行**，见「已知刻意的简化」`SIM-MODEL-PATH-NO-VERTEX-AO` 与 `docs/risks.md` R-050。天空亮度随时间的曲线与方块发光等级仍未接。
 
 ### 5.3 背面剔除
 
@@ -583,6 +595,17 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **判定（Issue #128）**：`modelScale=1` 下生产 raw 的 Position+Rotation 已与源 `T*R` 等价；Book 报告的 `(0.364,...)` 是 `modelScale=16` probe 把混合单位整段比较造成的，不是 T/R 缺陷。`RawNodeFramePoseTests` 使用 Book `right_pages` 源样本（`x=0.997491, yRot=-1.5`, local first vertex `(5,-4,0.99)`），对单 cube 的 **24/24** 顶点逐点比较位置+UV（独立公式 `R*(v/16)+T_blocks`），并用同一 cube 的 Position+Rotation part 验证 `PartWorldMatrix(rawSourceFrame:true)`；不按实现反推。
 
 ## 已知刻意的简化
+
+### SIM-MODEL-PATH-NO-VERTEX-AO：元素模型路径没有逐顶点 AO
+
+- **简化了什么**：`EmitSectionModels` / `BlockModelSet.Emit` 仍按"每个面一组光照 × 朝向亮度"着色，没有逐顶点环境光遮蔽。因此 `ChunkMesher.PrepareQuadLighting` 的**部分面分支目前只在测试中执行**，生产路径只走整面分支。
+- **为什么**：模型面不是立方体面，要让原版的加权分支真正生效，得把四边形在方块内的包围盒（`faceShape` 的输入）从 `BlockModelSet` 一路传到 `PrepareQuadLighting`，并按角采样替换现在的单点采样。#255 先修立方体面路径（画面里绝大多数方块），按原则 14 的切片纪律把模型路径另立任务，避免一次改动同时动两条路径。
+- **对等效性的影响**：普通方块（立方体面）的 AO 与平滑光照已与原版同公式；台阶、楼梯、草、花、箱子等元素模型方块在凹角处**看不到 AO**，边缘比原版平。几何与贴图不受影响。
+- **当前状态与独立任务**：跟踪 `docs/risks.md` **R-050**（Issue 待项目所有者建号后回填）。**不是已解决。**
+- **验收入口**：把包围盒接进模型路径后，在 `Repro_255_AmbientOcclusionTests` 增加"部分面分支经 `MeshChunk` 生产路径触发"的用例，并用同机位离线 `--frame` 像素对比（当前离线 A/B：岛体区域均值 93.59 → 92.14，最暗差 62/765）。
+
+<!-- simplification:SIM-MODEL-PATH-NO-VERTEX-AO task:R-050 -->
+
 
 ### SIM-LOCAL-FRAME-NO-LAYOUT：`--frame` 本地演示场景不传 layout / tint
 

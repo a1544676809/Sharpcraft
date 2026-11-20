@@ -17,7 +17,7 @@ namespace Sharpcraft.Client.Render;
 public static partial class ChunkMesher
 {
     /// </remarks>
-    private readonly struct Neighbourhood
+    internal readonly struct Neighbourhood
     {
         private readonly LevelChunk _centre;
         private readonly LevelChunk? _west;
@@ -201,116 +201,6 @@ public static partial class ChunkMesher
     }
 
 
-    /// <summary>
-    /// Lit colour of one quad corner, from smooth lighting and ambient occlusion.
-    /// </summary>
-    /// <remarks>
-    /// The reference computes light per vertex: it averages the light of the four cells that share the corner on the visible
-    /// side, then darkens by the occluders around that corner (one quarter per occluder, and half when both sides are
-    /// blocked). Doing this per corner instead of once per quad is what removes the flat patches a merged quad used to
-    /// show, and it keeps neighbouring quads continuous across chunk borders because the samples are world positions.
-    /// </remarks>
-    private static (float R, float G, float B, float Sky, float Block) CornerShade(
-        in Neighbourhood neighbourhood,
-        int direction,
-        (int X, int Y, int Z) corner,
-        int uAxis,
-        int vAxis,
-        float shadeFactor,
-        float red,
-        float green,
-        float blue,
-        BlockSpriteMap? sprites,
-        Sharpcraft.Common.Registries.BlockStateLayout? layout,
-        bool ambientOcclusion = true)
-    {
-        var (nx, ny, nz) = NeighbourOffset(direction);
-        Span<int> u = stackalloc int[3];
-        u[uAxis] = 1;
-        Span<int> v = stackalloc int[3];
-        v[vAxis] = 1;
-
-        // `corner` is already a face vertex (the face plane), so the four cells that share it on the outer side sit at
-        // corner - (0 or 1) per axis: at corner for a positive normal axis, at corner - 1 for a negative one. Adding the
-        // raw normal overshot by one cell on +X/+Y/+Z, so a top face read the light above the block above it and a side
-        // face read one block too far out.
-        var bx = corner.X + Math.Min(nx, 0);
-        var by = corner.Y + Math.Min(ny, 0);
-        var bz = corner.Z + Math.Min(nz, 0);
-
-        Span<int> xs = stackalloc int[4] { bx, bx - u[0], bx - v[0], bx - u[0] - v[0] };
-        Span<int> ys = stackalloc int[4] { by, by - u[1], by - v[1], by - u[1] - v[1] };
-        Span<int> zs = stackalloc int[4] { bz, bz - u[2], bz - v[2], bz - u[2] - v[2] };
-
-        Span<byte> skySamples = stackalloc byte[4];
-        Span<byte> blockSamples = stackalloc byte[4];
-        var samples = 0;
-
-        for (var index = 0; index < 4; index++)
-        {
-            if (neighbourhood.TryGetLight(xs[index], ys[index], zs[index], out var sampleSky, out var sampleBlock))
-            {
-                skySamples[samples] = sampleSky;
-                blockSamples[samples] = sampleBlock;
-                samples++;
-            }
-        }
-
-        (int Sky, int Block) light;
-        if (samples == 4)
-        {
-            // Reference LightCoordsUtil.smoothBlend for a full cube face: three neighbours + centre with the
-            // zero-neighbour correction (docs/analysis/render/lighting-color-space.md #3). Index 0 is the centre cell.
-            light = SmoothLighting.Blend(
-                skySamples[0], blockSamples[0],
-                skySamples[1], blockSamples[1],
-                skySamples[2], blockSamples[2],
-                skySamples[3], blockSamples[3]);
-        }
-        else if (samples == 0)
-        {
-            light = (0, 0);
-        }
-        else
-        {
-            var skySum = 0;
-            var blockSum = 0;
-            for (var index = 0; index < samples; index++)
-            {
-                skySum += skySamples[index];
-                blockSum += blockSamples[index];
-            }
-
-            light = (skySum / samples, blockSum / samples);
-        }
-
-        // Ambient occlusion: average shade brightness of the four cells that share this vertex on the face's outer side.
-        // A full solid cell contributes 0.2, anything else 1.0, so an open corner is 1.0 and a nook drops toward 0.2.
-        var occlusion = ambientOcclusion
-            ? AmbientOcclusion(
-                Occludes(neighbourhood.GetBlockState(xs[0], ys[0], zs[0], 0), sprites, layout),
-                Occludes(neighbourhood.GetBlockState(xs[1], ys[1], zs[1], 0), sprites, layout),
-                Occludes(neighbourhood.GetBlockState(xs[2], ys[2], zs[2], 0), sprites, layout),
-                Occludes(neighbourhood.GetBlockState(xs[3], ys[3], zs[3], 0), sprites, layout))
-            : 1f;
-
-        // Base colour = biome tint × directional shade × AO (linear). The lightmap is computed per fragment in the shader
-        // from the light levels carried alongside, so a day/night change needs no re-mesh (docs/decisions/0019).
-        var scalar = shadeFactor * occlusion;
-        return (red * scalar, green * scalar, blue * scalar, light.Item1 / 15f, light.Item2 / 15f);
-    }
-
-    /// <summary>
-    /// Ambient-occlusion coefficient for one vertex: the average of the four cells that share it, a full solid cell
-    /// counting as 0.2 and anything else as 1.0. Includes the reference corner-softening rule: if both edge cells are
-    /// solid the diagonal is treated as occluded by them (use the edge's shade) instead of its own cell, which keeps an
-    /// open diagonal from brightening an otherwise enclosed nook.
-    /// </summary>
-    public static float AmbientOcclusion(bool center, bool sideA, bool sideB, bool diagonal)
-    {
-        var corner = sideA && sideB ? sideA : diagonal;
-        return ((center ? 0.2f : 1f) + (sideA ? 0.2f : 1f) + (sideB ? 0.2f : 1f) + (corner ? 0.2f : 1f)) * 0.25f;
-    }
 
     /// <summary>Resolves which faces of one 16³ section can see each other (T-833).</summary>
     /// <remarks>
