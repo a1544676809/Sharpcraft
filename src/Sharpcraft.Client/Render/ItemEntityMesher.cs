@@ -21,8 +21,8 @@ namespace Sharpcraft.Client.Render;
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.entity.ItemEntityRenderer", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/ItemEntityRenderer.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "model cuboids and flat sprites only; special renderers are not drawn here")]
 public sealed class ItemEntityMesher
 {
-    /// <summary>Floats per vertex, matching <see cref="EntityModelMesher"/>'s layout.</summary>
-    public const int VertexStride = 14;
+    /// <summary>Floats per vertex: the packed vertex every geometry builder writes.</summary>
+    public const int VertexStride = ChunkMesher.FloatsPerVertex;
 
     /// <summary>
     /// Reference <c>ItemEntityRenderState.getRenderedAmount</c>: a stack is drawn as 1..5 items depending on how many it
