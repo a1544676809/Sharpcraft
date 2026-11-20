@@ -10,7 +10,8 @@ namespace Sharpcraft.Common.Network;
 public sealed class PacketFrameBuffer
 {
     private byte[] _buffer;
-    private int _length;
+    private int _readOffset;
+    private int _writeOffset;
 
     /// <summary>Creates a buffer with the given initial capacity.</summary>
     public PacketFrameBuffer(int initialCapacity = 8192)
@@ -20,14 +21,14 @@ public sealed class PacketFrameBuffer
     }
 
     /// <summary>Bytes currently buffered but not yet consumed.</summary>
-    public int BufferedBytes => _length;
+    public int BufferedBytes => _writeOffset - _readOffset;
 
     /// <summary>Appends freshly received bytes.</summary>
     public void Append(ReadOnlySpan<byte> data)
     {
-        EnsureCapacity(_length + data.Length);
-        data.CopyTo(_buffer.AsSpan(_length));
-        _length += data.Length;
+        EnsureCapacity(data.Length);
+        data.CopyTo(_buffer.AsSpan(_writeOffset));
+        _writeOffset += data.Length;
     }
 
     /// <summary>Attempts to read one complete body, consuming it from the buffer.</summary>
@@ -35,18 +36,19 @@ public sealed class PacketFrameBuffer
     {
         body = [];
 
-        var status = PacketFramer.TryReadLengthPrefix(_buffer.AsSpan(0, _length), out var bodyLength, out var prefixLength);
+        var available = _writeOffset - _readOffset;
+        var status = PacketFramer.TryReadLengthPrefix(_buffer.AsSpan(_readOffset, available), out var bodyLength, out var prefixLength);
         if (status != DecodeStatus.Success)
         {
             return status;
         }
 
-        if (_length - prefixLength < bodyLength)
+        if (available - prefixLength < bodyLength)
         {
             return DecodeStatus.NeedMoreData;
         }
 
-        body = _buffer.AsSpan(prefixLength, bodyLength).ToArray();
+        body = _buffer.AsSpan(_readOffset + prefixLength, bodyLength).ToArray();
         Consume(prefixLength + bodyLength);
         return DecodeStatus.Success;
     }
@@ -63,20 +65,38 @@ public sealed class PacketFrameBuffer
 
     private void Consume(int count)
     {
-        _length -= count;
-        if (_length > 0)
+        _readOffset += count;
+        if (_readOffset >= _writeOffset)
         {
-            _buffer.AsSpan(count, _length).CopyTo(_buffer);
+            _readOffset = 0;
+            _writeOffset = 0;
         }
     }
 
-    private void EnsureCapacity(int required)
+    private void EnsureCapacity(int additionalBytes)
     {
-        if (required <= _buffer.Length)
+        if (_writeOffset + additionalBytes <= _buffer.Length)
         {
             return;
         }
 
+        var unread = _writeOffset - _readOffset;
+        if (_readOffset > 0)
+        {
+            if (unread > 0)
+            {
+                _buffer.AsSpan(_readOffset, unread).CopyTo(_buffer);
+            }
+
+            _readOffset = 0;
+            _writeOffset = unread;
+            if (_writeOffset + additionalBytes <= _buffer.Length)
+            {
+                return;
+            }
+        }
+
+        var required = _writeOffset + additionalBytes;
         var capacity = _buffer.Length;
         while (capacity < required)
         {
