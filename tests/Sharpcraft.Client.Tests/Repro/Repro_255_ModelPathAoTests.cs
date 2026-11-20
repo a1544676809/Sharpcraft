@@ -20,6 +20,15 @@ namespace Sharpcraft.Client.Tests.Repro;
 /// </summary>
 public sealed class Repro_255_ModelPathAoTests
 {
+    /// <summary>The six faces of the test model, all sharing one texture and no tint index.</summary>
+    private const string FaceList =
+        "\"up\":{\"texture\":\"#all\"},"
+        + "\"down\":{\"texture\":\"#all\"},"
+        + "\"north\":{\"texture\":\"#all\"},"
+        + "\"south\":{\"texture\":\"#all\"},"
+        + "\"west\":{\"texture\":\"#all\"},"
+        + "\"east\":{\"texture\":\"#all\"}";
+
     private const int BlockState = 1;
     private const int BlockX = 8;
     private const int BlockY = 8;
@@ -55,7 +64,10 @@ public sealed class Repro_255_ModelPathAoTests
     }
 
     /// <summary>A plain cube model with no tint index anywhere, so the vertex colour is shade times brightness alone.</summary>
-    private static BlockModelSet Models(BlockStateLayout layout)
+    private static BlockModelSet Models(BlockStateLayout layout) => Models(layout, string.Empty);
+
+    /// <summary>The same cube, optionally with element rotation or extra boxes, for the geometry tests.</summary>
+    private static BlockModelSet Models(BlockStateLayout layout, string extra)
     {
         const string faces =
             "\"up\":{\"texture\":\"#all\"},"
@@ -65,7 +77,7 @@ public sealed class Repro_255_ModelPathAoTests
             + "\"west\":{\"texture\":\"#all\"},"
             + "\"east\":{\"texture\":\"#all\"}";
 
-        var json = $"{{\"elements\":[{{\"from\":[0,0,0],\"to\":[16,16,16],\"faces\":{{{faces}}}}}]}}";
+        var json = $"{{\"elements\":[{{\"from\":[0,0,0],\"to\":[16,16,16]{extra},\"faces\":{{{faces}}}}}]}}";
         var bytes = System.Text.Encoding.UTF8.GetBytes(json);
 
         var library = new BlockModelLibrary(
@@ -97,7 +109,11 @@ public sealed class Repro_255_ModelPathAoTests
     /// vertex of the up face is lit identically and only the occlusion can separate them.
     /// </summary>
     /// <param name="occludeEastNorth">Whether the east and north sides of the up face's corner are blocked.</param>
-    private static MeshBuffer Mesh(bool occludeEastNorth, bool ambientOcclusion = true)
+    /// <summary>Temporary: exposes the mesh for a geometry probe.</summary>
+    internal static MeshBuffer MeshForProbe(string extra) =>
+        Mesh(occludeEastNorth: false, modelsOverride: Models(Layout(), extra));
+
+    private static MeshBuffer Mesh(bool occludeEastNorth, bool ambientOcclusion = true, BlockModelSet? modelsOverride = null)
     {
         var layout = Layout();
         var world = new ClientWorld(minSectionY: -1, sectionCount: 3);
@@ -138,7 +154,7 @@ public sealed class Repro_255_ModelPathAoTests
             sprites: Sprites(),
             layout: layout,
             tint: null,
-            models: Models(layout),
+            models: modelsOverride ?? Models(layout),
             ambientOcclusion: ambientOcclusion);
         return buffer;
     }
@@ -247,5 +263,104 @@ public sealed class Repro_255_ModelPathAoTests
         var at = (start + darkest) * ChunkMesher.FloatsPerVertex;
         Assert.Equal(BlockX + 1, blocked.Vertices[at]);      // +X side, where one occluder sits
         Assert.Equal(BlockZ, blocked.Vertices[at + 2]);      // -Z side, where the other one sits
+    }
+
+    // ---- geometry: rotation and the quad-count guard ------------------------------------------------------------
+
+    /// <summary>
+    /// A model with more quads than the sample buffer keeps the single-light fallback instead of growing the stack.
+    /// This pins the boundary; the fallback itself is the documented residual SIM-MODEL-QUAD-COUNT-CAP / R-051.
+    /// </summary>
+    [Fact]
+    public void TheQuadCountCapIsWhereItSaysItIs()
+    {
+        Assert.True(ChunkMesher.ModelSharesQuadSamples(ChunkMesher.MaxModelQuads));
+        Assert.False(ChunkMesher.ModelSharesQuadSamples(ChunkMesher.MaxModelQuads + 1));
+        Assert.True(ChunkMesher.MaxModelQuads >= 12);
+    }
+    /// <summary>Corner brightness of every quad vertex, keyed by face direction and by the corner's sign pair.</summary>
+    private static Dictionary<(string Direction, int Code), int> CornerBrightness(BlockModelSet models)
+    {
+        using var buffer = Mesh(occludeEastNorth: true, modelsOverride: models);
+        var vertices = buffer.Vertices;
+        var result = new Dictionary<(string, int), int>();
+
+        for (var quad = 0; quad * 4 + 3 < buffer.VertexCount; quad++)
+        {
+            var first = quad * 4;
+            var direction = DirectionNameOf(vertices, first);
+            if (direction is null)
+            {
+                continue;
+            }
+
+            var (uAxis, vAxis) = direction switch
+            {
+                "up" or "down" => (0, 2),
+                "north" or "south" => (0, 1),
+                _ => (2, 1)
+            };
+
+            var minU = float.MaxValue;
+            var maxU = float.MinValue;
+            var minV = float.MaxValue;
+            var maxV = float.MinValue;
+            for (var vertex = 0; vertex < 4; vertex++)
+            {
+                var at = (first + vertex) * ChunkMesher.FloatsPerVertex;
+                minU = Math.Min(minU, vertices[at + uAxis]);
+                maxU = Math.Max(maxU, vertices[at + uAxis]);
+                minV = Math.Min(minV, vertices[at + vAxis]);
+                maxV = Math.Max(maxV, vertices[at + vAxis]);
+            }
+
+            for (var vertex = 0; vertex < 4; vertex++)
+            {
+                var at = (first + vertex) * ChunkMesher.FloatsPerVertex;
+                var code = 0;
+                if (vertices[at + uAxis] > ((minU + maxU) * 0.5f))
+                {
+                    code |= 1;
+                }
+
+                if (vertices[at + vAxis] > ((minV + maxV) * 0.5f))
+                {
+                    code |= 2;
+                }
+
+                result[(direction, code)] = Red(vertices, first + vertex);
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>The face a quad lies on, or null when the four vertices share no axis plane.</summary>
+    private static string? DirectionNameOf(ReadOnlySpan<float> vertices, int first)
+    {
+        for (var axis = 0; axis < 3; axis++)
+        {
+            var value = vertices[(first * ChunkMesher.FloatsPerVertex) + axis];
+            var same = true;
+            for (var vertex = 1; vertex < 4; vertex++)
+            {
+                same &= vertices[((first + vertex) * ChunkMesher.FloatsPerVertex) + axis] == value;
+            }
+
+            if (!same)
+            {
+                continue;
+            }
+
+            // A plane at a block edge is a face; an interior plane came from a rotation and is not one of the six.
+            return axis switch
+            {
+                1 => (int)value == BlockY + 1 ? "up" : (int)value == BlockY ? "down" : null,
+                0 => (int)value == BlockX + 1 ? "east" : (int)value == BlockX ? "west" : null,
+                _ => (int)value == BlockZ + 1 ? "south" : (int)value == BlockZ ? "north" : null
+            };
+        }
+
+        return null;
     }
 }

@@ -302,6 +302,40 @@ public sealed class Repro_227_ModelPathWiringTests
         }
     }
 
+    /// <summary>
+    /// An absolute level check, not just a difference: every vertex of the up face carries the reference blend of its
+    /// own neighbour. In this scene the up neighbour holds block light 5, the in-plane cells around the face hold 0 and
+    /// the centre is the neighbour cell itself, so the blend is (0 + 0 + 0 + 5) >> 2 = 1, which packs to 17 of 255.
+    /// A face that read another neighbour, or that mixed several neighbours with the wrong weights, misses this number
+    /// even when a differential test would still pass.
+    /// </summary>
+    [Fact]
+    public void TheUpFaceCarriesTheReferenceBlendOfItsOwnNeighbour()
+    {
+        using var buffer = Mesh();
+        var vertices = buffer.Vertices;
+
+        for (var quad = 0; quad < 6; quad++)
+        {
+            var first = quad * 4;
+            if (DirectionOf(vertices, first) != "up")
+            {
+                continue;
+            }
+
+            for (var vertex = 0; vertex < 4; vertex++)
+            {
+                var light = LightOf(vertices, first + vertex);
+                Assert.Equal(Channel(15 / 15f), light.Sky);
+                Assert.Equal(17, light.Block);
+            }
+
+            return;
+        }
+
+        Assert.Fail("no up face was emitted");
+    }
+
     /// <summary>Mean block light of each face's four vertices, keyed by the face the vertices lie on.</summary>
     private static Dictionary<string, int> FaceLightAverages(string? liftedDirection)
     {

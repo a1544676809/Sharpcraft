@@ -64,10 +64,22 @@ public sealed class Repro_255_AmbientOcclusionTests
         public LevelChunk Chunk { get; }
         public ChunkSection Section { get; }
 
-        public Scene Solid(int x, int y, int z)
+        /// <summary>Makes a cell solid; the state defaults to stone and can name another block in the layout.</summary>
+        public Scene Solid(int x, int y, int z, Sharpcraft.Common.Identifiers.Identifier? block = null)
         {
-            Section.Set(x, y, z, 1);
+            Section.Set(x, y, z, StateOf(block));
             return this;
+        }
+
+        private static int StateOf(Sharpcraft.Common.Identifiers.Identifier? block)
+        {
+            if (block is null)
+            {
+                return 1;
+            }
+
+            var layout = Layout();
+            return layout.TryGetBaseId(block.Value, out var id) ? id : throw new InvalidOperationException($"unknown block {block}");
         }
 
         public Scene Light(int x, int y, int z, byte sky, byte block)
@@ -108,11 +120,18 @@ public sealed class Repro_255_AmbientOcclusionTests
         return new BlockSpriteMap(SpriteAtlasBuilder.Stitch(entries));
     }
 
+    /// <summary>
+    /// Air, an opaque full block, and two blocks whose sprite is not opaque but whose collision shape is a full block:
+    /// glass and leaves. The reference shades both of them 0.2 and lets light through them, so a renderer that judges by
+    /// the texture gets them backwards.
+    /// </summary>
     private static Sharpcraft.Common.Registries.BlockStateLayout Layout() =>
         new(
         [
             (Sharpcraft.Common.Identifiers.Identifier.Parse("minecraft:air"), 1),
-            (Sharpcraft.Common.Identifiers.Identifier.Parse("minecraft:stone"), 1)
+            (Sharpcraft.Common.Identifiers.Identifier.Parse("minecraft:stone"), 1),
+            (Sharpcraft.Common.Identifiers.Identifier.Parse("minecraft:glass"), 1),
+            (Sharpcraft.Common.Identifiers.Identifier.Parse("minecraft:oak_leaves"), 1)
         ]);
 
     /// <summary>Runs the reference pass for one face and returns the four slots.</summary>
@@ -530,5 +549,76 @@ public sealed class Repro_255_AmbientOcclusionTests
                 Assert.Equal(slot, table[baked]);
             }
         }
+    }
+
+    // ---- the three reference predicates ------------------------------------------------------------------------
+
+    /// <summary>
+    /// Glass and leaves have a full collision shape but an empty occlusion shape, so the reference shades a corner next
+    /// to them at 0.2 even though their texture is see-through. Judging by the sprite instead (the proxy this replaced)
+    /// left them at 1.0, which is the "leaves have no ambient occlusion" half of issue 255.
+    /// </summary>
+    [Theory]
+    [InlineData("minecraft:glass")]
+    [InlineData("minecraft:oak_leaves")]
+    public void ATransparentFullBlockShadesItsCornerLikeTheReference(string blockName)
+    {
+        var scene = new Scene();
+        scene.Solid(BlockX + 1, BlockY + 1, BlockZ, Sharpcraft.Common.Identifiers.Identifier.Parse(blockName));
+        scene.Light(BlockX, BlockY + 1, BlockZ, 15, 0);
+        scene.Build();
+
+        var slots = Run(scene, Up);
+
+        // One occluder east: slots 2 and 3 touch +X and come out at 0.8, the other two stay at 1.0.
+        Assert.Equal(0.8f, slots[2].Brightness, 4);
+        Assert.Equal(0.8f, slots[3].Brightness, 4);
+        Assert.Equal(1f, slots[0].Brightness, 4);
+        Assert.Equal(1f, slots[1].Brightness, 4);
+    }
+
+    /// <summary>
+    /// The same two blocks are light permeable (their occlusion shape is not full), so the two-sided rule must not fire
+    /// even with both sides and the probe cells filled: a bright diagonal has to reach the result.
+    /// </summary>
+    [Theory]
+    [InlineData("minecraft:glass")]
+    [InlineData("minecraft:oak_leaves")]
+    public void ATransparentFullBlockStaysLightPermeable(string blockName)
+    {
+        var block = Sharpcraft.Common.Identifiers.Identifier.Parse(blockName);
+
+        // East and north corners opaque-ish, plus their probe cells, plus the diagonal itself, but the light is only in
+        // the diagonal cell: if the pair rule fired, corner zero (dark) would replace it.
+        var permeableScene = new Scene();
+        permeableScene.Solid(BlockX + 1, BlockY + 1, BlockZ, block)
+                      .Solid(BlockX, BlockY + 1, BlockZ - 1, block)
+                      .Solid(BlockX + 1, BlockY + 2, BlockZ, block)
+                      .Solid(BlockX, BlockY + 2, BlockZ - 1, block)
+                      .Solid(BlockX + 1, BlockY + 1, BlockZ - 1, block)
+                      .Light(BlockX + 1, BlockY + 1, BlockZ - 1, 15, 15)
+                      .Light(BlockX, BlockY + 1, BlockZ, 15, 0);
+        permeableScene.Build();
+
+        // The same scene with the two probe cells replaced by stone, which is not permeable, so the pair rule fires.
+        var blockedScene = new Scene();
+        var stone = Sharpcraft.Common.Identifiers.Identifier.Parse("minecraft:stone");
+        blockedScene.Solid(BlockX + 1, BlockY + 1, BlockZ, block)
+                    .Solid(BlockX, BlockY + 1, BlockZ - 1, block)
+                    .Solid(BlockX + 1, BlockY + 2, BlockZ, stone)
+                    .Solid(BlockX, BlockY + 2, BlockZ - 1, stone)
+                    .Solid(BlockX + 1, BlockY + 1, BlockZ - 1, block)
+                    .Light(BlockX + 1, BlockY + 1, BlockZ - 1, 15, 15)
+                    .Light(BlockX, BlockY + 1, BlockZ, 15, 0);
+        blockedScene.Build();
+
+        var slots = SlotOfComputedVertex(Up);
+        var permeable = Run(permeableScene, Up);
+        var blocked = Run(blockedScene, Up);
+
+        // Vertex 1 is the (north + east) corner, whose diagonal carries the only light in the scene.
+        Assert.True(
+            permeable[slots[1]].BlockLight > blocked[slots[1]].BlockLight,
+            $"a permeable neighbour did not let the bright diagonal through: {permeable[slots[1]].BlockLight} vs {blocked[slots[1]].BlockLight}");
     }
 }

@@ -280,10 +280,10 @@ public static partial class ChunkMesher
         var c3 = SampleCorner(nb, baseX + o3.X, baseY + o3.Y, baseZ + o3.Z, sprites, layout);
 
         // One cell further out along the face normal decides whether a diagonal has to be sampled at all.
-        var permeable0 = !Occludes(nb.GetBlockState(baseX + o0.X + nx, baseY + o0.Y + ny, baseZ + o0.Z + nz, 0), sprites, layout);
-        var permeable1 = !Occludes(nb.GetBlockState(baseX + o1.X + nx, baseY + o1.Y + ny, baseZ + o1.Z + nz, 0), sprites, layout);
-        var permeable2 = !Occludes(nb.GetBlockState(baseX + o2.X + nx, baseY + o2.Y + ny, baseZ + o2.Z + nz, 0), sprites, layout);
-        var permeable3 = !Occludes(nb.GetBlockState(baseX + o3.X + nx, baseY + o3.Y + ny, baseZ + o3.Z + nz, 0), sprites, layout);
+        var permeable0 = LightPermeable(nb.GetBlockState(baseX + o0.X + nx, baseY + o0.Y + ny, baseZ + o0.Z + nz, 0), sprites, layout);
+        var permeable1 = LightPermeable(nb.GetBlockState(baseX + o1.X + nx, baseY + o1.Y + ny, baseZ + o1.Z + nz, 0), sprites, layout);
+        var permeable2 = LightPermeable(nb.GetBlockState(baseX + o2.X + nx, baseY + o2.Y + ny, baseZ + o2.Z + nz, 0), sprites, layout);
+        var permeable3 = LightPermeable(nb.GetBlockState(baseX + o3.X + nx, baseY + o3.Y + ny, baseZ + o3.Z + nz, 0), sprites, layout);
 
         // When both sides of a diagonal are opaque the diagonal is not sampled and corner zero's value is reused, for
         // all four diagonals (ref BlockModelLighter.java:83-119).
@@ -292,7 +292,21 @@ public static partial class ChunkMesher
         var corner12 = !permeable2 && !permeable1 ? c0 : SampleCorner(nb, baseX + o1.X + o2.X, baseY + o1.Y + o2.Y, baseZ + o1.Z + o2.Z, sprites, layout);
         var corner13 = !permeable3 && !permeable1 ? c0 : SampleCorner(nb, baseX + o1.X + o3.X, baseY + o1.Y + o3.Y, baseZ + o1.Z + o3.Z, sprites, layout);
 
+        // The centre light has its own rule (ref BlockModelLighter.java:114-119): a cubic face reads the cell it looks
+        // at, but a partial face still reads the cell in front of the block whenever that cell is not a solid render.
+        // Missing that condition lit a plant or a partial model from the block's own cell instead.
         var center = SampleCorner(nb, baseX, baseY, baseZ, sprites, layout);
+        if (!cubic)
+        {
+            var frontX = block.X + nx;
+            var frontY = block.Y + ny;
+            var frontZ = block.Z + nz;
+            if (!SolidRender(nb.GetBlockState(frontX, frontY, frontZ, 0), sprites, layout))
+            {
+                var front = SampleCorner(nb, frontX, frontY, frontZ, sprites, layout);
+                center = new CornerSample(center.Shade, front.BlockLight, front.SkyLight);
+            }
+        }
 
         return new QuadCornerSamples(c0, c1, c2, c3, corner02, corner03, corner12, corner13, center);
     }
@@ -518,7 +532,7 @@ public static partial class ChunkMesher
         BlockSpriteMap? sprites,
         BlockStateLayout? layout)
     {
-        var full = Occludes(neighbourhood.GetBlockState(block.X, block.Y, block.Z, 0), sprites, layout);
+        var full = CollisionFullBlock(neighbourhood.GetBlockState(block.X, block.Y, block.Z, 0), sprites, layout);
 
         return direction switch
         {
@@ -531,10 +545,35 @@ public static partial class ChunkMesher
         };
     }
 
+    /// <summary>
+    /// Whether the reference calls a state collision-shape full, which is what the 0.2 / 1.0 shade and the cubic face
+    /// test read. Guessing from the sprite alpha gets glass, ice and leaves backwards: they are collision-full while
+    /// their occlusion shape is empty.
+    /// </summary>
+    private static bool CollisionFullBlock(int state, BlockSpriteMap? sprites, BlockStateLayout? layout) =>
+        layout?.BlockAt(state) is { } block && VanillaBlockOcclusion.TryGet(block, out var info)
+            ? info.CollisionFullBlock
+            : Occludes(state, sprites, layout);
+
+    /// <summary>Whether the reference calls a state solid render, which decides where a partial face reads its light.</summary>
+    private static bool SolidRender(int state, BlockSpriteMap? sprites, BlockStateLayout? layout) =>
+        layout?.BlockAt(state) is { } block && VanillaBlockOcclusion.TryGet(block, out var info)
+            ? info.SolidRender
+            : Occludes(state, sprites, layout);
+
+    /// <summary>
+    /// Whether light passes through a state, which is what the two-sided diagonal rule reads. The reference answers with
+    /// <c>!isSolidRender || lightDampening == 0</c>, not with the texture.
+    /// </summary>
+    private static bool LightPermeable(int state, BlockSpriteMap? sprites, BlockStateLayout? layout) =>
+        layout?.BlockAt(state) is { } block && VanillaBlockOcclusion.TryGet(block, out var info)
+            ? info.LightPermeable
+            : !Occludes(state, sprites, layout);
+
     private static CornerSample SampleCorner(
         in Neighbourhood neighbourhood, int x, int y, int z, BlockSpriteMap? sprites, BlockStateLayout? layout)
     {
-        var shade = Occludes(neighbourhood.GetBlockState(x, y, z, 0), sprites, layout) ? 0.2f : 1.0f;
+        var shade = CollisionFullBlock(neighbourhood.GetBlockState(x, y, z, 0), sprites, layout) ? 0.2f : 1.0f;
         if (!neighbourhood.TryGetLight(x, y, z, out var sky, out var block))
         {
             return new CornerSample(shade, 0, 0);

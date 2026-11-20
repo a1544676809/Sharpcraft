@@ -107,7 +107,12 @@
 
 采样与混合对齐 `BlockModelLighter.prepareQuadAmbientOcclusion`：
 
-- **采样点**：立方体面从"面所朝的那一格"（`base`）出发，取四个角邻、四个对角（角 i + 角 j）与中心格；`getShadeBrightness` 用"满方块碰撞形状 → 0.2，否则 1.0"，本仓以 `Occludes` 作等价判据（半透明 / 带透明像素的方块算透光）。
+- **采样点**：立方体面从"面所朝的那一格"（`base`）出发，取四个角邻、四个对角（角 i + 角 j）与中心格。原版在这里问三个**互相不同**的问题，本仓不再用"纹理是否不透明"代理任何一个：
+  - `isCollisionShapeFullBlock(level, pos)` → 明暗 0.2 / 1.0，以及整面判定的兜底（`ref://…/BlockBehaviour.java:310-312`、`BlockModelLighter.java:264-271`）；
+  - `isSolidRender()` → `!solidRender || lightDampening == 0` 这条透光判据的一半（`ref://…/BlockBehaviour.java:808-810`）；
+  - `getLightDampening()` → 另一半。
+  
+  三者由 `VanillaBlockOcclusion`（生成表，见下表）回答。它们不一致是常态：玻璃与冰的**碰撞形状是满方块**而**遮挡形状为空**（所以明暗 0.2、同时透光），树叶同理，台阶不碰撞满但确实遮挡。按贴图透明度判断会把这三类全部判反——这正是 #255 里"树叶没有环境光遮蔽"的那一半。
 - **对角规则**：只有当对角的两侧"沿面法线再外推一格"都**不透光**时才跳过对角采样，直接复用**角 0** 的值。12 / 13 两个对角复用的也是**角 0**（原版如此，不是角 1）；这是原版最容易抄错的一处，已有专项测试。
 - **两条分支**：
   - **整面**：四个角值原样分配，一个计算顶点一组，不做权重混合。
@@ -125,11 +130,14 @@
 | 朝向亮度 | `ref://mc-26.3-analysis/src/net/minecraft/world/level/CardinalLighting.java` `DEFAULT` | 下 0.5 / 上 1.0 / 南北 0.8 / 东西 0.6 |
 | 遮蔽判据 | `ref://mc-26.3-analysis/src/net/minecraft/world/level/block/state/BlockBehaviour.java:310` | 碰撞形状满方块 → 0.2，否则 1.0 |
 | 通道量化 | `ref://mc-26.3-analysis/src/net/minecraft/util/ARGB.java:341` | `floor(value × 255)` |
+| 三个遮挡判据（1286 个方块） | `ref://mc-26.3-analysis/vectors/BlockOcclusionVectors.java`（`run-probe.ps1 -Name BlockOcclusionVectors -Args block-occlusion.tsv`） | `collisionFull` / `solidRender` / `lightDampening`，生成表 `VanillaBlockOcclusion`，门禁 `generate-block-occlusion-table.ps1 -Check` |
 | 真值向量（混合数学 14 组） | `ref://mc-26.3-analysis/vectors/LightBlendVectors.java`（`run-probe.ps1 -Name LightBlendVectors`，跑在 26.3 客户端 jar 上） | 10 组 `smoothBlend` + 4 组 `smoothWeightedBlend`，逐组断言于 `Repro_255_LightBlendVectorsTests` |
 
 **已加载边界处理**：位于加载区域边缘的面会采样到不属于任何区块的格子，此时该格按 0 光处理（与原版越界读 0 一致）；`Neighbourhood.TryGetLight` 对世界上下边界同样返回 0，不再越界索引。
 
-**两条路径同一套算法**（原则 14 单轨）：元素模型路径（`EmitSectionModels` → `BlockModelSet.Emit`）与立方体面路径调用同一个 `ResolveQuadLighting`。模型路径由 `EmitSectionModels` 按四边形的**模型内包围盒**逐 quad 采样（`SampleQuadCorners`），`BlockModelSet.Emit` 再用"顶点在四边形内的位置"（`uMax`/`vMax` 两个符号位）定位它属于烘焙四边形的哪个顶点，因此模型文件可以任意排列顶点顺序；四边形是否"部分面"由包围盒判定，加权分支因此在**生产路径**上真实生效（草方块、树叶、花草都走这条路径）。\n\n**仍未实现（已登记）**：单个模型 quad 数超过 32 时该方块退回"每面一组光"（`MaxModelQuads` 守卫，现有模型均远低于此）；`getShadeBrightness` 的方块级覆写（屏障、光源、泥、雪层、灵魂沙）未建模；天空亮度随时间的曲线与方块发光等级仍未接。
+**两条路径同一套算法**（原则 14 单轨）：元素模型路径（`EmitSectionModels` → `BlockModelSet.Emit`）与立方体面路径调用同一个 `ResolveQuadLighting`。模型路径由 `EmitSectionModels` 按四边形的**模型内包围盒**逐 quad 采样（`SampleQuadCorners`），并按 `(方向, 是否整面)` 共享同一组采样（同一方向多个 quad 只采一次），`BlockModelSet.Emit` 再用"顶点在四边形内的位置"（`uMax`/`vMax` 两个符号位）定位它属于烘焙四边形的哪个顶点，因此模型文件可以任意排列顶点顺序；四边形是否"部分面"由包围盒判定，加权分支因此在**生产路径**上真实生效（草方块、树叶、花草都走这条路径）。
+
+**仍未实现（已登记）**：① 单个模型 quad 数超过 32 时该方块退回"每面一组光"（`MaxModelQuads` 守卫，现有模型远低于此，见 `SIM-MODEL-QUAD-COUNT-CAP` / R-051）；② **带 `rotation` 的元素**：我们的模型读取器在旋转后不保持原版烘焙四边形的顶点顺序（实测：绕 Y 轴 90° 后 +Y 面的顶点序由 `0,2,3,1` 变成 `1,0,2,3`），因此"按声明方向逐角对齐"对旋转面暂时不可验证，登记为 R-052；③ 天空亮度随时间的曲线、方块发光等级仍未接。
 
 ### 5.3 背面剔除
 

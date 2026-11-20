@@ -62,6 +62,10 @@ public static partial class ChunkMesher
         // buffer is hoisted for the same reason; a model with more quads than this keeps the single-light fallback.
         Span<QuadCornerSamples> quadSamples = stackalloc QuadCornerSamples[MaxModelQuads];
 
+        // One reused sample set per (direction, cubic) pair, so a multi-element model does not sample a face twice.
+        Span<QuadCornerSamples> sharedSamples = stackalloc QuadCornerSamples[12];
+        Span<bool> sharedSet = stackalloc bool[12];
+
         for (var y = 0; y < 16; y++)
         {
             for (var z = 0; z < 16; z++)
@@ -94,8 +98,12 @@ public static partial class ChunkMesher
                     }
 
                     var sampleCount = 0;
-                    if (quads.Length <= MaxModelQuads)
+                    if (ModelSharesQuadSamples(quads.Length))
                     {
+                        // Sampling depends on the direction and on whether the face sits on the block surface, not on the
+                        // quad shape, so every quad of the same (direction, cubic) shares one set. A model with two
+                        // elements therefore samples each face once instead of twice.
+                        sharedSet.Clear();
                         for (var index = 0; index < quads.Length; index++)
                         {
                             var modelQuad = quads[index].Quad;
@@ -109,8 +117,16 @@ public static partial class ChunkMesher
                             var bounds = ModelQuadBounds(modelQuad);
                             var cubic = QuadFaceCubic(
                                 direction, bounds, (baseX + x, baseY + y, baseZ + z), nb, sprites, layout);
-                            quadSamples[index] = SampleQuadCorners(
-                                nb, direction, (baseX + x, baseY + y, baseZ + z), cubic, sprites, layout);
+                            var key = (direction * 2) + (cubic ? 1 : 0);
+
+                            if (!sharedSet[key])
+                            {
+                                sharedSamples[key] = SampleQuadCorners(
+                                    nb, direction, (baseX + x, baseY + y, baseZ + z), cubic, sprites, layout);
+                                sharedSet[key] = true;
+                            }
+
+                            quadSamples[index] = sharedSamples[key];
                             sampleCount = Math.Max(sampleCount, index + 1);
                         }
                     }
@@ -150,7 +166,15 @@ public static partial class ChunkMesher
     }
 
     /// <summary>Most quads one block model may have before the model path keeps the single-light fallback.</summary>
-    private const int MaxModelQuads = 32;
+    internal const int MaxModelQuads = 32;
+
+    /// <summary>Whether a model of this size still gets per-corner ambient occlusion.</summary>
+    /// <param name="quadCount">Quads of the model.</param>
+    /// <remarks>
+    /// The sample buffer is a stack allocation with a compile time bound, so a model past it keeps one light per face
+    /// instead of growing the stack. Registered as SIM-MODEL-QUAD-COUNT-CAP / R-051.
+    /// </remarks>
+    internal static bool ModelSharesQuadSamples(int quadCount) => quadCount <= MaxModelQuads;
 
     /// <summary>Our face direction constant for one entry of <see cref="BlockModelSet.FaceIndex"/>.</summary>
     private static int DirectionOfFace(int faceIndex) => faceIndex switch
