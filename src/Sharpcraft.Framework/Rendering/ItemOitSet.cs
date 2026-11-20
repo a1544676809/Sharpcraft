@@ -40,11 +40,19 @@ internal sealed class ItemOitSet : IDisposable
     public BindGroupHandle CompositeBindGroup { get; private set; } = default;
 
     /// <summary>(Re)creates the targets for a framebuffer size, disposing the previous ones.</summary>
+    /// <param name="targetFormat">Format of the depth-bounds target, which the cull pass writes.</param>
+    /// <param name="colorFormat">
+    /// Format of the transmittance and accumulation targets. They are separate from the bounds on purpose:
+    /// the OIT pipelines declare the colour attachments with the colour format, so creating all four
+    /// targets with one format makes wgpu reject the draw ("incompatible color attachments") and abort the
+    /// process the first time a translucent item is visible (#288).
+    /// </param>
     public void Create(
         IRenderBackend backend,
         uint width,
         uint height,
-        TextureFormat format,
+        TextureFormat targetFormat,
+        TextureFormat colorFormat,
         BindGroupLayoutHandle transmittanceLayout,
         BindGroupLayoutHandle accumulateLayout,
         BindGroupLayoutHandle compositeLayout)
@@ -53,14 +61,15 @@ internal sealed class ItemOitSet : IDisposable
         Dispose();
 
         // Same description as the terrain OIT targets: renderable and sampleable, one mip level.
-        var desc = new TextureDesc(width, height, format, 1, TextureUsages.RenderAttachment | TextureUsages.TextureBinding);
-        _bounds = backend.CreateTexture(desc);
+        var boundsDesc = new TextureDesc(width, height, targetFormat, 1, TextureUsages.RenderAttachment | TextureUsages.TextureBinding);
+        var colorDesc = new TextureDesc(width, height, colorFormat, 1, TextureUsages.RenderAttachment | TextureUsages.TextureBinding);
+        _bounds = backend.CreateTexture(boundsDesc);
         _boundsView = backend.CreateTextureView(_bounds);
-        _coeff0 = backend.CreateTexture(desc);
+        _coeff0 = backend.CreateTexture(colorDesc);
         _coeff0View = backend.CreateTextureView(_coeff0);
-        _coeff1 = backend.CreateTexture(desc);
+        _coeff1 = backend.CreateTexture(colorDesc);
         _coeff1View = backend.CreateTextureView(_coeff1);
-        _accumulate = backend.CreateTexture(desc);
+        _accumulate = backend.CreateTexture(colorDesc);
         _accumulateView = backend.CreateTextureView(_accumulate);
 
         TransmittanceBindGroup = backend.CreateBindGroup(

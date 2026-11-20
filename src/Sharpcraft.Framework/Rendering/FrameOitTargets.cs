@@ -186,6 +186,7 @@ internal sealed class FrameOitTargets
             width,
             height,
             _oitTargetFormat,
+            _oitColorFormat,
             _transmittanceLayout,
             _accumulateLayout,
             _compositeLayout);
