@@ -547,7 +547,7 @@ public sealed class Repro_255_AmbientOcclusionTests
             [0, 2, 3, 1],   // +X east
             [0, 1, 3, 2],   // -Y down
             [0, 2, 3, 1],   // +Y up
-            [0, 1, 3, 2],   // -Z north
+            [0, 2, 3, 1],   // -Z north
             [0, 1, 3, 2]    // +Z south
         ];
 
