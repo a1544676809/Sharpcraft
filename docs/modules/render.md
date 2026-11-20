@@ -129,7 +129,7 @@
 
 **已加载边界处理**：位于加载区域边缘的面会采样到不属于任何区块的格子，此时该格按 0 光处理（与原版越界读 0 一致）；`Neighbourhood.TryGetLight` 对世界上下边界同样返回 0，不再越界索引。
 
-**未实现（已登记）**：元素模型路径（`EmitSectionModels`）仍按"每个面一组光"渲染，没有逐顶点 AO，因此上面的**部分面分支目前只在测试中执行**，见「已知刻意的简化」`SIM-MODEL-PATH-NO-VERTEX-AO` 与 `docs/risks.md` R-050。天空亮度随时间的曲线与方块发光等级仍未接。
+**两条路径同一套算法**（原则 14 单轨）：元素模型路径（`EmitSectionModels` → `BlockModelSet.Emit`）与立方体面路径调用同一个 `ResolveQuadLighting`。模型路径由 `EmitSectionModels` 按四边形的**模型内包围盒**逐 quad 采样（`SampleQuadCorners`），`BlockModelSet.Emit` 再用"顶点在四边形内的位置"（`uMax`/`vMax` 两个符号位）定位它属于烘焙四边形的哪个顶点，因此模型文件可以任意排列顶点顺序；四边形是否"部分面"由包围盒判定，加权分支因此在**生产路径**上真实生效（草方块、树叶、花草都走这条路径）。\n\n**仍未实现（已登记）**：单个模型 quad 数超过 32 时该方块退回"每面一组光"（`MaxModelQuads` 守卫，现有模型均远低于此）；`getShadeBrightness` 的方块级覆写（屏障、光源、泥、雪层、灵魂沙）未建模；天空亮度随时间的曲线与方块发光等级仍未接。
 
 ### 5.3 背面剔除
 
@@ -597,15 +597,15 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 ## 已知刻意的简化
 
-### SIM-MODEL-PATH-NO-VERTEX-AO：元素模型路径没有逐顶点 AO
+### SIM-MODEL-QUAD-COUNT-CAP：模型 quad 超过 32 个时该方块退回单点光照
 
-- **简化了什么**：`EmitSectionModels` / `BlockModelSet.Emit` 仍按"每个面一组光照 × 朝向亮度"着色，没有逐顶点环境光遮蔽。因此 `ChunkMesher.PrepareQuadLighting` 的**部分面分支目前只在测试中执行**，生产路径只走整面分支。
-- **为什么**：模型面不是立方体面，要让原版的加权分支真正生效，得把四边形在方块内的包围盒（`faceShape` 的输入）从 `BlockModelSet` 一路传到 `PrepareQuadLighting`，并按角采样替换现在的单点采样。#255 先修立方体面路径（画面里绝大多数方块），按原则 14 的切片纪律把模型路径另立任务，避免一次改动同时动两条路径。
-- **对等效性的影响**：普通方块（立方体面）的 AO 与平滑光照已与原版同公式；台阶、楼梯、草、花、箱子等元素模型方块在凹角处**看不到 AO**，边缘比原版平。几何与贴图不受影响。
-- **当前状态与独立任务**：跟踪 `docs/risks.md` **R-050**（Issue 待项目所有者建号后回填）。**不是已解决。**
-- **验收入口**：把包围盒接进模型路径后，在 `Repro_255_AmbientOcclusionTests` 增加"部分面分支经 `MeshChunk` 生产路径触发"的用例，并用同机位离线 `--frame` 像素对比（当前离线 A/B：岛体区域均值 93.59 → 92.14，最暗差 62/765）。
+- **简化了什么**：`EmitSectionModels` 为每个方块预留 32 个四边形的采样槽（`MaxModelQuads`）。quad 数超过 32 的模型整块退回"每个面一组光"，不做逐顶点 AO。**部分面分支本身已接入生产路径**（见 §5.2.1），本条只覆盖这个数量守卫。
+- **为什么**：采样槽是 `stackalloc`，必须有编译期上界才能保持零分配且不随模型大小增长栈；现有方块模型（cube、火把、花盆、箱子、床等）最多十余个 quad，32 留有余量。
+- **对等效性的影响**：只有超过 32 个 quad 的模型（当前没有）在凹角处没有 AO；其余模型与立方体面完全同算法。
+- **当前状态与独立任务**：守卫常量化，超限会在几何上"变平"但不会崩溃；改为按需切片（`ArrayPool` 或按模型缓存）是独立优化任务，跟踪 `docs/risks.md` **R-051**。Issue 待建号后回填。
+- **验收入口**：构造一个 33 quad 的测试模型，断言它走回退路径且不抛异常；改为按需分配后本条删除。
 
-<!-- simplification:SIM-MODEL-PATH-NO-VERTEX-AO task:R-050 -->
+<!-- simplification:SIM-MODEL-QUAD-COUNT-CAP task:R-051 -->
 
 
 ### SIM-LOCAL-FRAME-NO-LAYOUT：`--frame` 本地演示场景不传 layout / tint

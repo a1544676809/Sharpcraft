@@ -123,7 +123,7 @@ public sealed class Repro_227_ModelPathWiringTests
     /// everywhere. The block's own cell is lit too, so the single-value fallback would be 15 everywhere and this test
     /// would fail if the per-face table never arrived.
     /// </summary>
-    private static (ClientWorld World, LevelChunk Chunk, BlockSpriteMap Sprites, BlockModelSet Models, BlockStateLayout Layout) Scene()
+    private static (ClientWorld World, LevelChunk Chunk, BlockSpriteMap Sprites, BlockModelSet Models, BlockStateLayout Layout) Scene(string? liftedDirection = null)
     {
         var layout = Layout();
         var world = new ClientWorld(minSectionY: -1, sectionCount: 3);
@@ -143,9 +143,9 @@ public sealed class Repro_227_ModelPathWiringTests
 
         // Six distinct neighbour levels, assigned by the vanilla direction convention rather than by the code's table.
         byte level = 1;
-        foreach (var (_, offset) in Neighbour.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+        foreach (var (key, offset) in Neighbour.OrderBy(pair => pair.Key, StringComparer.Ordinal))
         {
-            SetNibble(blockLight, BlockX + offset.X, BlockY + offset.Y, BlockZ + offset.Z, level);
+            SetNibble(blockLight, BlockX + offset.X, BlockY + offset.Y, BlockZ + offset.Z, key == liftedDirection ? (byte)15 : level);
             level++;
         }
 
@@ -217,9 +217,9 @@ public sealed class Repro_227_ModelPathWiringTests
         return ((int)((word >> 16) & 0xFF), (int)((word >> 24) & 0xFF));
     }
 
-    private static MeshBuffer Mesh()
+    private static MeshBuffer Mesh(string? liftedDirection = null)
     {
-        var (world, chunk, sprites, models, layout) = Scene();
+        var (world, chunk, sprites, models, layout) = Scene(liftedDirection);
         var buffer = new MeshBuffer();
         ChunkMesher.MeshChunk(
             world,
@@ -267,35 +267,64 @@ public sealed class Repro_227_ModelPathWiringTests
     }
 
     /// <summary>
-    /// The mesher really passes the per-face lights: each face carries its own neighbour's level, so a direction swap or
-    /// a single shared value fails. Passing <c>default</c> for <c>faceLights</c> fails exactly here.
+    /// The model path lights each face from the cell that face looks at: raising that one neighbour brightens that face
+    /// and leaves every other face untouched. A swapped direction table fails here, and so does a path that reads the
+    /// block's own (fully lit) cell, because then no neighbour could move a vertex.
     /// </summary>
-    [Fact]
-    public void TheMesherHandsThePerFaceLightsToTheModelPath()
+    /// <remarks>
+    /// Issue 255 replaced the single per-face value with the reference's per-corner blend, so this test compares two
+    /// scenes instead of one exact level: the property under test is attribution, not the blend itself, which
+    /// <c>Repro_255_AmbientOcclusionTests</c> pins numerically.
+    /// </remarks>
+    [Theory]
+    [InlineData("up")]
+    [InlineData("down")]
+    [InlineData("north")]
+    [InlineData("south")]
+    [InlineData("west")]
+    [InlineData("east")]
+    public void TheMesherLightsEachModelFaceFromItsOwnNeighbour(string lifted)
     {
-        using var buffer = Mesh();
+        var baseline = FaceLightAverages(null);
+        var raised = FaceLightAverages(lifted);
+
+        Assert.Equal(6, baseline.Count);
+        Assert.True(
+            raised[lifted] > baseline[lifted],
+            $"lifting the {lifted} neighbour did not brighten the {lifted} face: {baseline[lifted]} -> {raised[lifted]}");
+
+        foreach (var (direction, value) in baseline)
+        {
+            if (direction != lifted)
+            {
+                Assert.Equal(value, raised[direction]);
+            }
+        }
+    }
+
+    /// <summary>Mean block light of each face's four vertices, keyed by the face the vertices lie on.</summary>
+    private static Dictionary<string, int> FaceLightAverages(string? liftedDirection)
+    {
+        using var buffer = Mesh(liftedDirection);
         var vertices = buffer.Vertices;
-        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var result = new Dictionary<string, int>(StringComparer.Ordinal);
 
         for (var quad = 0; quad < 6; quad++)
         {
             var first = quad * 4;
             var direction = DirectionOf(vertices, first);
             Assert.NotEqual("unknown", direction);
-            Assert.True(seen.Add(direction), $"direction {direction} was emitted twice");
 
-            var light = LightOf(vertices, first);
-            Assert.Equal(Channel(15 / 15f), light.Sky);
-            Assert.Equal(Channel(NeighbourLevel(direction) / 15f), light.Block);
-
-            // Every vertex of the face agrees, so the per-face value is not a per-vertex accident.
-            for (var vertex = 1; vertex < 4; vertex++)
+            var sum = 0;
+            for (var vertex = 0; vertex < 4; vertex++)
             {
-                Assert.Equal(light, LightOf(vertices, first + vertex));
+                sum += LightOf(vertices, first + vertex).Block;
             }
+
+            Assert.True(result.TryAdd(direction, sum / 4), $"direction {direction} was emitted twice");
         }
 
-        Assert.Equal(6, seen.Count);
+        return result;
     }
 
     /// <summary>The direction table itself, written against vanilla's convention rather than against the code.</summary>

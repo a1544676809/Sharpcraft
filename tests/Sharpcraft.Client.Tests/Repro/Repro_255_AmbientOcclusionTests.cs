@@ -495,4 +495,40 @@ public sealed class Repro_255_AmbientOcclusionTests
         var open = Run(openScene, Up);
         Assert.NotEqual(actual[slots[vertex]].BlockLight, open[slots[vertex]].BlockLight);
     }
+
+    /// <summary>
+    /// The geometric corner match (used by the element model path, whose vertices come from the model file in any order)
+    /// agrees with the merged path's table for all six faces: for every corner of every face, the baked vertex derived
+    /// from the position inside the quad must be the one the hand-written table names.
+    /// </summary>
+    /// <remarks>
+    /// Our corner slots are written here as (uMax, vMax) sign pairs, which is what the merged path builds when it assigns
+    /// origin, a, b and c; the baked quad's order comes from FaceInfo.
+    /// </remarks>
+    [Fact]
+    public void TheGeometricCornerMatchAgreesWithTheMergedPathTable()
+    {
+        // Slot order per face: 0 = (-u,-v), 1 = (+u,-v), 2 = (+u,+v), 3 = (-u,+v) except the faces whose V span starts
+        // from the high end, which is why these are written out rather than derived.
+        int[][] slotSigns =
+        [
+            [0, 1, 3, 2],   // -X west
+            [0, 2, 3, 1],   // +X east
+            [0, 1, 3, 2],   // -Y down
+            [0, 2, 3, 1],   // +Y up
+            [0, 1, 3, 2],   // -Z north
+            [0, 1, 3, 2]    // +Z south
+        ];
+
+        for (var direction = 0; direction < 6; direction++)
+        {
+            var table = ChunkMesher.QuadCornerOrderOf(direction).ToArray();
+            for (var slot = 0; slot < 4; slot++)
+            {
+                var code = slotSigns[direction][slot];
+                var baked = ChunkMesher.BakedVertexAt(direction, (code & 1) != 0, (code & 2) != 0);
+                Assert.Equal(slot, table[baked]);
+            }
+        }
+    }
 }

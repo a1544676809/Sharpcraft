@@ -169,7 +169,7 @@ public static partial class ChunkMesher
     public static bool NonCubicWeight(int direction) => direction is >= 0 and <= 5;
 
     /// <summary>A corner's contribution: occlusion brightness plus both light channels on the reference's 0..240 scale.</summary>
-    private readonly record struct CornerSample(float Shade, int BlockLight, int SkyLight);
+    internal readonly record struct CornerSample(float Shade, int BlockLight, int SkyLight);
 
     /// <summary>One vertex's lighting: brightness for the colour, sky and block for the lightmap.</summary>
     /// <param name="Brightness">Occlusion brightness in 0..1.</param>
@@ -199,11 +199,72 @@ public static partial class ChunkMesher
         Span<VertexLighting> slots)
     {
         var nb = neighbourhood;
+        var cubic = FaceCubic(direction, bounds, block, nb, sprites, layout);
+        var samples = SampleQuadCorners(nb, direction, block, cubic, sprites, layout);
+
+        // The reference remaps its computed corners onto the baked quad's vertex order before writing them; ours is a
+        // different order for the same four world corners, so the baked order is mapped onto our slots here.
+        Span<VertexLighting> baked = stackalloc VertexLighting[4];
+        ResolveQuadLighting(direction, samples, bounds, ambientOcclusion, baked);
+
+        for (var vertex = 0; vertex < 4; vertex++)
+        {
+            slots[QuadCornerForFaceVertex[(direction * 4) + vertex]] = baked[vertex];
+        }
+    }
+
+    /// <summary>
+    /// The nine cells the reference samples for one face: four corner neighbours, four diagonals and the centre.
+    /// </summary>
+    /// <remarks>
+    /// Sampling does not depend on the quad's shape, only on the direction and whether the face sits on the block's
+    /// outer surface, so a model with several quads on one face can share one set.
+    /// </remarks>
+    internal readonly struct QuadCornerSamples(
+        CornerSample corner0,
+        CornerSample corner1,
+        CornerSample corner2,
+        CornerSample corner3,
+        CornerSample diagonal02,
+        CornerSample diagonal03,
+        CornerSample diagonal12,
+        CornerSample diagonal13,
+        CornerSample center)
+    {
+        public CornerSample Corner0 { get; } = corner0;
+        public CornerSample Corner1 { get; } = corner1;
+        public CornerSample Corner2 { get; } = corner2;
+        public CornerSample Corner3 { get; } = corner3;
+        public CornerSample Diagonal02 { get; } = diagonal02;
+        public CornerSample Diagonal03 { get; } = diagonal03;
+        public CornerSample Diagonal12 { get; } = diagonal12;
+        public CornerSample Diagonal13 { get; } = diagonal13;
+        public CornerSample Center { get; } = center;
+    }
+
+    /// <summary>Whether a face of the given shape sits on the block's outer surface.</summary>
+    internal static bool QuadFaceCubic(
+        int direction,
+        (float MinX, float MaxX, float MinY, float MaxY, float MinZ, float MaxZ) bounds,
+        (int X, int Y, int Z) block,
+        in Neighbourhood neighbourhood,
+        BlockSpriteMap? sprites,
+        BlockStateLayout? layout) =>
+        FaceCubic(direction, bounds, block, neighbourhood, sprites, layout);
+
+    /// <summary>Samples the nine cells of one face (ref BlockModelLighter.java:44-126).</summary>
+    internal static QuadCornerSamples SampleQuadCorners(
+        in Neighbourhood nb,
+        int direction,
+        (int X, int Y, int Z) block,
+        bool cubic,
+        BlockSpriteMap? sprites,
+        BlockStateLayout? layout)
+    {
         var (nx, ny, nz) = NeighbourOffset(direction);
 
         // A cubic face samples from the cell it looks at and takes its centre shade from there; a cut-out face samples
         // from its own cell (ref BlockModelLighter.java:41-43, 120-126).
-        var cubic = FaceCubic(direction, bounds, block, nb, sprites, layout);
         var baseX = cubic ? block.X + nx : block.X;
         var baseY = cubic ? block.Y + ny : block.Y;
         var baseZ = cubic ? block.Z + nz : block.Z;
@@ -231,28 +292,70 @@ public static partial class ChunkMesher
         var corner12 = !permeable2 && !permeable1 ? c0 : SampleCorner(nb, baseX + o1.X + o2.X, baseY + o1.Y + o2.Y, baseZ + o1.Z + o2.Z, sprites, layout);
         var corner13 = !permeable3 && !permeable1 ? c0 : SampleCorner(nb, baseX + o1.X + o3.X, baseY + o1.Y + o3.Y, baseZ + o1.Z + o3.Z, sprites, layout);
 
-        var center = cubic
-            ? SampleCorner(nb, baseX, baseY, baseZ, sprites, layout)
-            : SampleCorner(nb, block.X, block.Y, block.Z, sprites, layout);
+        var center = SampleCorner(nb, baseX, baseY, baseZ, sprites, layout);
 
-        Span<VertexLighting> raw = stackalloc VertexLighting[4];
+        return new QuadCornerSamples(c0, c1, c2, c3, corner02, corner03, corner12, corner13, center);
+    }
+
+    /// <summary>
+    /// Turns the nine samples into four vertex values, written in the baked quad's vertex order
+    /// (ref BlockModelLighter.java:128-206).
+    /// </summary>
+    internal static void ResolveQuadLighting(
+        int direction,
+        in QuadCornerSamples samples,
+        (float MinX, float MaxX, float MinY, float MaxY, float MinZ, float MaxZ) bounds,
+        bool ambientOcclusion,
+        Span<VertexLighting> baked)
+    {
+        Span<VertexLighting> computed = stackalloc VertexLighting[4];
         if (IsPartialFace(direction, bounds) && NonCubicWeight(direction))
         {
-            PreparePartialFace(direction, c0, c1, c2, c3, corner02, corner03, corner12, corner13, center, bounds, ambientOcclusion, raw);
+            PreparePartialFace(
+                direction,
+                samples.Corner0, samples.Corner1, samples.Corner2, samples.Corner3,
+                samples.Diagonal02, samples.Diagonal03, samples.Diagonal12, samples.Diagonal13,
+                samples.Center, bounds, ambientOcclusion, computed);
         }
         else
         {
-            PrepareCubeFace(c0, c1, c2, c3, corner02, corner03, corner12, corner13, center, ambientOcclusion, raw);
+            PrepareCubeFace(
+                samples.Corner0, samples.Corner1, samples.Corner2, samples.Corner3,
+                samples.Diagonal02, samples.Diagonal03, samples.Diagonal12, samples.Diagonal13,
+                samples.Center, ambientOcclusion, computed);
         }
 
-        // The reference remaps its computed corners onto the baked quad's vertex order; ours is a different order for
-        // the same four world corners, so both tables are applied.
         for (var vertex = 0; vertex < 4; vertex++)
         {
-            var baked = FaceVertexRemap[(direction * 4) + vertex];
-            slots[QuadCornerForFaceVertex[(direction * 4) + baked]] = raw[vertex];
+            baked[FaceVertexRemap[(direction * 4) + vertex]] = computed[vertex];
         }
     }
+
+    /// <summary>
+    /// Which baked-quad vertex a corner belongs to, from the corner's position inside the quad alone.
+    /// </summary>
+    /// <param name="direction">Face direction constant.</param>
+    /// <param name="uMax">Whether the corner is at the high end of the face's first in-plane axis.</param>
+    /// <param name="vMax">Whether the corner is at the high end of the face's second in-plane axis.</param>
+    /// <remarks>
+    /// The reference orders a quad's vertices by the box extents it calls FaceInfo, so the position inside the quad is
+    /// the whole answer. This is what lets the element model path, whose vertices come straight from the model file and
+    /// are not in our merged order, light each corner correctly without a hand-written table per model.
+    /// </remarks>
+    internal static int BakedVertexAt(int direction, bool uMax, bool vMax) =>
+        FaceVertexAtCorner[(direction * 4) + ((vMax ? 2 : 0) | (uMax ? 1 : 0))];
+
+    /// <summary>Baked-quad vertex for each corner of a face, indexed by two sign bits: bit 0 is high u, bit 1 high v.</summary>
+    /// <remarks>ref://mc-26.3-analysis/src/net/minecraft/client/renderer/FaceInfo.java, the four VertexInfo per face.</remarks>
+    private static ReadOnlySpan<byte> FaceVertexAtCorner =>
+    [
+        1, 2, 0, 3,   // -X west:  u = Z, v = Y
+        2, 1, 3, 0,   // +X east
+        1, 2, 0, 3,   // -Y down:  u = X, v = Z
+        0, 3, 1, 2,   // +Y up
+        2, 1, 3, 0,   // -Z north: u = X, v = Y
+        1, 2, 0, 3    // +Z south
+    ];
 
     /// <summary>The full-cube branch: the four corner values pass straight through, one per vertex.</summary>
     private static void PrepareCubeFace(

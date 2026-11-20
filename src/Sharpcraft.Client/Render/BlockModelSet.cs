@@ -92,8 +92,10 @@ public sealed class BlockModelSet
     /// <param name="z">Block Z.</param>
     /// <param name="light">Packed sky and block light, each zero to one.</param>
     /// <param name="spriteFor">Resolves a texture path to its atlas cell.</param>
+    /// <param name="quadSamples">Per-quad corner samples for ambient occlusion, in the order of <paramref name="quads"/>.</param>
+    /// <param name="ambientOcclusion">False keeps every vertex at full brightness while still smoothing the light.</param>
     /// <returns>How many quads were emitted.</returns>
-    public static int Emit(
+    internal static int Emit(
         MeshBuffer buffer,
         TexturedQuad[] quads,
         int x,
@@ -103,7 +105,9 @@ public sealed class BlockModelSet
         Func<Identifier, SpriteRect?> spriteFor,
         Func<string, bool>? isCulled = null,
         (float R, float G, float B)? tint = null,
-        ReadOnlySpan<(float Sky, float Block)> faceLights = default)
+        ReadOnlySpan<(float Sky, float Block)> faceLights = default,
+        ReadOnlySpan<ChunkMesher.QuadCornerSamples> quadSamples = default,
+        bool ambientOcclusion = true)
     {
         ArgumentNullException.ThrowIfNull(buffer);
         ArgumentNullException.ThrowIfNull(quads);
@@ -111,8 +115,13 @@ public sealed class BlockModelSet
 
         var emitted = 0;
 
-        foreach (var textured in quads)
+        // Hoisted out of the quad loop so a model with several faces does not grow the stack per quad (CA2014).
+        Span<ChunkMesher.VertexLighting> perVertex = stackalloc ChunkMesher.VertexLighting[4];
+        Span<(float R, float G, float B, float Sky, float Block)> corners = stackalloc (float, float, float, float, float)[4];
+
+        for (var index = 0; index < quads.Length; index++)
         {
+            var textured = quads[index];
             if (spriteFor(textured.Texture) is not { } sprite)
             {
                 continue;
@@ -133,22 +142,60 @@ public sealed class BlockModelSet
             // opaque block has an unlit cell of its own, so reading that cell drew every model block black
             // (issue 227). Callers without a neighbourhood fall back to the single supplied light.
             var faceIndex = FaceIndex(quad.Direction);
-            var (sky, block) = faceIndex >= 0 && faceIndex < faceLights.Length ? faceLights[faceIndex] : light;
+            var fallbackSky = faceIndex >= 0 && faceIndex < faceLights.Length ? faceLights[faceIndex].Sky : light.Sky;
+            var fallbackBlock = faceIndex >= 0 && faceIndex < faceLights.Length ? faceLights[faceIndex].Block : light.Block;
+
+            // Issue 255: a model face is lit per corner exactly like a cube face. The samples come from the caller,
+            // which has world access, and the quad's own bounds decide which branch and which weights apply; the four
+            // values arrive in the baked quad's vertex order, so each of this quad's corners is matched by position.
+            var lit = index < quadSamples.Length && faceIndex >= 0;
+            var direction = DirectionOfFace(faceIndex);
+            var bounds = lit ? Bounds(quad) : default;
+            if (lit)
+            {
+                ChunkMesher.ResolveQuadLighting(direction, quadSamples[index], bounds, ambientOcclusion, perVertex);
+            }
 
             var shade = Shade(quad.Direction);
+            var (uAxis, vAxis) = ChunkMesher.InPlaneAxes(direction);
+
+            ReadOnlySpan<ModelVertex> vertices = [quad.V0, quad.V1, quad.V2, quad.V3];
+            for (var corner = 0; corner < 4; corner++)
+            {
+                if (!lit)
+                {
+                    corners[corner] = (shade * tr, shade * tg, shade * tb, fallbackSky, fallbackBlock);
+                    continue;
+                }
+
+                var position = vertices[corner].Position;
+                var bakedVertex = ChunkMesher.BakedVertexAt(
+                    direction,
+                    Component(position, uAxis) > ((Component(bounds, uAxis, true) + Component(bounds, uAxis, false)) * 0.5f),
+                    Component(position, vAxis) > ((Component(bounds, vAxis, true) + Component(bounds, vAxis, false)) * 0.5f));
+
+                var value = perVertex[bakedVertex];
+                corners[corner] = (
+                    shade * tr * value.Brightness,
+                    shade * tg * value.Brightness,
+                    shade * tb * value.Brightness,
+                    value.SkyLight,
+                    value.BlockLight);
+            }
+
             buffer.AppendQuad(
                 (quad.V0.Position.X + x, quad.V0.Position.Y + y, quad.V0.Position.Z + z),
                 (quad.V1.Position.X + x, quad.V1.Position.Y + y, quad.V1.Position.Z + z),
                 (quad.V2.Position.X + x, quad.V2.Position.Y + y, quad.V2.Position.Z + z),
                 (quad.V3.Position.X + x, quad.V3.Position.Y + y, quad.V3.Position.Z + z),
-                (shade * tr, shade * tg, shade * tb),
-                (shade * tr, shade * tg, shade * tb),
-                (shade * tr, shade * tg, shade * tb),
-                (shade * tr, shade * tg, shade * tb),
-                (sky, block),
-                (sky, block),
-                (sky, block),
-                (sky, block),
+                (corners[0].R, corners[0].G, corners[0].B),
+                (corners[1].R, corners[1].G, corners[1].B),
+                (corners[2].R, corners[2].G, corners[2].B),
+                (corners[3].R, corners[3].G, corners[3].B),
+                (corners[0].Sky, corners[0].Block),
+                (corners[1].Sky, corners[1].Block),
+                (corners[2].Sky, corners[2].Block),
+                (corners[3].Sky, corners[3].Block),
                 (quad.V0.Uv.X, quad.V0.Uv.Y),
                 (quad.V1.Uv.X, quad.V1.Uv.Y),
                 (quad.V2.Uv.X, quad.V2.Uv.Y),
@@ -159,6 +206,52 @@ public sealed class BlockModelSet
         }
 
         return emitted;
+    }
+
+    /// <summary>Our face direction constant for one entry of <see cref="FaceIndex"/>.</summary>
+    private static int DirectionOfFace(int faceIndex) => faceIndex switch
+    {
+        0 => 2,  // down
+        1 => 3,  // up
+        2 => 4,  // north
+        3 => 5,  // south
+        4 => 0,  // west
+        _ => 1   // east
+    };
+
+    /// <summary>Bounds of a quad inside its block along each axis, which the shape test and the corner match read.</summary>
+    private static (float MinX, float MaxX, float MinY, float MaxY, float MinZ, float MaxZ) Bounds(ModelQuad quad)
+    {
+        var min = quad.V0.Position;
+        var max = quad.V0.Position;
+
+        foreach (var vertex in (ReadOnlySpan<ModelVertex>)[quad.V1, quad.V2, quad.V3])
+        {
+            min = System.Numerics.Vector3.Min(min, vertex.Position);
+            max = System.Numerics.Vector3.Max(max, vertex.Position);
+        }
+
+        return (min.X, max.X, min.Y, max.Y, min.Z, max.Z);
+    }
+
+    private static float Component(System.Numerics.Vector3 value, int axis) => axis switch
+    {
+        0 => value.X,
+        1 => value.Y,
+        _ => value.Z
+    };
+
+    private static float Component(
+        (float MinX, float MaxX, float MinY, float MaxY, float MinZ, float MaxZ) bounds, int axis, bool maximum)
+    {
+        if (axis == 0)
+        {
+            return maximum ? bounds.MaxX : bounds.MinX;
+        }
+
+        return axis == 1
+            ? (maximum ? bounds.MaxY : bounds.MinY)
+            : (maximum ? bounds.MaxZ : bounds.MinZ);
     }
 
     /// <summary>Index of a face direction inside the per-face light table, or -1 when the direction is unknown.</summary>

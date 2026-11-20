@@ -194,7 +194,7 @@ public static partial class ChunkMesher
 
             if (models is not null && sprites is not null)
             {
-                EmitSectionModels(neighbourhood, section, baseX, baseY, baseZ, buffer, sprites, models, tint, layout);
+                EmitSectionModels(neighbourhood, section, baseX, baseY, baseZ, buffer, sprites, models, tint, layout, ambientOcclusion);
             }
         }
 
@@ -464,7 +464,7 @@ public static partial class ChunkMesher
     }
 
     /// <summary>The two in-plane axes used for merging, per face direction.</summary>
-    private static (int U, int V) InPlaneAxes(int direction) => direction switch
+    internal static (int U, int V) InPlaneAxes(int direction) => direction switch
     {
         NegativeX or PositiveX => (2, 1),   // u = Z, v = Y
         NegativeY or PositiveY => (0, 2),   // u = X, v = Z

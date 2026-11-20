@@ -51,6 +51,12 @@ internal static partial class FrameCommand
             return RenderLocal(width, height);
         }
 
+        if (GameOptions.Get("MC_FRAME_AO_NEST") is { Length: > 0 })
+        {
+            // Issue 255: grass and leaves take the element model path, which the stone demo never exercises.
+            return RenderWorld(BuildAoNestWorld(VanillaBlockRegistry.Layout), width, height, VanillaBlockRegistry.Layout);
+        }
+
         if (GameOptions.Get("MC_FRAME_OCCLUDER") is { Length: > 0 })
         {
             // Deterministic scene for the occlusion test: a solid wall with solid chunks behind it.
@@ -274,6 +280,71 @@ internal static partial class FrameCommand
     }
 
     /// <summary>
+    /// Builds a deterministic scene for ambient occlusion on the model path: a grass platform with a pit, a wall and a
+    /// leaf canopy, so a nook exists on both the cube path and the element model path.
+    /// </summary>
+    /// <remarks>
+    /// Issue 255 needed a scene the old stone demo could not provide: grass and leaves take the element model path, and
+    /// that is where the user saw the missing occlusion. The pit gives a concave floor corner, the wall a vertical one,
+    /// and the leaves hang over the pit so their underside is shaded too.
+    /// </remarks>
+    internal static ClientWorld BuildAoNestWorld(BlockStateLayout layout)
+    {
+        var world = new ClientWorld(minSectionY: -1, sectionCount: 3);
+
+        layout.TryGetBaseId(new Identifier("minecraft", "grass_block"), out var grass);
+        layout.TryGetBaseId(new Identifier("minecraft", "dirt"), out var dirt);
+        layout.TryGetBaseId(new Identifier("minecraft", "oak_leaves"), out var leaves);
+
+        var chunk = world.AddChunk(0, 0);
+        chunk.SetSection(new Sharpcraft.Common.World.ChunkSection(singleState: 0, sectionY: 0));
+        var baseY = 8;
+
+        // A 14 by 14 platform: dirt below, grass on top.
+        for (var x = 1; x <= 14; x++)
+        {
+            for (var z = 1; z <= 14; z++)
+            {
+                chunk.SetBlockState(x, baseY, z, dirt);
+                chunk.SetBlockState(x, baseY + 1, z, grass);
+            }
+        }
+
+        // A four by four pit two blocks deep, which is the concave corner the occlusion has to darken.
+        for (var x = 5; x <= 8; x++)
+        {
+            for (var z = 5; z <= 8; z++)
+            {
+                chunk.SetBlockState(x, baseY, z, dirt);
+                chunk.SetBlockState(x, baseY + 1, z, dirt);
+            }
+        }
+
+        // A one block wall along the west edge of the pit, plus a taller post at its north end.
+        for (var z = 4; z <= 9; z++)
+        {
+            chunk.SetBlockState(4, baseY + 2, z, grass);
+        }
+
+        chunk.SetBlockState(4, baseY + 3, 4, grass);
+
+        // A leaf canopy over the pit, so the cutout model path has an occluded underside as well.
+        for (var x = 3; x <= 10; x++)
+        {
+            for (var z = 3; z <= 10; z++)
+            {
+                chunk.SetBlockState(x, baseY + 5, z, leaves);
+            }
+        }
+
+        // No lighting data exists for a synthetic scene, so full sky light keeps the shapes readable.
+        chunk.ApplyLight(Sharpcraft.Common.Network.LightData.FullSky(chunk.Light.LightSectionCount));
+        chunk.MarkLoaded();
+
+        return world;
+    }
+
+    /// <summary>
     /// Builds a deterministic scene for the occlusion test: a solid wall with solid chunks behind it.
     /// </summary>
     /// <remarks>
@@ -376,7 +447,8 @@ internal static partial class FrameCommand
 
                 blocks += Sharpcraft.Client.Render.ChunkMeshCache.MeshChunkOnce(
                     world, chunk, buffer, sprites, translucent, layout, cutout, tint,
-                    GameOptions.Get("MC_MESH_NOMERGE") != "1", maxBlocks: 2_000_000 - blocks, models: models);
+                    GameOptions.Get("MC_MESH_NOMERGE") != "1", maxBlocks: 2_000_000 - blocks, models: models,
+                    ambientOcclusion: GameOptions.Get("MC_NO_AO") != "1");
 
                 ranges.Add((before, buffer.IndexCount - before));
 
@@ -995,7 +1067,8 @@ internal static partial class FrameCommand
         // ChunkMeshCache/ChunkWorkerPool with both, and both entries accept them (issue 227). Passing the layout here
         // changes this scene's culling (2392 -> 4176 triangles), which is a separate question and not this issue's.
         var mesh = Sharpcraft.Client.Render.ChunkMeshCache.MeshWorldOnce(
-            world, prepared?.Map, GameOptions.Get("MC_MESH_NOMERGE") != "1", prepared?.Models);
+            world, prepared?.Map, GameOptions.Get("MC_MESH_NOMERGE") != "1", prepared?.Models,
+            ambientOcclusion: GameOptions.Get("MC_NO_AO") != "1");
         Console.WriteLine($"local demo: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
 
         var bounds = (Min: new Vector3(0, -16, 0), Max: new Vector3(16, 16, 16));
