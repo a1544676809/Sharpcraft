@@ -45,6 +45,25 @@ public static class PlaySession
     public static string? ChunkDumpDirectory { get; set; }
 
     /// <summary>
+    /// Answers only <c>KeepAlive</c> on the background receive pump so the 30s timeout cannot fire during startup,
+    /// leaving <c>Ping</c> and <c>ChunkBatchFinished</c> queued in exact order for the main thread.
+    /// </summary>
+    public static bool TryHandleKeepAlive(int packetId, ref PayloadReader reader, Action<byte[]> send)
+    {
+        if (packetId != PacketIds.PlayClientbound.KeepAlive)
+        {
+            return false;
+        }
+
+        if (reader.TryReadLong(out var keepAliveId) == DecodeStatus.Success)
+        {
+            send(PlayPackets.BuildKeepAliveReply(keepAliveId));
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// Handles transport-level clientbound play packets (KeepAlive, Ping, ChunkBatchFinished) in one shared path.
     /// </summary>
     /// <remarks>

@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Net.Sockets;
+using System.Threading.Channels;
 using Sharpcraft.Common.Network;
 
 namespace Sharpcraft.Client.Game;
@@ -16,9 +17,14 @@ internal sealed class LivePlaySession : IDisposable
 {
     private readonly MinecraftConnection _connection;
     private readonly BoundedReceiveQueue _incoming = new();
-    private readonly object _sendLock = new();
+    private readonly Channel<byte[]> _outgoing = Channel.CreateUnbounded<byte[]>(new UnboundedChannelOptions
+    {
+        SingleReader = true,
+        SingleWriter = false
+    });
     private readonly CancellationTokenSource _stop = new();
     private Task _pump = Task.CompletedTask;
+    private Task _writer = Task.CompletedTask;
     private volatile string _failure = string.Empty;
 
     /// <summary>Message used when the bounded receive queue rejects a packet.</summary>
@@ -39,9 +45,13 @@ internal sealed class LivePlaySession : IDisposable
     /// </remarks>
     internal Sharpcraft.Common.Network.DynamicRegistries? Registries { get; }
 
-    /// <summary>Starts the receive pump on a background task.</summary>
-    private void Start(CancellationToken cancellationToken) =>
-        _pump = Task.Run(() => PumpAsync(cancellationToken), CancellationToken.None);
+    /// <summary>Starts the receive pump and async send writer on background tasks.</summary>
+    private void Start(CancellationToken cancellationToken)
+    {
+        var linked = CancellationTokenSource.CreateLinkedTokenSource(_stop.Token, cancellationToken);
+        _pump = Task.Run(() => PumpAsync(linked.Token), CancellationToken.None);
+        _writer = Task.Run(() => WriteLoopAsync(linked.Token), CancellationToken.None);
+    }
 
     /// <summary>Reason the connection ended, or empty while it is alive.</summary>
     internal string Failure => _failure;
@@ -121,7 +131,7 @@ internal sealed class LivePlaySession : IDisposable
     /// <param name="body">Packet body without the length prefix.</param>
     internal bool TryDequeue(out byte[] body) => _incoming.TryDequeue(out body!);
 
-    /// <summary>Sends one packet body; failures mark the session dead instead of throwing.</summary>
+    /// <summary>Enqueues one packet body for async sending without blocking the caller thread.</summary>
     /// <param name="packet">Packet body to send.</param>
     internal bool Send(ReadOnlySpan<byte> packet)
     {
@@ -130,37 +140,54 @@ internal sealed class LivePlaySession : IDisposable
             return false;
         }
 
+        return _outgoing.Writer.TryWrite(packet.ToArray());
+    }
+
+    private async Task WriteLoopAsync(CancellationToken cancellationToken)
+    {
         try
         {
-            // The receive pump answers transport packets on its own thread, so every write to the stream is serialized:
-            // an interleaved frame would desynchronise the protocol, not merely arrive late.
-            lock (_sendLock)
+            var reader = _outgoing.Reader;
+            while (await reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false))
             {
-                _connection.Send(packet);
-            }
+                while (reader.TryRead(out var packet))
+                {
+                    _connection.SendWithoutFlush(packet);
+                }
 
-            return true;
+                _connection.Flush();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Shutdown.
         }
         catch (Exception exception) when (exception is IOException or SocketException or ObjectDisposedException)
         {
             _failure = exception.Message;
-            return false;
+            _stop.Cancel();
+        }
+        catch (Exception exception)
+        {
+            _failure = DescribePumpFailure(exception);
+            _stop.Cancel();
         }
     }
 
     /// <inheritdoc />
     public void Dispose()
     {
+        _outgoing.Writer.TryComplete();
         _stop.Cancel();
         _connection.Dispose();
 
         try
         {
-            _pump.Wait(TimeSpan.FromSeconds(1));
+            Task.WhenAll(_pump, _writer).Wait(TimeSpan.FromSeconds(1));
         }
         catch (AggregateException)
         {
-            // The pump ends by exception when the socket closes; that is the normal shutdown path.
+            // The pump/writer ends by exception when the socket closes; that is the normal shutdown path.
         }
 
         _stop.Dispose();
@@ -180,15 +207,10 @@ internal sealed class LivePlaySession : IDisposable
     }
 
     /// <summary>
-    /// Answers the transport-level packets (keep-alive, ping, chunk batch finished) on the pump thread and drops them.
+    /// Answers only KeepAlive on the pump thread so the 30s server timeout cannot fire while startup is busy.
+    /// Ping and ChunkBatchFinished stay in the incoming queue so the game thread answers them in exact packet order
+    /// after applying preceding world/chunk/entity state.
     /// </summary>
-    /// <remarks>
-    /// A server drops a client that leaves its keep-alives unanswered for thirty seconds, and the client only drains its
-    /// queue once a frame runs: startup (meshing, the first frame request, the window appearing) can outlast that, which
-    /// killed the session before it ever streamed a chunk (T-792). These three packets only need a reply, never game
-    /// state, and the reply encoding is the same shared implementation the preload and the game thread call, so this is
-    /// not a second dispatcher: chunks still reach the world through <see cref="InteractiveSession"/>, on the game thread.
-    /// </remarks>
     private bool TryAnswerTransport(byte[] body)
     {
         var reader = new PayloadReader(body);
@@ -197,29 +219,11 @@ internal sealed class LivePlaySession : IDisposable
             return false;
         }
 
-        var keepAlives = 0;
-        var pings = 0;
-        var batches = 0;
-        try
-        {
-            return PlaySession.TryHandleTransport(packetId, ref reader, SendFromPump, ref keepAlives, ref pings, ref batches);
-        }
-        catch (Exception exception) when (exception is IOException or SocketException or ObjectDisposedException)
-        {
-            _failure = exception.Message;
-            _stop.Cancel();
-            return true;
-        }
+        return PlaySession.TryHandleKeepAlive(packetId, ref reader, SendFromPump);
     }
 
-    /// <summary>Sends a transport reply from the pump thread, keeping the stream writes serialized.</summary>
-    private void SendFromPump(byte[] packet)
-    {
-        lock (_sendLock)
-        {
-            _connection.Send(packet);
-        }
-    }
+    /// <summary>Enqueues a keep-alive reply from the pump thread onto the async outbound channel.</summary>
+    private void SendFromPump(byte[] packet) => Send(packet);
 
     /// <summary>Formats a receive-pump fault so protocol/decode failures are surfaced instead of silently faulting the task.</summary>
     internal static string DescribePumpFailure(Exception exception) =>
