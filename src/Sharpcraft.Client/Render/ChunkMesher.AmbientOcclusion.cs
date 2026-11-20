@@ -278,10 +278,17 @@ public static partial class ChunkMesher
             var light = vertex switch { 0 => light0, 1 => light1, 2 => light2, _ => light3 };
             raw[vertex] = new VertexLighting(
                 ambientOcclusion ? Math.Clamp(shade[vertex], 0f, 1f) : 1f,
-                light.Block / 240f,
-                light.Sky / 240f);
+                TruncatedToLevel(light.Block) / 240f,
+                TruncatedToLevel(light.Sky) / 240f);
         }
     }
+
+    /// <summary>
+    /// Drops the sub-level part of a blended light value, which is what the reference does by reading the result back
+    /// as a four-bit level for a whole-face vertex (ref LightCoordsUtil.block/sky). The partial-face branch keeps the
+    /// fraction because it feeds the value straight into the weighted blend.
+    /// </summary>
+    private static int TruncatedToLevel(int value240) => (value240 >> 4) << 4;
 
     /// <summary>
     /// The partial-face branch: each corner's shade is weighted by how much of the quad it covers, and the four blended
@@ -437,4 +444,24 @@ public static partial class ChunkMesher
     /// <summary>Neighbour offset of one of the four corners of a face.</summary>
     private static (int X, int Y, int Z) CornerOffset(int direction, int corner) =>
         NeighbourOffset(CornerNeighbours[(direction * 4) + corner]);
+
+    /// <summary>Test access to the reference blend, in the same 0..240 channel form the pass uses.</summary>
+    internal static (int Block, int Sky) SmoothBlendForTest(
+        int block1, int sky1, int block2, int sky2, int block3, int sky3, int centerBlock, int centerSky) =>
+        SmoothBlend(
+            new CornerSample(1f, block1, sky1),
+            new CornerSample(1f, block2, sky2),
+            new CornerSample(1f, block3, sky3),
+            new CornerSample(1f, centerBlock, centerSky));
+
+    /// <summary>Test access to the reference weighted blend.</summary>
+    internal static (int Block, int Sky) SmoothWeightedBlendForTest(
+        int block1, int sky1, int block2, int sky2, int block3, int sky3, int block4, int sky4,
+        float weight1, float weight2, float weight3, float weight4) =>
+        SmoothWeightedBlend(
+            (block1, sky1), (block2, sky2), (block3, sky3), (block4, sky4),
+            weight1, weight2, weight3, weight4);
+
+    /// <summary>Test access to the whole-face level truncation.</summary>
+    internal static int TruncatedToLevelForTest(int value240) => TruncatedToLevel(value240);
 }

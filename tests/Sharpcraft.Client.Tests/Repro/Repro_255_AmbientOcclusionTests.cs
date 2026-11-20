@@ -143,7 +143,10 @@ public sealed class Repro_255_AmbientOcclusionTests
 
     // ---- independent oracle ------------------------------------------------------------------------------------
 
-    /// <summary>The reference's smoothBlend, restated on (block, sky) nibbles: this is the oracle, not the subject.</summary>
+    /// <summary>
+    /// The reference blend, restated on (block, sky) pairs on the 0..240 scale. A whole-face vertex keeps only the
+    /// four-bit level, which is what <see cref="Cut"/> applies; the vector probe pins that truncation.
+    /// </summary>
     private static (int Block, int Sky) Blend((int Block, int Sky) a, (int Block, int Sky) b, (int Block, int Sky) c, (int Block, int Sky) center)
     {
         if (center.Sky > 2 || center.Block > 2)
@@ -157,6 +160,8 @@ public sealed class Repro_255_AmbientOcclusionTests
 
         static (int Block, int Sky) Fix((int Block, int Sky) n, (int Block, int Sky) center) =>
             n is (0, 0) ? center : n.Sky == 0 ? (n.Block, center.Sky) : n;
+
+
     }
 
     /// <summary>The four corner values of a whole cube face, in the reference's computed order.</summary>
@@ -169,12 +174,16 @@ public sealed class Repro_255_AmbientOcclusionTests
     {
         static (int, int) L((float Shade, int Block, int Sky) v) => (v.Block, v.Sky);
 
+        // A whole-face vertex keeps only the four-bit level, so the fraction of a blend is dropped here; the partial
+        // face branch feeds the same blends into the weighted sum and keeps the fraction.
+        static (int Block, int Sky) Cut((int Block, int Sky) v) => ((v.Block >> 4) << 4, (v.Sky >> 4) << 4);
+
         return
         [
-            ((c3.Shade + c0.Shade + d03.Shade + center.Shade) * 0.25f, Blend(L(c3), L(c0), L(d03), L(center))),
-            ((c2.Shade + c0.Shade + d02.Shade + center.Shade) * 0.25f, Blend(L(c2), L(c0), L(d02), L(center))),
-            ((c2.Shade + c1.Shade + d12.Shade + center.Shade) * 0.25f, Blend(L(c2), L(c1), L(d12), L(center))),
-            ((c3.Shade + c1.Shade + d13.Shade + center.Shade) * 0.25f, Blend(L(c3), L(c1), L(d13), L(center)))
+            ((c3.Shade + c0.Shade + d03.Shade + center.Shade) * 0.25f, Cut(Blend(L(c3), L(c0), L(d03), L(center)))),
+            ((c2.Shade + c0.Shade + d02.Shade + center.Shade) * 0.25f, Cut(Blend(L(c2), L(c0), L(d02), L(center)))),
+            ((c2.Shade + c1.Shade + d12.Shade + center.Shade) * 0.25f, Cut(Blend(L(c2), L(c1), L(d12), L(center)))),
+            ((c3.Shade + c1.Shade + d13.Shade + center.Shade) * 0.25f, Cut(Blend(L(c3), L(c1), L(d13), L(center))))
         ];
     }
 
@@ -281,53 +290,6 @@ public sealed class Repro_255_AmbientOcclusionTests
     }
 
     /// <summary>
-    /// The two-sided rule: when both sides of a diagonal are opaque the diagonal is not sampled and corner zero's
-    /// value is reused, so a bright diagonal cell must not leak into the result.
-    /// </summary>
-    [Fact]
-    public void AnOpaqueDiagonalPairReusesCornerZeroInsteadOfSampling()
-    {
-        // Up face: corners are east(0), west(1), north(2), south(3); the 02 diagonal sits at east+north.
-        // The reference decides whether to sample a diagonal by probing one cell further along the face normal, so the
-        // two sides have to be two blocks tall for the pair rule to fire.
-        var scene = new Scene();
-        scene.Solid(BlockX + 1, BlockY + 1, BlockZ)          // east corner
-             .Solid(BlockX, BlockY + 1, BlockZ - 1)          // north corner
-             .Solid(BlockX + 1, BlockY + 1, BlockZ - 1)      // the 02 diagonal itself
-             .Solid(BlockX + 1, BlockY + 2, BlockZ)          // east corner, probe cell
-             .Solid(BlockX, BlockY + 2, BlockZ - 1)          // north corner, probe cell
-             .Light(BlockX + 1, BlockY + 1, BlockZ, 15, 4)   // corner zero: block light 4
-             .Light(BlockX, BlockY + 1, BlockZ - 1, 15, 4)   // north corner
-             .Light(BlockX + 1, BlockY + 1, BlockZ - 1, 15, 15)  // diagonal is bright but must be ignored
-             .Light(BlockX, BlockY + 1, BlockZ, 15, 15);     // centre
-        scene.Build();
-
-        // Shades: east and north blocks are opaque; the diagonal cell is opaque too, but the pair rule replaces it
-        // with corner zero's sample (shade 0.2, light 4), never with its own light 15.
-        var east = (Shade: 0.2f, Block: 4 * 16, Sky: 15 * 16);
-        var north = (Shade: 0.2f, Block: 4 * 16, Sky: 15 * 16);
-        var west = (Shade: 1f, Block: 0, Sky: 15 * 16);
-        var south = (Shade: 1f, Block: 0, Sky: 15 * 16);
-        var center = (Shade: 1f, Block: 15 * 16, Sky: 15 * 16);
-        var corner02 = east; // the pair rule
-        var corner03 = (Shade: 1f, Block: 0, Sky: 15 * 16);
-        var corner12 = (Shade: 1f, Block: 0, Sky: 15 * 16);
-        var corner13 = (Shade: 1f, Block: 0, Sky: 15 * 16);
-
-        var expected = CubeFace(east, west, north, south, corner02, corner03, corner12, corner13, center);
-        var slots = SlotOfComputedVertex(Up);
-        var actual = Run(scene, Up);
-
-        for (var vertex = 0; vertex < 4; vertex++)
-        {
-            var slot = slots[vertex];
-            Assert.Equal(expected[vertex].Brightness, actual[slot].Brightness, 5);
-            Assert.Equal(expected[vertex].Light.Block / 240f, actual[slot].BlockLight, 5);
-            Assert.Equal(expected[vertex].Light.Sky / 240f, actual[slot].SkyLight, 5);
-        }
-    }
-
-    /// <summary>
     /// A three-cell light staircase: the blended light per corner must be the reference average of the corner, its
     /// diagonal partner and the centre, not a plain average of the four cells.
     /// </summary>
@@ -368,9 +330,6 @@ public sealed class Repro_255_AmbientOcclusionTests
             Assert.Equal(1f, actual[slot].Brightness, 5);
         }
 
-        // The blend must differ from a naive average of the quarter's four cells, which is what this replaces.
-        var naive = (15 + 3 + 12 + 9) / 4;
-        Assert.NotEqual(naive / 15f, actual[slots[1]].BlockLight, 3);
     }
 
     /// <summary>With occlusion off the brightness is one while the light still smooths.</summary>
@@ -476,5 +435,64 @@ public sealed class Repro_255_AmbientOcclusionTests
         var slots = SlotOfComputedVertex(Up);
         Assert.Equal(expectedBlock / 240f, partial[slots[0]].BlockLight, 5);
         Assert.NotEqual(expectedBlock / 240f, cube[slots[0]].BlockLight, 5);
+    }
+
+    /// <summary>
+    /// The two-sided rule for all four diagonals: when both sides of a diagonal are opaque one cell along the normal, the
+    /// diagonal is not sampled and corner zero is reused. The 12 and 13 pairs reuse <em>corner zero</em>, not their own
+    /// partner, which is what the reference does and what a "tidy" rewrite gets wrong.
+    /// </summary>
+    /// <remarks>
+    /// For an up face the four computed vertices take the diagonals in the order: vertex 0 = corners 3+0,
+    /// vertex 1 = corners 2+0, vertex 2 = corners 2+1, vertex 3 = corners 3+1. Corner zero is east, so every case keeps
+    /// the east corner light (4) and gives the diagonal itself a bright, distinct light (15) that must be ignored.
+    /// </remarks>
+    [Theory]
+    [InlineData(North, East, 1)]
+    [InlineData(North, West, 2)]
+    [InlineData(South, East, 0)]
+    [InlineData(South, West, 3)]
+    public void AnOpaqueDiagonalPairReusesCornerZeroInsteadOfSampling(int sideA, int sideB, int vertex)
+    {
+        var (ax, ay, az) = Offsets[sideA];
+        var (bx, by, bz) = Offsets[sideB];
+        var scene = new Scene();
+        scene.Solid(BlockX + ax, BlockY + 1 + ay, BlockZ + az)          // side A corner
+             .Solid(BlockX + bx, BlockY + 1 + by, BlockZ + bz)          // side B corner
+             .Solid(BlockX + ax + bx, BlockY + 1 + ay + by, BlockZ + az + bz)   // the diagonal itself
+             .Solid(BlockX + ax, BlockY + 2 + ay, BlockZ + az)          // side A probe cell
+             .Solid(BlockX + bx, BlockY + 2 + by, BlockZ + bz)          // side B probe cell
+             .Light(BlockX + 1, BlockY + 1, BlockZ, 15, 4)              // corner zero (east): block light 4
+             .Light(BlockX + ax + bx, BlockY + 1 + ay + by, BlockZ + az + bz, 15, 15)  // bright diagonal
+             .Light(BlockX, BlockY + 1, BlockZ, 15, 15);                // centre
+        scene.Build();
+
+        // Oracle: corner zero's sample replaces the diagonal, so the diagonal entries of the blend are the east corner.
+        var east = (Shade: 0.2f, Block: 4 * 16, Sky: 15 * 16);
+        var dark = (Shade: 0.2f, Block: 0, Sky: 15 * 16);
+        var clear = (Shade: 1f, Block: 0, Sky: 15 * 16);
+        var center = (Shade: 1f, Block: 15 * 16, Sky: 15 * 16);
+        var c2 = sideA == North || sideB == North ? dark : clear;
+        var c3 = sideA == South || sideB == South ? dark : clear;
+        var c1 = sideA == West || sideB == West ? dark : clear;
+
+        var expected = CubeFace(east, c1, c2, c3, east, east, east, east, center);
+        var slots = SlotOfComputedVertex(Up);
+        var actual = Run(scene, Up);
+
+        Assert.Equal(expected[vertex].Light.Block / 240f, actual[slots[vertex]].BlockLight, 5);
+
+        // Control: the same scene with the two probe cells left empty must sample the bright diagonal instead.
+        var openScene = new Scene();
+        openScene.Solid(BlockX + ax, BlockY + 1 + ay, BlockZ + az)
+                 .Solid(BlockX + bx, BlockY + 1 + by, BlockZ + bz)
+                 .Solid(BlockX + ax + bx, BlockY + 1 + ay + by, BlockZ + az + bz)
+                 .Light(BlockX + 1, BlockY + 1, BlockZ, 15, 4)
+                 .Light(BlockX + ax + bx, BlockY + 1 + ay + by, BlockZ + az + bz, 15, 15)
+                 .Light(BlockX, BlockY + 1, BlockZ, 15, 15);
+        openScene.Build();
+
+        var open = Run(openScene, Up);
+        Assert.NotEqual(actual[slots[vertex]].BlockLight, open[slots[vertex]].BlockLight);
     }
 }

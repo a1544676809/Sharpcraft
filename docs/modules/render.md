@@ -113,7 +113,7 @@
   - **整面**：四个角值原样分配，一个计算顶点一组，不做权重混合。
   - **部分面**（`facePartial && doNonCubicWeight`；26.3 六面该标志全为 `true`，因此实际只由四边形形状决定）：按 `faceShape × vertNWeights` 的八个形状项两两相乘得到四个权重，对四个角值加权求和；**同一组权重**同时用于亮度与光照坐标。
 - **顶点重映射**：原版把"计算顶点"重排到烘焙四边形的顶点序；本仓四边形的角序由合并的 UV 轴决定，因此两张表串联 `ourSlot = QuadCornerForFaceVertex[FaceVertexRemap[computed]]`，六面各自用"单个遮挡物只压暗它接触的两个角"的测试定位。
-- **量化**：光照在 0..240 尺度（原版 nibble 打包后的量纲）混合并逐通道截断，写入顶点时量化到 0..255；原版 `ARGB.gray` 用截断、本仓顶点写入用四舍五入，单通道最多差 1/255。
+- **量化**：光照在 0..240 尺度（原版 nibble 打包后的量纲）混合并逐通道截断。**整面分支再丢掉小数位**——原版把混合结果写回光照坐标后按四位半字节读取，小数被移出（真值向量：4/15、4/15、4/15、15/15 混合得 level 6，而精确平均是 6.75）；**部分面分支保留小数**，因为它把混合结果直接喂给加权混合。写入顶点时量化到 0..255，原版 `ARGB.gray` 用截断、本仓顶点写入用四舍五入，单通道最多差 1/255。
 
 | 量 | 原版出处 | 常量 / 约定 |
 | --- | --- | --- |
@@ -125,6 +125,7 @@
 | 朝向亮度 | `ref://mc-26.3-analysis/src/net/minecraft/world/level/CardinalLighting.java` `DEFAULT` | 下 0.5 / 上 1.0 / 南北 0.8 / 东西 0.6 |
 | 遮蔽判据 | `ref://mc-26.3-analysis/src/net/minecraft/world/level/block/state/BlockBehaviour.java:310` | 碰撞形状满方块 → 0.2，否则 1.0 |
 | 通道量化 | `ref://mc-26.3-analysis/src/net/minecraft/util/ARGB.java:341` | `floor(value × 255)` |
+| 真值向量（混合数学 14 组） | `ref://mc-26.3-analysis/vectors/LightBlendVectors.java`（`run-probe.ps1 -Name LightBlendVectors`，跑在 26.3 客户端 jar 上） | 10 组 `smoothBlend` + 4 组 `smoothWeightedBlend`，逐组断言于 `Repro_255_LightBlendVectorsTests` |
 
 **已加载边界处理**：位于加载区域边缘的面会采样到不属于任何区块的格子，此时该格按 0 光处理（与原版越界读 0 一致）；`Neighbourhood.TryGetLight` 对世界上下边界同样返回 0，不再越界索引。
 
