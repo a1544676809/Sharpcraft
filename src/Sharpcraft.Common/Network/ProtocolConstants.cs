@@ -185,6 +185,9 @@ public static class PacketIds
     /// <summary>Server to client, <see cref="ConnectionState.Play"/> (only used ids listed).</summary>
     public static class PlayClientbound
     {
+        /// <summary>Delimit a bundle of packets that must be applied atomically on the main thread.</summary>
+        public const int BundleDelimiter = 0;
+
         /// <summary>Health and food update for the local player.</summary>
         /// <remarks>Reference registration dump: play clientbound 106.</remarks>
         public const int SetHealth = 106;

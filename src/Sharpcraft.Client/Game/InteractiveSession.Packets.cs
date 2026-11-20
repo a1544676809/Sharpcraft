@@ -28,11 +28,45 @@ internal sealed partial class InteractiveSession
 
         while (_live.TryDequeue(out var body))
         {
-            var reader = new PayloadReader(body);
-            if (reader.TryReadVarInt(out var packetId) != DecodeStatus.Success)
+            var peekReader = new PayloadReader(body);
+            if (peekReader.TryReadVarInt(out var peekPacketId) == DecodeStatus.Success &&
+                peekPacketId == PacketIds.PlayClientbound.BundleDelimiter)
             {
+                if (_inBundle)
+                {
+                    _inBundle = false;
+                    foreach (var bundled in _bundleBuffer)
+                    {
+                        DispatchPacket(bundled);
+                    }
+
+                    _bundleBuffer.Clear();
+                }
+                else
+                {
+                    _inBundle = true;
+                }
+
                 continue;
             }
+
+            if (_inBundle)
+            {
+                _bundleBuffer.Add(body);
+                continue;
+            }
+
+            DispatchPacket(body);
+        }
+    }
+
+    private void DispatchPacket(byte[] body)
+    {
+        var reader = new PayloadReader(body);
+        if (reader.TryReadVarInt(out var packetId) != DecodeStatus.Success)
+        {
+            return;
+        }
 
             // Host-only join packet capture (MC_PACKET_LOG=1): id/length/prefix of the first packets, so the clock source
             // can be found against the reference (principle 13: parsed here, in the host; no LINQ on this hot path).
@@ -41,6 +75,15 @@ internal sealed partial class InteractiveSession
                 _packetLogCount++;
                 var prefix = body[..Math.Min(24, body.Length)];
                 Console.WriteLine($"pkt#{_packetLogCount} id={packetId} len={body.Length} hex={Convert.ToHexString(prefix)}");
+            }
+
+            if (packetId == PacketIds.PlayClientbound.ChunkBatchFinished)
+            {
+                var batchSize = 0;
+                reader.TryReadVarInt(out batchSize);
+                _chunkBatchCalculator.OnBatchFinished(batchSize);
+                _live!.Send(PlayPackets.BuildChunkBatchReceived(_chunkBatchCalculator.DesiredChunksPerTick));
+                return;
             }
 
             // Transport-level replies (keep-alive, ping, chunk batch) share one implementation with the warm-up
@@ -54,9 +97,10 @@ internal sealed partial class InteractiveSession
                     pkt => { _live!.Send(pkt); },
                     ref transportKeepAlives,
                     ref transportPings,
-                    ref transportBatches))
+                    ref transportBatches,
+                    _chunkBatchCalculator.DesiredChunksPerTick))
             {
-                continue;
+                return;
             }
 
             switch (packetId)
@@ -562,7 +606,7 @@ internal sealed partial class InteractiveSession
                     break;
 
                 case PacketIds.PlayClientbound.ChunkBatchStart:
-                    // Empty marker packet; batch-finished (id 11) drives the ack. Nothing to apply.
+                    _chunkBatchCalculator.OnBatchStart();
                     break;
 
                 case PacketIds.PlayClientbound.ForgetLevelChunk:
@@ -753,6 +797,5 @@ internal sealed partial class InteractiveSession
 
                     break;
             }
-        }
     }
 }

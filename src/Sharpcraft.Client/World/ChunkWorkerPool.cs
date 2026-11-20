@@ -30,7 +30,9 @@ namespace Sharpcraft.Client.World;
 public sealed class ChunkWorkerPool : IDisposable
 {
     private readonly ClientWorld _world;
-    private readonly ConcurrentQueue<byte[]> _parseQueue = new();
+    private readonly object _parseGate = new();
+    private readonly PriorityQueue<byte[], (double Distance, long Sequence)> _parseQueue = new();
+    private long _parseSequence;
     // Nearest first: the chunk under the player is what they notice, and a plain queue would build whatever the network
     // happened to deliver first. Ties fall back to arrival order through the sequence number.
     private readonly object _meshGate = new();
@@ -187,10 +189,38 @@ public sealed class ChunkWorkerPool : IDisposable
             return false;
         }
 
+        var distance = ParsePacketDistanceToView(body);
+        lock (_parseGate)
+        {
+            _parseQueue.Enqueue(body, (distance, ++_parseSequence));
+        }
+
         Interlocked.Increment(ref _parsePending);
-        _parseQueue.Enqueue(body);
         _signal.Release();
         return true;
+    }
+
+    private double ParsePacketDistanceToView(byte[] body)
+    {
+        var reader = new PayloadReader(body);
+        if (reader.TryReadVarInt(out _) != DecodeStatus.Success ||
+            reader.TryReadInt(out var chunkX) != DecodeStatus.Success ||
+            reader.TryReadInt(out var chunkZ) != DecodeStatus.Success)
+        {
+            return 0d;
+        }
+
+        var dx = chunkX + 0.5f - Volatile.Read(ref _viewChunkX);
+        var dz = chunkZ + 0.5f - Volatile.Read(ref _viewChunkZ);
+        return (dx * dx) + (dz * dz);
+    }
+
+    private bool TryTakeParseBody(out byte[] body)
+    {
+        lock (_parseGate)
+        {
+            return _parseQueue.TryDequeue(out body!, out _);
+        }
     }
 
     /// <summary>Queues a chunk for meshing.</summary>
@@ -351,7 +381,7 @@ public sealed class ChunkWorkerPool : IDisposable
                 return;
             }
 
-            if (_parseQueue.TryDequeue(out var body))
+            if (TryTakeParseBody(out var body))
             {
                 Interlocked.Decrement(ref _parsePending);
                 Parse(body);
