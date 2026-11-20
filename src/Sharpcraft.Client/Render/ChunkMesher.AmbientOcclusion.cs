@@ -137,7 +137,7 @@ public static partial class ChunkMesher
         2, 3, 0, 1,   // +X east
         3, 0, 1, 2,   // -Y down
         0, 1, 2, 3,   // +Y up
-        2, 1, 0, 3,   // -Z north
+        2, 3, 0, 1,   // -Z north
         3, 0, 1, 2    // +Z south
     ];
 
