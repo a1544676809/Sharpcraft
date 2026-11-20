@@ -13,7 +13,7 @@ public sealed class PacketBundleAssemblerTests
     [Fact]
     public void BundledPacketsAreBufferedUntilClosingDelimiterAndDispatchedAtomicallyInOrder()
     {
-        var assembler = new PacketBundleAssembler();
+        var assembler = new PacketBundleAssembler(PacketIds.PlayClientbound.BundleDelimiter);
         var dispatched = new List<byte[]>();
         var delimiter = new byte[] { (byte)PacketIds.PlayClientbound.BundleDelimiter };
 
@@ -40,7 +40,7 @@ public sealed class PacketBundleAssemblerTests
     [Fact]
     public void UnclosedBundleFlushesWhenReachingMaxBundlePacketsWithoutDroppingOrGrowingUnboundedly()
     {
-        var assembler = new PacketBundleAssembler();
+        var assembler = new PacketBundleAssembler(PacketIds.PlayClientbound.BundleDelimiter);
         var dispatched = new List<byte[]>();
         var delimiter = new byte[] { (byte)PacketIds.PlayClientbound.BundleDelimiter };
 

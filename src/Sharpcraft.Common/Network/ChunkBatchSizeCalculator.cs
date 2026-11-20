@@ -9,11 +9,7 @@ namespace Sharpcraft.Common.Network;
 /// Tracks per-chunk receive/processing duration and computes the desired chunks per tick
 /// for <c>chunk_batch_received</c> flow control, matching vanilla <c>ChunkBatchSizeCalculator</c>.
 /// </summary>
-[Sharpcraft.Common.Reference.ReferenceClass(
-    "net.minecraft.client.multiplayer.ChunkBatchSizeCalculator",
-    "ref://mc-26.3-analysis/src/net/minecraft/client/multiplayer/ChunkBatchSizeCalculator.java",
-    Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror,
-    Status = Sharpcraft.Common.Reference.ReferenceStatus.Full)]
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.multiplayer.ChunkBatchSizeCalculator", "ref://mc-26.3-analysis/src/net/minecraft/client/multiplayer/ChunkBatchSizeCalculator.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full)]
 public sealed class ChunkBatchSizeCalculator
 {
     private const int MaxOldSamplesWeight = 49;

@@ -35,7 +35,7 @@ internal sealed partial class InteractiveSession
     private readonly ChunkWorkerPool? _pool;
     private readonly EntityTracker _entities = new();
     private readonly ChunkBatchSizeCalculator _chunkBatchCalculator = new();
-    private readonly PacketBundleAssembler _bundleAssembler = new();
+    private readonly PacketBundleAssembler _bundleAssembler = new(PacketIds.PlayClientbound.BundleDelimiter);
     private readonly PlayerListRoster _playerList = new();
     private readonly ChatInput _chat = new();
     private readonly ChatLog _chatLog = new();

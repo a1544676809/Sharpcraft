@@ -7,11 +7,7 @@ namespace Sharpcraft.Common.Network;
 /// Buffers sub-packets between <c>bundle_delimiter</c> (id 0) markers and dispatches them
 /// atomically in arrival order, matching vanilla <c>BundlerInfo.BUNDLE_SIZE_LIMIT</c> (4096).
 /// </summary>
-[Sharpcraft.Common.Reference.ReferenceClass(
-    "net.minecraft.network.protocol.BundlerInfo",
-    "ref://mc-26.3-analysis/src/net/minecraft/network/protocol/BundlerInfo.java",
-    Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror,
-    Status = Sharpcraft.Common.Reference.ReferenceStatus.Full)]
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.network.protocol.BundlerInfo", "ref://mc-26.3-analysis/src/net/minecraft/network/protocol/BundlerInfo.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full)]
 public sealed class PacketBundleAssembler
 {
     /// <summary>Upper bound on packets inside a single bundle, matching vanilla <c>BundlerInfo.BUNDLE_SIZE_LIMIT</c>.</summary>
@@ -21,6 +17,11 @@ public sealed class PacketBundleAssembler
     private bool _inBundle;
 
     /// <summary>True while inside an open <c>bundle_delimiter</c> pair.</summary>
+    private readonly int _delimiterPacketId;
+
+    /// <summary>Uses the play clientbound bundle delimiter the session dispatches on.</summary>
+    public PacketBundleAssembler(int delimiterPacketId) => _delimiterPacketId = delimiterPacketId;
+
     public bool InBundle => _inBundle;
 
     /// <summary>Number of sub-packets currently buffered waiting for the closing delimiter.</summary>
@@ -38,7 +39,7 @@ public sealed class PacketBundleAssembler
 
         var peekReader = new PayloadReader(body);
         if (peekReader.TryReadVarInt(out var packetId) == DecodeStatus.Success &&
-            packetId == PacketIds.PlayClientbound.BundleDelimiter)
+            packetId == _delimiterPacketId)
         {
             if (_inBundle)
             {
