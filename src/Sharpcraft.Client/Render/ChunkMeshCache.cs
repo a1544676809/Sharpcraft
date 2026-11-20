@@ -50,8 +50,9 @@ public sealed class ChunkMeshCache
         bool merge,
         BlockModelSet? models = null,
         Sharpcraft.Common.Registries.BlockStateLayout? layout = null,
-        BiomeTint? tint = null) =>
-        ChunkMesher.Mesh(world, airState: 0, maxBlocks: 2_000_000, sprites: sprites, merge: merge, models: models, layout: layout, tint: tint);
+        BiomeTint? tint = null,
+        bool ambientOcclusion = true) =>
+        ChunkMesher.Mesh(world, airState: 0, maxBlocks: 2_000_000, sprites: sprites, merge: merge, models: models, layout: layout, tint: tint, ambientOcclusion: ambientOcclusion);
 
     /// <summary>
     /// Meshes one chunk from an explicit parameter set, for callers that hold no cache (the offscreen frame).
@@ -84,10 +85,11 @@ public sealed class ChunkMeshCache
 
         bool merge,
         int maxBlocks = 2_000_000,
-        BlockModelSet? models = null) =>
+        BlockModelSet? models = null,
+        bool ambientOcclusion = true) =>
         ChunkMesher.MeshChunk(
             world, chunk, airState: 0, solid, maxBlocks: maxBlocks, sprites: sprites, translucent: translucent,
-            layout: layout, cutout: cutout, tint: tint, merge: merge, models: models);
+            layout: layout, cutout: cutout, tint: tint, merge: merge, models: models, ambientOcclusion: ambientOcclusion);
 
     /// <summary>Chunks re-meshed by the last synchronous <see cref="Build"/> call.</summary>
     public int LastRemeshedChunks { get; private set; }

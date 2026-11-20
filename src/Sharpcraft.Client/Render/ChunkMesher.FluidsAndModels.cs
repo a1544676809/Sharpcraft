@@ -50,12 +50,21 @@ public static partial class ChunkMesher
         BlockSpriteMap sprites,
         BlockModelSet models,
         BiomeTint? tint = null,
-        Sharpcraft.Common.Registries.BlockStateLayout? layout = null)
+        Sharpcraft.Common.Registries.BlockStateLayout? layout = null,
+        bool ambientOcclusion = true)
     {
         var nb = neighbourhood;
 
         // Hoisted out of the block loop so the per-face light table is one stack frame, not one per block (CA2014).
         Span<(float Sky, float Block)> faceLights = stackalloc (float, float)[6];
+
+        // One sample set per quad of the block, so the model path lights each corner the way the cube path does. The
+        // buffer is hoisted for the same reason; a model with more quads than this keeps the single-light fallback.
+        Span<QuadCornerSamples> quadSamples = stackalloc QuadCornerSamples[MaxModelQuads];
+
+        // One reused sample set per (direction, cubic) pair, so a multi-element model does not sample a face twice.
+        Span<QuadCornerSamples> sharedSamples = stackalloc QuadCornerSamples[12];
+        Span<bool> sharedSet = stackalloc bool[12];
 
         for (var y = 0; y < 16; y++)
         {
@@ -88,6 +97,40 @@ public static partial class ChunkMesher
                             : (sky / 15f, block / 15f);
                     }
 
+                    var sampleCount = 0;
+                    if (ModelSharesQuadSamples(quads.Length))
+                    {
+                        // Sampling depends on the direction and on whether the face sits on the block surface, not on the
+                        // quad shape, so every quad of the same (direction, cubic) shares one set. A model with two
+                        // elements therefore samples each face once instead of twice.
+                        sharedSet.Clear();
+                        for (var index = 0; index < quads.Length; index++)
+                        {
+                            var modelQuad = quads[index].Quad;
+                            var faceIndex = BlockModelSet.FaceIndex(modelQuad.Direction);
+                            if (faceIndex < 0)
+                            {
+                                continue;
+                            }
+
+                            var direction = DirectionOfFace(faceIndex);
+                            var bounds = ModelQuadBounds(modelQuad);
+                            var cubic = QuadFaceCubic(
+                                direction, bounds, (baseX + x, baseY + y, baseZ + z), nb, sprites, layout);
+                            var key = (direction * 2) + (cubic ? 1 : 0);
+
+                            if (!sharedSet[key])
+                            {
+                                sharedSamples[key] = SampleQuadCorners(
+                                    nb, direction, (baseX + x, baseY + y, baseZ + z), cubic, sprites, layout);
+                                sharedSet[key] = true;
+                            }
+
+                            quadSamples[index] = sharedSamples[key];
+                            sampleCount = Math.Max(sampleCount, index + 1);
+                        }
+                    }
+
                     BlockModelSet.Emit(
                         buffer,
                         quads,
@@ -114,10 +157,50 @@ public static partial class ChunkMesher
                             return neighbour != 0 && ShouldCullFace(state, neighbour, sprites, null);
                         },
                         tintColour,
-                        faceLights);
+                        faceLights,
+                        quadSamples[..sampleCount],
+                        ambientOcclusion);
                 }
             }
         }
+    }
+
+    /// <summary>Most quads one block model may have before the model path keeps the single-light fallback.</summary>
+    internal const int MaxModelQuads = 32;
+
+    /// <summary>Whether a model of this size still gets per-corner ambient occlusion.</summary>
+    /// <param name="quadCount">Quads of the model.</param>
+    /// <remarks>
+    /// The sample buffer is a stack allocation with a compile time bound, so a model past it keeps one light per face
+    /// instead of growing the stack. Registered as SIM-MODEL-QUAD-COUNT-CAP / R-051.
+    /// </remarks>
+    internal static bool ModelSharesQuadSamples(int quadCount) => quadCount <= MaxModelQuads;
+
+    /// <summary>Our face direction constant for one entry of <see cref="BlockModelSet.FaceIndex"/>.</summary>
+    private static int DirectionOfFace(int faceIndex) => faceIndex switch
+    {
+        0 => NegativeY,
+        1 => PositiveY,
+        2 => NegativeZ,
+        3 => PositiveZ,
+        4 => NegativeX,
+        _ => PositiveX
+    };
+
+    /// <summary>The quad's own bounds in block units, which is what the reference's shape test reads.</summary>
+    private static (float MinX, float MaxX, float MinY, float MaxY, float MinZ, float MaxZ) ModelQuadBounds(
+        Sharpcraft.Client.Assets.ModelQuad quad)
+    {
+        var min = quad.V0.Position;
+        var max = quad.V0.Position;
+
+        foreach (var vertex in (ReadOnlySpan<Sharpcraft.Client.Assets.ModelVertex>)[quad.V1, quad.V2, quad.V3])
+        {
+            min = System.Numerics.Vector3.Min(min, vertex.Position);
+            max = System.Numerics.Vector3.Max(max, vertex.Position);
+        }
+
+        return (min.X, max.X, min.Y, max.Y, min.Z, max.Z);
     }
 
     private static void EmitSectionFluids(

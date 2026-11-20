@@ -194,7 +194,7 @@ public static partial class ChunkMesher
 
             if (models is not null && sprites is not null)
             {
-                EmitSectionModels(neighbourhood, section, baseX, baseY, baseZ, buffer, sprites, models, tint, layout);
+                EmitSectionModels(neighbourhood, section, baseX, baseY, baseZ, buffer, sprites, models, tint, layout, ambientOcclusion);
             }
         }
 
@@ -464,7 +464,7 @@ public static partial class ChunkMesher
     }
 
     /// <summary>The two in-plane axes used for merging, per face direction.</summary>
-    private static (int U, int V) InPlaneAxes(int direction) => direction switch
+    internal static (int U, int V) InPlaneAxes(int direction) => direction switch
     {
         NegativeX or PositiveX => (2, 1),   // u = Z, v = Y
         NegativeY or PositiveY => (0, 2),   // u = X, v = Z
@@ -672,10 +672,30 @@ public static partial class ChunkMesher
             }
         }
 
-        var cornerOrigin = CornerShade(neighbourhood, direction, origin, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout, ambientOcclusion);
-        var cornerA = CornerShade(neighbourhood, direction, a, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout, ambientOcclusion);
-        var cornerB = CornerShade(neighbourhood, direction, b, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout, ambientOcclusion);
-        var cornerC = CornerShade(neighbourhood, direction, c, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout, ambientOcclusion);
+        // Ambient occlusion and smooth light come from the reference's per-quad pass: it samples the four corners, the
+        // four diagonals (with its own fallback rule) and the centre, then blends brightness and light separately. A
+        // merged quad covers a whole block face, so the shape test of that pass sees a cubic face.
+        Span<VertexLighting> lighting = stackalloc VertexLighting[4];
+        PrepareQuadLighting(
+            neighbourhood,
+            direction,
+            (x + baseX, y + baseY, z + baseZ),
+            ambientOcclusion,
+            sprites,
+            layout,
+            CubeFaceBoundsOf(direction),
+            lighting);
+
+        (float R, float G, float B, float Sky, float Block) Shaded(VertexLighting vertex)
+        {
+            var factor = shadeFactor * vertex.Brightness;
+            return (red * factor, green * factor, blue * factor, vertex.SkyLight, vertex.BlockLight);
+        }
+
+        var cornerOrigin = Shaded(lighting[0]);
+        var cornerA = Shaded(lighting[1]);
+        var cornerB = Shaded(lighting[2]);
+        var cornerC = Shaded(lighting[3]);
 
         // Still water and lava sit at fourteen sixteenths of a block, not at the block top. Without this the water surface
         // is exactly coplanar with an ice block's top face and the two fight for the same depth, which is what showed as
