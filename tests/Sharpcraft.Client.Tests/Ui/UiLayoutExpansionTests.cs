@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using Sharpcraft.Client.Ui;
+using Sharpcraft.Common.Imaging;
 using Sharpcraft.Framework.Rendering;
 using Xunit;
 
@@ -9,7 +10,7 @@ namespace Sharpcraft.Client.Tests.Ui;
 
 /// <summary>
 /// Pins the expanded XAML subset: XML entities, xmlns/x:Class, 9-point anchors, horizontal panels,
-/// dynamic bindings and zero-GC steady-state layout.
+/// explicit Width/Height/Margin, Shadow toggle, dynamic bindings and zero-GC steady-state layout.
 /// </summary>
 public sealed class UiLayoutExpansionTests
 {
@@ -53,6 +54,88 @@ public sealed class UiLayoutExpansionTests
     }
 
     [Fact]
+    public void ExplicitWidthHeightAndMarginPositionAnchoredPanel()
+    {
+        const string document = """
+<Screen Padding="10">
+  <StackPanel Anchor="BottomRight" Margin="4" Width="50" Height="20" Background="#FF222222">
+    <Spacer Width="0" Height="0" Background="#FFFFFFFF" />
+  </StackPanel>
+</Screen>
+""";
+
+        var root = UiMarkup.Parse(document);
+        var styles = UiStyles.Compile(root);
+        var geometry = new UiGeometry();
+
+        UiScreenLayout.Build(root, styles, 200f, 100f, geometry);
+
+        // Zero-sized Spacer emits no quad; StackPanel emits one quad at (10 + 180 - 50 - 4 = 136, 10 + 80 - 20 - 4 = 66).
+        Assert.Equal(1, geometry.QuadCount);
+        Assert.Equal(136f, geometry.Vertices[0], 3);
+        Assert.Equal(66f, geometry.Vertices[1], 3);
+        Assert.Equal(186f, geometry.Vertices[10], 3);
+        Assert.Equal(86f, geometry.Vertices[11], 3);
+    }
+
+    [Fact]
+    public void TextBlockShadowFalseSkipsShadowQuads()
+    {
+        var font = BitmapFont.FromSheet(SheetWithEveryGlyph(width: 2));
+        const string document = """
+<Screen Padding="0">
+  <TextBlock Text="AB" Colour="#FFFFFFFF" Shadow="false" />
+  <TextBlock Text="AB" Colour="#FFFFFFFF" Shadow="true" />
+</Screen>
+""";
+
+        var root = UiMarkup.Parse(document);
+        var styles = UiStyles.Compile(root);
+        var geometry = new UiGeometry();
+
+        UiScreenLayout.Build(root, styles, 200f, 100f, geometry, font);
+
+        // First TextBlock emits 2 foreground quads (Shadow="false"); second emits 4 quads (shadow + foreground per glyph).
+        Assert.Equal(6, geometry.QuadCount);
+    }
+
+    [Theory]
+    [InlineData("HP: {Binding Health}")]
+    [InlineData("{Binding }")]
+    [InlineData("{StaticResource Title}")]
+    public void MixedOrMalformedBindingThrowsAtCompileTime(string text)
+    {
+        var document = $"""
+<Screen>
+  <TextBlock Text="{text}" />
+</Screen>
+""";
+
+        var root = UiMarkup.Parse(document);
+        Assert.Throws<FormatException>(() => UiStyles.Compile(root));
+    }
+
+    [Fact]
+    public void BindingWithoutResolverOrNullReturnFallsBackToEmpty()
+    {
+        const string document = """
+<Screen>
+  <TextBlock Text="{Binding Health}" />
+</Screen>
+""";
+
+        var root = UiMarkup.Parse(document);
+        var styles = UiStyles.Compile(root);
+        var geometry = new UiGeometry();
+
+        UiScreenLayout.Build(root, styles, 200f, 100f, geometry);
+        Assert.Equal(0, geometry.QuadCount);
+
+        UiScreenLayout.Build(root, styles, 200f, 100f, geometry, resolveBinding: static _ => null);
+        Assert.Equal(0, geometry.QuadCount);
+    }
+
+    [Fact]
     public void BindingResolvesWithoutAllocatingOnceWarm()
     {
         const string document = """
@@ -89,5 +172,28 @@ public sealed class UiLayoutExpansionTests
 
         Assert.Equal(0, smallest);
         Assert.Equal(2, geometry.QuadCount);
+    }
+
+    private static RgbaImage SheetWithEveryGlyph(int width)
+    {
+        const int size = 128;
+        const int cell = 8;
+        var sheet = new RgbaImage(size, size, new byte[size * size * RgbaImage.BytesPerPixel]);
+
+        for (var y = 0; y < size; y++)
+        {
+            for (var x = 0; x < size; x++)
+            {
+                if (x % cell >= width)
+                {
+                    continue;
+                }
+
+                var offset = (((y * size) + x) * RgbaImage.BytesPerPixel) + 3;
+                sheet.Pixels[offset] = 255;
+            }
+        }
+
+        return sheet;
     }
 }

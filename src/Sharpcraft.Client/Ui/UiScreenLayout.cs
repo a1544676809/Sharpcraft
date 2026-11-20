@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using System.Globalization;
+using Sharpcraft.Common.Diagnostics;
 using Sharpcraft.Framework.Rendering;
 
 namespace Sharpcraft.Client.Ui;
@@ -112,13 +113,21 @@ public sealed class UiStyles
 
     private static string? ExtractBindingKey(string text)
     {
+        if (!text.Contains('{') && !text.Contains('}'))
+        {
+            return null;
+        }
+
         if (text.Length > 10 && text.StartsWith("{Binding ", StringComparison.Ordinal) && text[^1] == '}')
         {
             var key = text[9..^1].Trim();
-            return key.Length > 0 ? key : null;
+            if (key.Length > 0 && !key.Contains('{') && !key.Contains('}'))
+            {
+                return key;
+            }
         }
 
-        return null;
+        throw new FormatException($"invalid binding expression: {text}");
     }
 
     private static bool ParseOrientation(string value) => value switch
@@ -197,6 +206,18 @@ public static class UiScreenLayout
 """;
 
     /// <summary>Builds the geometry for one frame. Allocates nothing once the buffers are warm.</summary>
+    /// <param name="screen">Parsed root <c>Screen</c> node.</param>
+    /// <param name="styles">Pre-compiled style table from <see cref="UiStyles.Compile"/>.</param>
+    /// <param name="width">Canvas width in virtual GUI pixels.</param>
+    /// <param name="height">Canvas height in virtual GUI pixels.</param>
+    /// <param name="geometry">Reusable geometry buffer cleared and populated in place.</param>
+    /// <param name="font">Optional bitmap font; when <c>null</c>, placeholder bars are emitted.</param>
+    /// <param name="textScale">Scale factor applied to bitmap font metrics.</param>
+    /// <param name="resolveBinding">
+    /// Optional resolver for whole-string <c>{Binding Key}</c> expressions on <c>TextBlock</c>.
+    /// When <c>null</c> or when it returns <c>null</c>, the bound text falls back to <see cref="string.Empty"/>.
+    /// </param>
+    [HotPath("per-frame UI layout")]
     public static void Build(
         UiNode screen,
         UiStyles styles,
@@ -444,15 +465,10 @@ public static class UiScreenLayout
         return (totalW, totalH);
     }
 
-    private static string ResolveText(UiNode node, UiStyle style, Func<string, string?>? resolveBinding)
-    {
-        if (style.BindingKey is { } key && resolveBinding is not null)
-        {
-            return resolveBinding(key) ?? string.Empty;
-        }
-
-        return node.Get("Text");
-    }
+    private static string ResolveText(UiNode node, UiStyle style, Func<string, string?>? resolveBinding) =>
+        style.BindingKey is { } key
+            ? resolveBinding?.Invoke(key) ?? string.Empty
+            : node.Get("Text");
 
     private static float LineHeightOf(UiStyle style, BitmapFont? font, float textScale)
     {
