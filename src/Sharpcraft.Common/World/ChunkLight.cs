@@ -92,20 +92,20 @@ public sealed class ChunkLight
     /// <summary>Fills every light section with the same level; the top section is assumed lit.</summary>
     public void FillSkyLight(byte level)
     {
-        var data = Pack(level);
+        // One array per section: sharing a single array made every section the same buffer, so the per cell writes the
+        // light engine does afterwards changed every section at once.
         for (var i = 0; i < _sky.Length; i++)
         {
-            _sky[i] = data;
+            _sky[i] = Pack(level);
         }
     }
 
     /// <summary>Fills every block light section with the same level.</summary>
     public void FillBlockLight(byte level)
     {
-        var data = Pack(level);
         for (var i = 0; i < _block.Length; i++)
         {
-            _block[i] = data;
+            _block[i] = Pack(level);
         }
     }
 
@@ -117,6 +117,56 @@ public sealed class ChunkLight
         Array.Fill(data, value);
         return data;
     }
+
+    /// <summary>
+    /// Sky light level at world coordinates, for the client light engine that rewrites one cell at a time.
+    /// </summary>
+    /// <param name="x">Section-local X, 0..15.</param>
+    /// <param name="y">World Y.</param>
+    /// <param name="z">Section-local Z, 0..15.</param>
+    /// <remarks>
+    /// The two extra light sections exist because light crosses the block range, so the world Y maps to
+    /// <c>section - MinSectionY + 1</c>; anything outside returns zero rather than throwing, which the propagation
+    /// relies on at the top and bottom of the world.
+    /// </remarks>
+    public byte GetSkyLight(int x, int y, int z) =>
+        Read(_sky, LightSectionOf(y), x & 15, y & 15, z & 15);
+
+    /// <summary>Writes one sky light cell, allocating the section array on first write.</summary>
+    /// <param name="x">Section-local X, 0..15.</param>
+    /// <param name="y">World Y.</param>
+    /// <param name="z">Section-local Z, 0..15.</param>
+    /// <param name="level">Level to store, clamped to 0..15.</param>
+    /// <returns>True when the stored level actually changed.</returns>
+    public bool SetSkyLight(int x, int y, int z, byte level)
+    {
+        var lightSection = LightSectionOf(y);
+        if (lightSection < 0 || lightSection >= _sky.Length)
+        {
+            return false;
+        }
+
+        var data = _sky[lightSection] ??= new byte[BytesPerSection];
+        var index = ((y & 15) << 8) | ((z & 15) << 4) | (x & 15);
+        var at = index >> 1;
+        var clamped = (byte)Math.Min((int)level, 15);
+        var before = data[at];
+        var after = (index & 1) == 0
+            ? (byte)((before & 0xF0) | clamped)
+            : (byte)((before & 0x0F) | (clamped << 4));
+
+        if (after == before)
+        {
+            return false;
+        }
+
+        data[at] = after;
+        return true;
+    }
+
+    /// <summary>Light section index that holds a world Y, or -1 when the column has no storage there.</summary>
+    /// <param name="y">World Y.</param>
+    private int LightSectionOf(int y) => (y >> 4) - MinSectionY + 1;
 
     private static byte Read(byte[]?[] sections, int lightSection, int x, int y, int z)
     {

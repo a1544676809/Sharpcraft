@@ -1060,6 +1060,45 @@ internal sealed partial class InteractiveSession
         {
             FirstInstallSeconds = LastInstallSeconds;
         }
+
+        // Diagnostic: dump one chunk column group with its block states and the sky light the server computed, so the
+        // client light engine can be checked against real data instead of against itself.
+        DumpLightIfRequested(chunk.Chunk);
     }
+
+    /// <summary>Writes a small window of block states and sky light for the light engine golden vectors.</summary>
+    /// <param name="chunk">Chunk that just arrived.</param>
+    private void DumpLightIfRequested(Sharpcraft.Common.World.LevelChunk chunk)
+    {
+        if (Sharpcraft.Client.Game.GameOptions.Get("MC_LIGHT_DUMP") is not { Length: > 0 } root || _lightDumps >= 400)
+        {
+            return;
+        }
+
+        _lightDumps++;
+        var path = $"{root}.{chunk.ChunkX}_{chunk.ChunkZ}.tsv";
+        var builder = new System.Text.StringBuilder();
+        builder.AppendLine("# x\tz\ty\tstate\tsky");
+        var baseX = chunk.ChunkX * 16;
+        var baseZ = chunk.ChunkZ * 16;
+        for (var x = baseX; x < baseX + 4; x++)
+        {
+            for (var z = baseZ; z < baseZ + 4; z++)
+            {
+                for (var y = 96; y < 136; y++)
+                {
+                    var state = _world!.GetBlockState(x, y, z);
+                    var sky = chunk.Light.GetSkyLight(x & 15, y, z & 15);
+                    builder.Append(x).Append('	').Append(z).Append('	').Append(y).Append('	')
+                        .Append(state).Append('	').Append(sky).AppendLine();
+                }
+            }
+        }
+
+        System.IO.File.WriteAllText(path, builder.ToString());
+        Console.WriteLine($"light dump written to {path}");
+    }
+
+    private int _lightDumps;
 
 }

@@ -607,7 +607,88 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **pivot 基准**：root child cube 是绝对源像素，先扣除 base pivot（`px`），再 R，再加源位移；child cube 保持 parent-local。`PartWorldMatrix` 的 `Walk` 每层都把 `rawSourceFrame` 传给 `NodeFrame`（raw flag 不只作用于 rootFrame）；`PartMatrix`/`PartFrame` 的 flat 分支同样逐层传播该 flag。
 - **判定（Issue #128）**：`modelScale=1` 下生产 raw 的 Position+Rotation 已与源 `T*R` 等价；Book 报告的 `(0.364,...)` 是 `modelScale=16` probe 把混合单位整段比较造成的，不是 T/R 缺陷。`RawNodeFramePoseTests` 使用 Book `right_pages` 源样本（`x=0.997491, yRot=-1.5`, local first vertex `(5,-4,0.99)`），对单 cube 的 **24/24** 顶点逐点比较位置+UV（独立公式 `R*(v/16)+T_blocks`），并用同一 cube 的 Position+Rotation part 验证 `PartWorldMatrix(rawSourceFrame:true)`；不按实现反推。
 
+
+## 5.5 客户端天空光传播（Issue #269，2026-11-20）
+
+服务端**不**为方块变化下发光照：抓包确认挖掉一格时只有 `id=8 block_update`，`id=49 light_update` 全程 0 个（加载阶段也是 0）。原版客户端因此自建光照引擎，本仓照同一结构实现。
+
+### 原版源码映射表
+
+| 环节 | 原版出处 | 常量 / 约定 |
+| --- | --- | --- |
+| 引擎创建 | `ref://mc-26.3-analysis/src/net/minecraft/client/multiplayer/ClientChunkCache.java:38` | `new LevelLightEngine(this, true, hasSkyLight)`：客户端**自己**建，不等服务端 |
+| 方块变化驱动 | `ref://mc-26.3-analysis/src/net/minecraft/world/level/chunk/LevelChunk.java:292,301` | `updateSectionStatus(pos, isEmpty)` + `checkBlock(pos)` |
+| 每 tick 执行 | `ref://mc-26.3-analysis/src/net/minecraft/client/multiplayer/ClientLevel.java:497` | `runLightUpdates()` |
+| 衰减 | `ref://mc-26.3-analysis/src/net/minecraft/world/level/lighting/LightEngine.java:77-79` | `getOpacity(state) = Math.max(1, state.getLightDampening())` |
+| 传播 | `ref://mc-26.3-analysis/src/net/minecraft/world/level/lighting/SkyLightEngine.java:139-186` | `newToLevel = fromLevel - getOpacity(toState)`，六向，>1 才继续推 |
+| 向下不衰减 | 同上 `:113-135`（`addSourcesAbove`）+ `ChunkSkyLightSources` | 柱子中"上方没有任何吸光方块"的格子**本身就是 15 的光源**，所以下方格拿到的不是 14 |
+| 吸光值来源 | `VanillaBlockOcclusion`（生成表，见 §5.2.1） | `lightDampening` 逐方块，`glass/leaves` 见下 |
+
+### 规则（实现照此）
+
+1. **光源**：同一柱中，某格"上方（含世界顶）没有任何**挡天格**" → 该格为 15。**挡天格判据 = `lightDampening > 0` 或 `SolidRender`**（后者是生成表里的"遮挡形状为满方块"，对应原版 `isEdgeOccluded` 的形状分支，`ref://…/lighting/ChunkSkyLightSources.java:140-147`）。石头两者皆真；玻璃两者皆假（透光）；树叶 `lightDampening = 1` 但 `SolidRender = false`——**它会挡住"开天柱"但只按 1 衰减**，与游戏观感一致。
+2. **扩散**：六向 BFS，`候选 = 源等级 − max(1, 目标格 lightDampening)`；`候选 > 当前` 才写入并继续推。目标格是"挡天格"时直接不传播（对应原版的 `shapeOccludes`）。因为 `max(1, ·)`，空气每格 −1，玻璃（dampening 0）也 −1，石头（15）直接挡住。
+3. **下降**：不做特殊处理——开天柱的每一格都已是 15（规则 1），所以"向下不衰减"自然成立。
+4. **回落**：放置方块后按同一流程重算，柱子不再开天，等级自然归零。
+
+
+
+### 实测成本（未优化，朴素版）
+
+用测试内置的计时（`Repro_269_SkyLightTests.TheCostOfOneRelightIsMeasured`，本机 Debug 构建）：
+
+| 指标 | 数值 |
+| --- | --- |
+| 单次 `CheckBlock` | **9.83 ms** |
+| 连续 10 次方块变化 | **99.54 ms**（**9.95 ms/次**） |
+| 每次变化的分配 | 稳态 **约 7 字节/次**（11 次共 80 字节）；**light section 首次写入会分配 2048 字节** |
+| 10 次变化重写的光照格 | 2520（252/次） |
+
+结论：**单次挖方约 10 ms，占 16.7 ms 帧预算的一半以上**，连续挖掘会掉帧。这正是 R-055 要解决的增量优化，本轮按原则 14 先朴素后优化，不做性能声称。
+
+### 实现结构
+
+- 存储：`ChunkLight` 新增按格 `GetSkyLight/SetSkyLight(x, y, z)`（世界 y 映射到 `section - MinSectionY + 1`，越界读 0，首次写入时分配该 section 数组）。
+- 传播：`SkyLightEngine.CheckBlock(x, y, z)` 在 `x/z ± 16`、`y ± 16` 的立方体内（半径 = 15 + 1）先按规则 1 重设光源，再从**立方体外的壳层**与内部光源起做 BFS 到不动点；壳层保留既有等级、只向内馈送，因此不会把远处已有的光抹掉。
+- 接线：`ClientWorld.SetBlockState` 写完方块后调用 `CheckBlock`，再对 `DirtyChunks` 逐块 `MarkChunkDirty`（不带 seam 标记，保持"一处改动脏一块"）。
+- **初始光照仍来自区块包**：引擎只在方块变化时运行，未覆盖的格子保持包里的值；加载后第一帧不会因为"还没算"而全黑。
+
+### 未实现（已登记）
+
+- **方块光**（火把、荧石、岩浆）：本阶段只做天空光，见 `SIM-CLIENT-LIGHT-NO-BLOCK-LIGHT` / R-054。
+- **增量队列与柱高缓存**：原版用 `DynamicGraphMinFixedPoint` 队列 + `ChunkSkyLightSources` 高度图；本仓每次改动重算 33³ 立方体并逐柱扫描，见 `SIM-CLIENT-LIGHT-FULL-RECOMPUTE` / R-055（未做基准）。
+- 斜向传播、区块卸载时的光照释放：不做。
 ## 已知刻意的简化
+
+### SIM-CLIENT-LIGHT-NO-FACE-SHAPE：天空光只看"一个方块是否挡满"，不看两个半形状拼合
+
+- **简化了什么**：原版判断"光能否跨过一个面"用的是 `Shapes.faceShapeOccludes(两个相邻形状)`，也就是**两个半高形状拼起来盖满一个面**时也算挡住（例如两个紧贴的台阶、台阶 + 雪层）。本仓没有逐状态形状数据，只用"挡天格 = `lightDampening > 0` 或 `SolidRender`"，即**单个方块自身是否挡满**。
+- **为什么**：状态级形状表要按 `getCollisionShape/getOcclusionShape` 落盘（含 AABB 列表），远大于本轮的生成表；先做能做的部分。
+- **对等效性的影响**：光会**掠过**本应被两个半形状合起来挡住的一格。受影响方块：台阶（双层/侧面相接）、雪层（多层）、栅栏/墙（相邻柱）、以及任何两个相邻的非满方块。视觉上表现为贴缝处偏亮一格。
+- **当前状态与独立任务**：跟踪 `docs/risks.md` **R-056**（Issue 待建）。**不是已解决。**
+- **验收入口**：接入状态级形状后，用"两个台阶拼缝上下各一格"的场景断言缝下格为 0；届时删除本条。
+
+<!-- simplification:SIM-CLIENT-LIGHT-NO-FACE-SHAPE task:R-056 -->
+
+### SIM-CLIENT-LIGHT-NO-BLOCK-LIGHT：客户端光照只做天空光
+
+- **简化了什么**：`SkyLightEngine` 只传播天空光；方块光（火把、荧石、岩浆、发光方块）不计算，也不在方块变化时重算。`ChunkLight` 的方块光数组原样保留服务端下发的值。
+- **为什么**：Issue #269 的病灶是"挖开方块后新面全黑"，那条路径由天空光决定（地下与洞穴除外）；方块光要另一套光源枚举与增量结构，按阶段切分留到下一步。
+- **对等效性的影响**：白天室外场景与原版一致；**夜晚或室内**，火把周围的照明在放置/破坏后不会更新（沿用旧值），而原版会立刻变化。地下洞穴在没有天空光的地方仍是黑的。
+- **当前状态与独立任务**：跟踪 `docs/risks.md` **R-054**（Issue 待建号）。**不是已解决。**
+- **验收入口**：做到方块光后补"放置火把 → 邻格等级 = 14"的解析式测试与夜间实机截图对比；届时删除本条。
+
+<!-- simplification:SIM-CLIENT-LIGHT-NO-BLOCK-LIGHT task:R-054 -->
+
+### SIM-CLIENT-LIGHT-FULL-RECOMPUTE：一次方块变化重算整个受影响立方体
+
+- **简化了什么**：`CheckBlock` 每次都把 `x/z ±16`、`y ±16` 的立方体（约 3.6 万格）按光源规则重设一遍，再从壳层与内部光源做 BFS 到不动点；柱子的"最高吸光格"也每列现扫。原版用增量队列（`DynamicGraphMinFixedPoint`）+ 每柱高度图（`ChunkSkyLightSources`），只碰真正变化的格子。
+- **为什么**：原则 14 要求首版是 1:1 朴素实现；先把"挖开就亮"跑对，再谈增量。朴素版同时是后续优化的逐值基准。
+- **对等效性的影响**：**结果应相同**，差异在开销：单次方块变化的状态读取量比原版高两个数量级（未做基准，故不声称可接受）。内存上额外分配受影响 section 的 nibble 数组。
+- **当前状态与独立任务**：跟踪 `docs/risks.md` **R-055**（Issue 待建号）。**不是已优化。**
+- **验收入口**：增量版必须以本朴素版输出做逐格不退化回归（同一世界两次计算逐格相等）+ 区块网格时间基准对比；届时删除本条。
+
+<!-- simplification:SIM-CLIENT-LIGHT-FULL-RECOMPUTE task:R-055 -->
 
 ### SIM-BLOCK-OCCLUSION-DEFAULT-STATE：遮挡判据按方块的 default state 取
 
