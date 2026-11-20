@@ -147,12 +147,26 @@ public sealed class MeshBuffer : IDisposable
         WriteVertex(c, colourC.R, colourC.G, colourC.B, lightC, uvC, rect);
         WriteVertex(d, colourD.R, colourD.G, colourD.B, lightD, uvD, rect);
 
-        _indices[_indexCount++] = first;
-        _indices[_indexCount++] = first + 1;
-        _indices[_indexCount++] = first + 2;
-        _indices[_indexCount++] = first;
-        _indices[_indexCount++] = first + 2;
-        _indices[_indexCount++] = first + 3;
+        var diagAc = colourA.R + colourA.G + colourA.B + colourC.R + colourC.G + colourC.B;
+        var diagBd = colourB.R + colourB.G + colourB.B + colourD.R + colourD.G + colourD.B;
+        if (diagAc + 1e-5f < diagBd)
+        {
+            _indices[_indexCount++] = first + 1;
+            _indices[_indexCount++] = first + 2;
+            _indices[_indexCount++] = first + 3;
+            _indices[_indexCount++] = first + 1;
+            _indices[_indexCount++] = first + 3;
+            _indices[_indexCount++] = first;
+        }
+        else
+        {
+            _indices[_indexCount++] = first;
+            _indices[_indexCount++] = first + 1;
+            _indices[_indexCount++] = first + 2;
+            _indices[_indexCount++] = first;
+            _indices[_indexCount++] = first + 2;
+            _indices[_indexCount++] = first + 3;
+        }
     }
 
     /// <summary>
